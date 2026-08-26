@@ -153,6 +153,24 @@ test.describe.serial("Personal Phone complete UI", () => {
       "href",
       /^\/api\/public\/contact\/.+\/vcard$/,
     );
+    await expect(page.getByRole("button", { name: /logga/ })).toBeVisible();
+    const companyLogo = await sharp({
+      create: {
+        width: 240,
+        height: 80,
+        channels: 3,
+        background: { r: 10, g: 40, b: 120 },
+      },
+    })
+      .png()
+      .toBuffer();
+    await page.locator('[data-testid="company-logo-input"]').setInputFiles({
+      name: "landvex.png",
+      mimeType: "image/png",
+      buffer: companyLogo,
+    });
+    await expect(page.getByRole("button", { name: "Byt logga" })).toBeVisible();
+    await expect(page.getByAltText(/Logga för|Företagslogga/)).toBeVisible();
     await page.screenshot({
       path: `${ARTIFACTS}/share-my-contact.png`,
       fullPage: true,

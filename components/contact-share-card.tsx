@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { ContactAvatar, InsetSection } from "@/components/apple-ui";
+import { CompanyLogoUploader } from "@/components/company-logo-uploader";
 import { ContactShareActions } from "@/components/contact-share-actions";
 import type { SharedContact } from "@/lib/contact-sharing";
 
@@ -39,7 +40,7 @@ export function ContactShareCard({
         <p className="mt-1 text-sm text-[var(--secondary-label)]">
           {publicView ? "Kontaktkort" : "Dela min kontakt"}
         </p>
-        {contact.companyLogoDataBase64 ? (
+        {publicView && contact.companyLogoDataBase64 ? (
           <div className="mx-auto mt-4 flex h-16 w-40 items-center justify-center">
             <Image
               src={`/api/public/contact/${contact.shareToken}/logo`}
@@ -52,6 +53,16 @@ export function ContactShareCard({
           </div>
         ) : null}
       </header>
+
+      {publicView ? null : (
+        <CompanyLogoUploader
+          company={contact.company}
+          endpoint="/api/profile/logo"
+          initialLogoUrl={
+            contact.companyLogoDataBase64 ? "/api/profile/logo" : null
+          }
+        />
+      )}
 
       <div className="mx-auto w-fit rounded-[28px] bg-white p-4 shadow-sm">
         <Image
