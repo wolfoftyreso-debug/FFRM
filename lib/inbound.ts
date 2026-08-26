@@ -12,7 +12,7 @@ import { extractMemory } from "@/lib/ai/extract";
 import { canAutoReply } from "@/lib/ai/policy";
 import { sendMessage, notifyOwner } from "@/lib/sms/send-message";
 import { logActivity } from "@/lib/activity";
-import { escalationPreviewEnabled, optionalEnv } from "@/lib/env";
+import { appUrl, escalationPreviewEnabled } from "@/lib/env";
 
 /**
  * Process one persisted inbound message: triage → auto-reply or escalate.
@@ -359,10 +359,10 @@ export async function escalateConversation(args: {
 
   // Owner notification — deduplicated per escalation episode.
   if (!alreadyNotified) {
-    const appUrl = optionalEnv("APP_URL") ?? "";
+    const publicUrl = appUrl() ?? "";
     const link = args.conversationId
-      ? `${appUrl}/messages/${args.conversationId}`
-      : `${appUrl}/messages`;
+      ? `${publicUrl}/messages/${args.conversationId}`
+      : `${publicUrl}/messages`;
     const preview =
       escalationPreviewEnabled() && args.messageText
         ? `\n"${args.messageText.slice(0, 120)}"`

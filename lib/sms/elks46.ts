@@ -1,6 +1,7 @@
 import "server-only";
 import { getElksCredentials } from "@/lib/providers/config";
 import { elksBasicAuth } from "@/lib/providers/elks46";
+import { appUrl } from "@/lib/env";
 import type {
   MessagingProvider,
   SendMmsInput,
@@ -29,10 +30,10 @@ export class Elks46MessagingProvider implements MessagingProvider {
     });
 
     // Ask 46elks for delivery reports when the app has a public URL.
-    const appUrl = process.env.APP_URL;
-    if (appUrl) {
+    const publicUrl = appUrl();
+    if (publicUrl) {
       const token = process.env.WEBHOOK_TOKEN;
-      const url = new URL("/api/webhooks/46elks/delivery", appUrl);
+      const url = new URL("/api/webhooks/46elks/delivery", publicUrl);
       if (token) url.searchParams.set("token", token);
       body.set("whendelivered", url.toString());
     }

@@ -88,6 +88,14 @@ falls back to environment variables.
 Rotating `AUTH_SECRET` invalidates stored provider ciphertext by design;
 credentials must then be re-entered.
 
+For Vercel **Preview** deployments, Vercel Authentication is the outer access
+boundary and app session auth is bypassed only when `VERCEL_ENV=preview`.
+Fresh Postgres databases bootstrap the single Owner row race-safely. If no
+`AUTH_SECRET` exists in this SSO-protected preview, a random provider-encryption
+key is generated once in `system_secrets`; Production never bypasses app auth
+and should use `AUTH_SECRET`. Public callback URLs automatically derive from
+`VERCEL_URL` when `APP_URL` is absent.
+
 ## Unified conversation/message model
 
 `Conversation` is contact-centric. One thread contains `Message` rows from

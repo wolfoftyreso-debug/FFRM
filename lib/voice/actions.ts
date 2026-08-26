@@ -1,4 +1,4 @@
-import { optionalEnv } from "@/lib/env";
+import { appUrl, optionalEnv } from "@/lib/env";
 import { getElevenLabsConfig } from "@/lib/providers/config";
 
 /**
@@ -9,7 +9,7 @@ import { getElevenLabsConfig } from "@/lib/providers/config";
 export type ElksCallAction = Record<string, unknown>;
 
 function webhookUrl(path: string): string {
-  const base = optionalEnv("APP_URL") ?? "http://localhost:3000";
+  const base = appUrl() ?? "http://localhost:3000";
   const url = new URL(path, base);
   const token = optionalEnv("WEBHOOK_TOKEN");
   if (token) url.searchParams.set("token", token);
@@ -69,10 +69,10 @@ async function elevenLabsGreeting(
       kind === "SCREEN"
         ? config.screeningAudioId
         : config.voicemailAudioId;
-    const appUrl = optionalEnv("APP_URL");
+    const publicUrl = appUrl();
     const token = optionalEnv("WEBHOOK_TOKEN");
-    if (!id || !appUrl || !token) return null;
-    const url = new URL(`/api/public/audio/${id}`, appUrl);
+    if (!id || !publicUrl || !token) return null;
+    const url = new URL(`/api/public/audio/${id}`, publicUrl);
     url.searchParams.set("token", token);
     return url.toString();
   } catch {

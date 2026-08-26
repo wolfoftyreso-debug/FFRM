@@ -4,7 +4,7 @@ import { and, eq, isNull, lt, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { transcribeAudio, generateStructured } from "@/lib/ai/client";
 import { fastModel } from "@/lib/ai/config";
-import { optionalEnv } from "@/lib/env";
+import { appUrl, optionalEnv } from "@/lib/env";
 import { logActivity } from "@/lib/activity";
 import { notifyOwner } from "@/lib/sms/send-message";
 import { contactDisplayName } from "@/lib/ai/context";
@@ -57,7 +57,7 @@ export async function processCallRecording(callId: string): Promise<void> {
       )[0]
     : null;
   const who = contact ? contactDisplayName(contact) : call.fromNumber;
-  const appUrl = optionalEnv("APP_URL") ?? "";
+  const publicUrl = appUrl() ?? "";
 
   try {
     const { username, password } = await getElksCredentials();
@@ -124,7 +124,7 @@ Voicemail transcript:
     const notified = await notifyOwner(
       `Röstmeddelande från ${who}${analysis ? `:\n${analysis.summary}` : "."}${
         analysis?.requiresUser ? "\nKräver dig." : ""
-      }\n\n${appUrl}/phone`,
+      }\n\n${publicUrl}/phone`,
     );
     if (!notified) throw new Error("Owner voicemail notification failed");
     await db
@@ -165,7 +165,7 @@ Voicemail transcript:
       });
       // After AI retries are exhausted, notify without a transcript.
       const notified = await notifyOwner(
-        `Nytt röstmeddelande från ${who} (kunde inte transkriberas).\n\n${appUrl}/phone`,
+        `Nytt röstmeddelande från ${who} (kunde inte transkriberas).\n\n${publicUrl}/phone`,
       );
       if (notified || call.recordingAttemptCount >= 5) {
         await db

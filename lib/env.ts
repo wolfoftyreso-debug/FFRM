@@ -56,3 +56,12 @@ export function defaultTimezone(): string {
 export function escalationPreviewEnabled(): boolean {
   return optionalEnv("ESCALATION_PREVIEW") === "true";
 }
+
+/** Public deployment URL with automatic Vercel preview fallback. */
+export function appUrl(): string | undefined {
+  const explicit = optionalEnv("APP_URL");
+  if (explicit) return explicit.replace(/\/$/, "");
+  const vercelUrl =
+    process.env.VERCEL_URL ?? process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  return vercelUrl ? `https://${vercelUrl.replace(/^https?:\/\//, "")}` : undefined;
+}

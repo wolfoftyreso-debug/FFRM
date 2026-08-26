@@ -132,6 +132,12 @@ No model strings are hardcoded — switch vendors by changing the env vars.
 Runtime resolver order is encrypted Settings first, environment variables
 second. Keys are never rendered back to the browser or logged.
 
+On Vercel previews, project-level **Vercel Authentication** protects the app
+and the database bootstraps Owner/encryption state automatically, so no
+temporary app password is needed for testing. Production still requires the
+application authentication secrets. `APP_URL` automatically falls back to
+Vercel's deployment URL.
+
 ## Configure the 46elks number (SMS + MMS + voice)
 
 In the 46elks dashboard, configure your voice-enabled virtual number:

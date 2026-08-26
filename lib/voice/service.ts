@@ -19,7 +19,7 @@ import {
 import { logActivity } from "@/lib/activity";
 import { notifyOwner } from "@/lib/sms/send-message";
 import { getOrCreateConversation } from "@/lib/sms/send-message";
-import { optionalEnv } from "@/lib/env";
+import { appUrl, optionalEnv } from "@/lib/env";
 import { contactDisplayName } from "@/lib/ai/context";
 import { appendConversationEvent } from "@/lib/conversation-events";
 import { createId } from "@/lib/id";
@@ -284,8 +284,8 @@ export async function handleHangup(input: HangupInput): Promise<void> {
       .where(and(eq(calls.id, call.id), isNull(calls.missedNotifiedAt)))
       .returning({ id: calls.id });
     if (claimedNotification.length === 0) return;
-    const appUrl = optionalEnv("APP_URL") ?? "";
-    await notifyOwner(`Missat samtal från ${who}.\n\n${appUrl}/phone`);
+    const publicUrl = appUrl() ?? "";
+    await notifyOwner(`Missat samtal från ${who}.\n\n${publicUrl}/phone`);
   }
 }
 
@@ -313,7 +313,7 @@ export async function initiateCallback(contact: Contact): Promise<Call> {
     voice_start: JSON.stringify({ connect: contact.phoneNumber }),
     whenhangup: new URL(
       `/api/webhooks/46elks/hangup${optionalEnv("WEBHOOK_TOKEN") ? `?token=${optionalEnv("WEBHOOK_TOKEN")}` : ""}`,
-      optionalEnv("APP_URL") ?? "http://localhost:3000",
+      appUrl() ?? "http://localhost:3000",
     ).toString(),
   });
 
