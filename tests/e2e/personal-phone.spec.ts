@@ -91,7 +91,6 @@ test.describe.serial("Personal Phone complete UI", () => {
       "Contacts",
       "Assistant",
       "Calendar",
-      "Automations",
       "Activity",
       "Settings",
     ]) {
@@ -408,7 +407,7 @@ test.describe.serial("Personal Phone complete UI", () => {
     });
   });
 
-  test("Phone, Calendar, Automations, Activity and Settings are operational", async ({
+  test("Phone, Calendar SMS jobs, Activity and Settings are operational", async ({
     page,
   }) => {
     await page.goto("/phone");
@@ -470,49 +469,10 @@ test.describe.serial("Personal Phone complete UI", () => {
     await page.getByRole("button", { name: "Back to Calendar" }).click();
     await expect(page).toHaveURL(/\/calendar$/);
 
-    await page.goto("/automations/new");
-    const trigger = page.locator('select[name="triggerType"]');
-    await expect(trigger.locator('option[value="INCOMING_SMS"]')).toHaveText(
-      "When an SMS arrives",
-    );
-    await trigger.selectOption("INCOMING_SMS");
-    await expect(page.locator('input[name="triggerDate"]')).toHaveCount(0);
-    const action = page.locator('select[name="actionType"]');
-    await expect(action.locator('option[value="UPDATE_CONTACT"]')).toHaveText(
-      "Update a contact field",
-    );
-    await action.selectOption("LOG_EVENT");
-    const name = `E2E incoming logger ${Date.now()}`;
-    await page.locator('input[name="name"]').fill(name);
-    const contactSelect = page.locator('select[name="contactId"]');
-    const johanValue = await contactSelect
-      .locator("option")
-      .filter({ hasText: "Johan" })
-      .first()
-      .getAttribute("value");
-    await contactSelect.selectOption(johanValue!);
-    await page.locator('input[name="actionTitle"]').fill("Inbound observed");
-    await page.getByRole("button", { name: "Create automation" }).click();
-    await expect(page.getByRole("heading", { name })).toBeVisible();
-    const toggle = page.getByRole("button", { name: "Disable" });
-    await toggle.click();
-    await expect(page.getByText("DISABLED")).toBeVisible();
-    await page.getByRole("button", { name: "Enable" }).click();
-    await expect(page.getByText("ENABLED")).toBeVisible();
-    await page.getByRole("button", { name: "Run now" }).click();
-    await expect(page.getByText("COMPLETED").first()).toBeVisible();
-
-    await page.goto("/messages?view=unread");
-    await expect(page.getByText("AUTOMATIC").first()).toBeVisible();
-    await expect(page.getByLabel("Unread").first()).toBeVisible();
-    await page.screenshot({
-      path: `${ARTIFACTS}/apple-automatic-unread-inbox.png`,
-      fullPage: true,
-      caret: "initial",
-    });
-
     await page.goto("/activity");
-    await expect(page.getByText(name).or(page.getByText(/Automation/)).first()).toBeVisible();
+    await expect(
+      page.getByText(/Calendar activity created/).first(),
+    ).toBeVisible();
 
     await page.goto("/settings");
     await page.getByRole("tab", { name: "Profile" }).click();
@@ -602,13 +562,6 @@ test.describe.serial("Personal Phone complete UI", () => {
     await page.waitForURL(/\/messages\/[^/]+$/);
     const conversationPath = new URL(page.url()).pathname;
 
-    await page.goto("/automations");
-    const automationHref = await page
-      .locator('a[href^="/automations/"]:not([href="/automations/new"])')
-      .first()
-      .getAttribute("href");
-    expect(automationHref).toBeTruthy();
-
     const deepRoutes = [
       {
         path: "/people/new",
@@ -641,14 +594,9 @@ test.describe.serial("Personal Phone complete UI", () => {
         expected: "/messages",
       },
       {
-        path: "/automations/new",
-        label: "Back to Automations",
-        expected: "/automations",
-      },
-      {
-        path: automationHref!,
-        label: "Back to Automations",
-        expected: "/automations",
+        path: "/calendar/new",
+        label: "Back to Calendar",
+        expected: "/calendar",
       },
     ];
     for (const route of deepRoutes) {
@@ -663,7 +611,6 @@ test.describe.serial("Personal Phone complete UI", () => {
       "/chat",
       "/me/share",
       "/calendar",
-      "/automations",
       "/activity",
       "/settings",
     ]) {

@@ -7,7 +7,7 @@ import {
 import { CalendarActivityForm } from "@/components/calendar-activity-form";
 import { ConfirmForm } from "@/components/confirm-form";
 import { Badge, Card, PageHeader, SecondaryButton } from "@/components/ui";
-import { isCalendarActivityConfig } from "@/lib/calendar-activities";
+import { isCalendarSmsJob } from "@/lib/calendar-activities";
 import { displayName, getAutomationDetail, listContacts } from "@/lib/queries";
 import { defaultTimezone } from "@/lib/env";
 
@@ -23,7 +23,7 @@ export default async function CalendarActivityPage({
     getAutomationDetail(id),
     listContacts(),
   ]);
-  if (!detail || !isCalendarActivityConfig(detail.automation.triggerConfig)) {
+  if (!detail || !isCalendarSmsJob(detail.automation)) {
     notFound();
   }
   const { automation, contact, executions } = detail;

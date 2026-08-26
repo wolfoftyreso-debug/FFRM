@@ -1,4 +1,5 @@
 import type {
+  Automation,
   CalendarActivityKind,
   TriggerConfig,
 } from "@/lib/db/schema";
@@ -92,4 +93,33 @@ export function isCalendarActivityConfig(
   return CALENDAR_ACTIVITY_KINDS.includes(
     config?.eventKind as CalendarActivityKind,
   );
+}
+
+/** Includes legacy relationship SMS schedules created before Calendar owned them. */
+export function isCalendarSmsJob(
+  automation: Pick<
+    Automation,
+    "triggerType" | "triggerConfig" | "actionType" | "contactId"
+  >,
+): boolean {
+  if (isCalendarActivityConfig(automation.triggerConfig)) return true;
+  return (
+    !!automation.contactId &&
+    ["BIRTHDAY", "NAME_DAY", "ANNIVERSARY", "DATE"].includes(
+      automation.triggerType,
+    ) &&
+    ["GENERATE_SMS", "GENERATE_DRAFT"].includes(automation.actionType)
+  );
+}
+
+export function calendarActivityKindFor(
+  automation: Pick<Automation, "triggerType" | "triggerConfig">,
+): CalendarActivityKind {
+  if (isCalendarActivityConfig(automation.triggerConfig)) {
+    return automation.triggerConfig.eventKind;
+  }
+  if (automation.triggerType === "BIRTHDAY") return "BIRTHDAY";
+  if (automation.triggerType === "NAME_DAY") return "NAME_DAY";
+  if (automation.triggerType === "ANNIVERSARY") return "ANNIVERSARY";
+  return "CUSTOM";
 }

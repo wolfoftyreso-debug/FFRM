@@ -423,7 +423,7 @@ export default async function SettingsPage({
               <dd>{healthValue(state.lastSmsSentAt)}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-stone-400">Failed automation executions</dt>
+              <dt className="text-stone-400">Failed scheduled jobs</dt>
               <dd className={health.failedJobs > 0 ? "text-red-600" : ""}>
                 {health.failedJobs}
               </dd>

@@ -12,7 +12,6 @@ import {
   Phone,
   Settings,
   Users,
-  Zap,
 } from "lucide-react";
 
 const primary = [
@@ -30,7 +29,6 @@ const secondary = [
   { href: "/me/share", label: "Dela min kontakt", icon: ContactRound },
   { href: "/calendar", label: "Calendar", icon: CalendarDays },
   { href: "/tasks", label: "Tickets", icon: ListChecks },
-  { href: "/automations", label: "Automations", icon: Zap },
   { href: "/activity", label: "Activity", icon: ListChecks },
   { href: "/settings", label: "Settings", icon: Settings },
 ];

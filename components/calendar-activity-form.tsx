@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import type { Automation, Contact } from "@/lib/db/schema";
 import {
   CALENDAR_ACTIVITY_OPTIONS,
+  calendarActivityKindFor,
   calendarActivityOption,
   type CalendarActivityKind,
 } from "@/lib/calendar-activities";
@@ -17,16 +18,30 @@ type ContactOption = Pick<
 export function CalendarActivityForm({
   contacts,
   automation,
+  defaultContactId,
+  defaultKind,
 }: {
   contacts: ContactOption[];
   automation?: Automation | null;
+  defaultContactId?: string;
+  defaultKind?: CalendarActivityKind;
 }) {
   const config = automation?.triggerConfig ?? {};
   const initialKind =
-    (config.eventKind as CalendarActivityKind | undefined) ?? "BIRTHDAY";
+    (automation ? calendarActivityKindFor(automation) : undefined) ??
+    defaultKind ??
+    "BIRTHDAY";
+  const initialContactId = automation?.contactId ?? defaultContactId ?? "";
+  const initialContact = contacts.find(
+    (contact) => contact.id === initialContactId,
+  );
   const [kind, setKind] = useState<CalendarActivityKind>(initialKind);
-  const [contactId, setContactId] = useState(automation?.contactId ?? "");
-  const [date, setDate] = useState(config.date ?? suggestedDate(initialKind));
+  const [contactId, setContactId] = useState(initialContactId);
+  const [date, setDate] = useState(
+    config.date ??
+      contactDate(initialKind, initialContact) ??
+      suggestedDate(initialKind),
+  );
   const [recurring, setRecurring] = useState(config.yearly !== false);
   const [randomMinute, setRandomMinute] = useState(
     config.randomMinute ?? true,

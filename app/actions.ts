@@ -29,7 +29,7 @@ import { createId } from "@/lib/id";
 import {
   CALENDAR_ACTIVITY_KINDS,
   calendarActivityOption,
-  isCalendarActivityConfig,
+  isCalendarSmsJob,
 } from "@/lib/calendar-activities";
 
 // ---------------------------------------------------------------- contacts
@@ -743,7 +743,7 @@ export async function updateCalendarActivity(
     .from(automations)
     .where(eq(automations.id, automationId))
     .limit(1);
-  if (!existing || !isCalendarActivityConfig(existing.triggerConfig)) {
+  if (!existing || !isCalendarSmsJob(existing)) {
     throw new Error("Calendar activity not found");
   }
   const parsed = parseCalendarActivity(
@@ -808,7 +808,7 @@ export async function deleteCalendarActivity(
     .from(automations)
     .where(eq(automations.id, automationId))
     .limit(1);
-  if (!existing || !isCalendarActivityConfig(existing.triggerConfig)) return;
+  if (!existing || !isCalendarSmsJob(existing)) return;
   await db.delete(automations).where(eq(automations.id, automationId));
   await logActivity({
     actor: "USER",

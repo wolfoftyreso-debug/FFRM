@@ -22,7 +22,7 @@ import { and, asc, desc, eq, gte, isNotNull, lte, ne, or, sql } from "drizzle-or
 import { nextYearlyOccurrence } from "@/lib/automations/recurrence";
 import { defaultTimezone } from "@/lib/env";
 import { cleanErrorMessage } from "@/lib/errors";
-import { isCalendarActivityConfig } from "@/lib/calendar-activities";
+import { isCalendarSmsJob } from "@/lib/calendar-activities";
 
 export async function getOwner() {
   const db = await getDb();
@@ -367,7 +367,7 @@ export async function listAutomations() {
   return rows.filter(
     ({ automation }) =>
       !automation.id.startsWith("system-") &&
-      !isCalendarActivityConfig(automation.triggerConfig),
+      !isCalendarSmsJob(automation),
   );
 }
 
@@ -431,7 +431,6 @@ export async function getCalendarItems(
     .leftJoin(contacts, eq(automations.contactId, contacts.id))
     .where(
       and(
-        eq(automations.enabled, true),
         isNotNull(automations.nextRunAt),
         gte(automations.nextRunAt, rangeStart),
         lte(automations.nextRunAt, rangeEnd),
@@ -442,10 +441,11 @@ export async function getCalendarItems(
       at: row.automation.nextRunAt!,
       title: row.automation.name,
       kind: "AUTOMATIC",
-      detailUrl: isCalendarActivityConfig(row.automation.triggerConfig)
+      detailUrl: isCalendarSmsJob(row.automation)
         ? `/calendar/${row.automation.id}`
         : `/automations/${row.automation.id}`,
       contactName: row.contact ? displayName(row.contact) : null,
+      status: row.automation.enabled ? undefined : "DISABLED",
     });
   }
 
@@ -471,7 +471,7 @@ export async function getCalendarItems(
       title: row.automation.name,
       kind: row.execution.status === "ESCALATED" ? "ESCALATED" : "COMPLETED",
       status: row.execution.status,
-      detailUrl: isCalendarActivityConfig(row.automation.triggerConfig)
+      detailUrl: isCalendarSmsJob(row.automation)
         ? `/calendar/${row.automation.id}`
         : `/automations/${row.automation.id}`,
       contactName: row.contact ? displayName(row.contact) : null,

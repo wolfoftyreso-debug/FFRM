@@ -6,7 +6,6 @@ import {
   ListChecks,
   Quote,
   Settings,
-  Zap,
 } from "lucide-react";
 
 export const metadata = { title: "More" };
@@ -16,7 +15,6 @@ const moreNavigation = [
   { href: "/calendar", label: "Calendar", icon: CalendarDays },
   { href: "/tasks", label: "Tickets", icon: ListChecks },
   { href: "/review", label: "Quotes", icon: Quote },
-  { href: "/automations", label: "Automations", icon: Zap },
   { href: "/activity", label: "Activity", icon: ListChecks },
   { href: "/settings", label: "Settings", icon: Settings },
 ];

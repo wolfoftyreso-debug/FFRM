@@ -2,14 +2,28 @@ import { createCalendarActivity } from "@/app/actions";
 import { CalendarActivityForm } from "@/components/calendar-activity-form";
 import { Card, PageHeader } from "@/components/ui";
 import { listContacts } from "@/lib/queries";
+import {
+  CALENDAR_ACTIVITY_KINDS,
+  type CalendarActivityKind,
+} from "@/lib/calendar-activities";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Ny aktivitet" };
 
-export default async function NewCalendarActivityPage() {
+export default async function NewCalendarActivityPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ contactId?: string; eventKind?: string }>;
+}) {
+  const params = await searchParams;
   const contacts = (await listContacts()).filter(
     (contact) => contact.phoneNumber,
   );
+  const defaultKind = CALENDAR_ACTIVITY_KINDS.includes(
+    params.eventKind as CalendarActivityKind,
+  )
+    ? (params.eventKind as CalendarActivityKind)
+    : undefined;
   return (
     <>
       <PageHeader
@@ -18,7 +32,11 @@ export default async function NewCalendarActivityPage() {
       />
       <Card>
         <form action={createCalendarActivity}>
-          <CalendarActivityForm contacts={contacts} />
+          <CalendarActivityForm
+            contacts={contacts}
+            defaultContactId={params.contactId}
+            defaultKind={defaultKind}
+          />
           <button className="mt-6 min-h-14 w-full rounded-2xl bg-[var(--system-blue)] text-[17px] font-semibold text-white">
             Spara aktivitet
           </button>

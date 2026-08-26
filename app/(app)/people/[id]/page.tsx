@@ -21,6 +21,7 @@ import {
   PhoneCall,
 } from "lucide-react";
 import { ConfirmForm } from "@/components/confirm-form";
+import { isCalendarSmsJob } from "@/lib/calendar-activities";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +40,7 @@ export default async function ContactPage({
   if (!detail) notFound();
   const { contact, facts, commitments, automations, conversations, timeline } =
     detail;
+  const smsJobs = automations.filter(isCalendarSmsJob);
   const styleMedia = await getStyleMediaSummary(contact.id);
   const filteredTimeline =
     historyFilter === "ALL"
@@ -55,7 +57,7 @@ export default async function ContactPage({
     { id: "PHOTOS", label: "Photos" },
     { id: "CALLS", label: "Calls" },
     { id: "VOICEMAIL", label: "Voicemail" },
-    { id: "AUTOMATIONS", label: "Automation" },
+    { id: "AUTOMATIONS", label: "SMS-jobb" },
     { id: "FACTS", label: "Facts" },
     { id: "REMINDERS", label: "Reminders" },
     { id: "SYSTEM", label: "System" },
@@ -365,16 +367,18 @@ export default async function ContactPage({
 
           <Card>
             <h3 className="text-xs font-semibold uppercase tracking-wide text-stone-400">
-              Automatic actions
+              Schemalagda SMS-jobb
             </h3>
-            {automations.length === 0 ? (
-              <p className="mt-2 text-sm text-stone-400">None yet.</p>
+            {smsJobs.length === 0 ? (
+              <p className="mt-2 text-sm text-stone-400">
+                Inga SMS-jobb för kontakten ännu.
+              </p>
             ) : (
               <ul className="mt-2 space-y-1.5 text-sm">
-                {automations.map((a) => (
+                {smsJobs.map((a) => (
                   <li key={a.id} className="flex items-center justify-between gap-2">
                     <Link
-                      href={`/automations/${a.id}`}
+                      href={`/calendar/${a.id}`}
                       className="truncate text-stone-700 hover:underline"
                     >
                       {a.name}
@@ -385,26 +389,26 @@ export default async function ContactPage({
               </ul>
             )}
             <Link
-              href={`/automations/new?contactId=${contact.id}`}
-              className="mt-3 inline-block text-sm font-medium text-stone-900 underline underline-offset-2"
+              href={`/calendar/new?contactId=${contact.id}`}
+              className="mt-3 flex min-h-12 items-center justify-center rounded-xl bg-[var(--system-blue)] px-4 text-sm font-semibold text-white"
             >
-              Add custom automation
+              Skapa SMS-jobb
             </Link>
             <div className="mt-2 flex flex-wrap gap-2">
               {contact.birthday ? (
                 <Link
-                  href={`/automations/new?contactId=${contact.id}&triggerType=BIRTHDAY`}
-                  className="flex min-h-9 items-center rounded-lg bg-pink-50 px-3 text-xs font-semibold text-pink-700"
+                  href={`/calendar/new?contactId=${contact.id}&eventKind=BIRTHDAY`}
+                  className="flex min-h-12 items-center rounded-xl bg-pink-50 px-4 text-sm font-semibold text-pink-700"
                 >
-                  + Birthday automation
+                  + Födelsedag
                 </Link>
               ) : null}
               {contact.nameDayMonth && contact.nameDayDay ? (
                 <Link
-                  href={`/automations/new?contactId=${contact.id}&triggerType=NAME_DAY`}
-                  className="flex min-h-9 items-center rounded-lg bg-cyan-50 px-3 text-xs font-semibold text-cyan-700"
+                  href={`/calendar/new?contactId=${contact.id}&eventKind=NAME_DAY`}
+                  className="flex min-h-12 items-center rounded-xl bg-cyan-50 px-4 text-sm font-semibold text-cyan-700"
                 >
-                  + Name-day automation
+                  + Namnsdag
                 </Link>
               ) : null}
             </div>
