@@ -7,20 +7,11 @@ import {
   InsetSection,
   SegmentedLinks,
 } from "@/components/apple-ui";
+import { ContactCriteriaMenu } from "@/components/contact-criteria-menu";
 import { Plus, Radar, Search } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "People" };
-
-const FILTERS = [
-  { id: "all", label: "All" },
-  { id: "family", label: "Family" },
-  { id: "friend", label: "Friends" },
-  { id: "work", label: "Work" },
-  { id: "important", label: "Important" },
-  { id: "birthday-soon", label: "Birthday soon" },
-  { id: "needs-attention", label: "Needs attention" },
-];
 
 export default async function PeoplePage({
   searchParams,
@@ -92,23 +83,7 @@ export default async function PeoplePage({
         <input type="hidden" name="sort" value={sort} />
       </form>
 
-      <div className="mb-3 overflow-x-auto pb-1">
-        <div className="flex min-w-max gap-1.5">
-        {FILTERS.map((f) => (
-          <Link
-            key={f.id}
-            href={`/people?filter=${f.id}&sort=${sort}${q ? `&q=${encodeURIComponent(q)}` : ""}`}
-            className={`flex min-h-8 items-center rounded-full px-3 text-[13px] font-medium ${
-              filter === f.id
-                ? "bg-[var(--system-blue)] text-white"
-                : "bg-white text-[var(--secondary-label)]"
-            }`}
-          >
-            {f.label}
-          </Link>
-        ))}
-        </div>
-      </div>
+      <ContactCriteriaMenu filter={filter} sort={sort} query={q} />
       <div className="mb-5">
         <SegmentedLinks
           active={sort}

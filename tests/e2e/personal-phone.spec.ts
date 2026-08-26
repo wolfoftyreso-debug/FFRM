@@ -263,6 +263,24 @@ test.describe.serial("Personal Phone complete UI", () => {
   }) => {
     await page.goto("/people");
     await expect(page.getByRole("heading", { name: "Contacts" })).toBeVisible();
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.getByRole("button", { name: "Show contacts: All contacts" }).click();
+    await expect(page.getByRole("dialog", { name: "Show" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Relationship" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Focus" })).toBeVisible();
+    await page.screenshot({
+      path: `${ARTIFACTS}/contacts-filter-menu.png`,
+      fullPage: true,
+      caret: "initial",
+    });
+    await page.getByRole("link", { name: "Family", exact: true }).click();
+    await expect(page).toHaveURL(/filter=family/);
+    await expect(
+      page.getByRole("button", { name: "Show contacts: Family" }),
+    ).toBeVisible();
+    await page.getByRole("link", { name: "Clear contact filter" }).click();
+    await expect(page).not.toHaveURL(/filter=/);
+    await page.setViewportSize({ width: 1280, height: 800 });
     for (const tab of ["Name", "Recent", "Priority"]) {
       await page.getByRole("tab", { name: tab, exact: true }).click();
       await expect(page.getByRole("tab", { name: tab, exact: true })).toHaveAttribute(
