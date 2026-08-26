@@ -45,6 +45,7 @@ function targetFor(pathname: string): BackTarget | null {
   }
   const secondary: Record<string, string> = {
     "/chat": "More",
+    "/me/share": "More",
     "/calendar": "More",
     "/tasks": "More",
     "/automations": "More",

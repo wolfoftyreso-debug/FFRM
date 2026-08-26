@@ -54,6 +54,8 @@ async function owner() {
 async function saveOwnerField(field: string, value: string) {
   const allowed = new Set([
     "name",
+    "email",
+    "phoneNumber",
     "preferredLanguage",
     "timezone",
     "defaultTone",
@@ -66,6 +68,26 @@ async function saveOwnerField(field: string, value: string) {
   if (!allowed.has(field)) throw new Error("Unsupported owner field");
   const db = await getDb();
   const current = await owner();
+  if (field === "phoneNumber") {
+    const phone = value.trim() ? normalizePhoneNumber(value) : null;
+    if (value.trim() && !phone) throw new Error("Use a valid phone number");
+    await db
+      .update(users)
+      .set({ phoneNumber: phone, updatedAt: sql`now()` })
+      .where(eq(users.id, current.id));
+    return;
+  }
+  if (field === "email") {
+    const email = value.trim();
+    if (email && !z.string().email().safeParse(email).success) {
+      throw new Error("Use a valid email address");
+    }
+    await db
+      .update(users)
+      .set({ email: email || null, updatedAt: sql`now()` })
+      .where(eq(users.id, current.id));
+    return;
+  }
   if (["name", "preferredLanguage", "timezone"].includes(field)) {
     if (!value.trim()) throw new Error("This field cannot be empty");
     await db

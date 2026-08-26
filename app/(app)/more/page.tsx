@@ -1,9 +1,18 @@
 import { AppleRow, InsetSection } from "@/components/apple-ui";
-import { Bot, CalendarDays, ListChecks, Quote, Settings, Zap } from "lucide-react";
+import {
+  Bot,
+  CalendarDays,
+  ContactRound,
+  ListChecks,
+  Quote,
+  Settings,
+  Zap,
+} from "lucide-react";
 
 export const metadata = { title: "More" };
 const moreNavigation = [
   { href: "/chat", label: "Assistant", icon: Bot },
+  { href: "/me/share", label: "Dela min kontakt", icon: ContactRound },
   { href: "/calendar", label: "Calendar", icon: CalendarDays },
   { href: "/tasks", label: "Tickets", icon: ListChecks },
   { href: "/review", label: "Quotes", icon: Quote },

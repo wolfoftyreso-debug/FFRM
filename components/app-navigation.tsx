@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   Bot,
   CalendarDays,
+  ContactRound,
   Ellipsis,
   ListChecks,
   MessageCircle,
@@ -26,6 +27,7 @@ const primary = [
 ];
 const secondary = [
   { href: "/chat", label: "Assistant", icon: Bot },
+  { href: "/me/share", label: "Dela min kontakt", icon: ContactRound },
   { href: "/calendar", label: "Calendar", icon: CalendarDays },
   { href: "/tasks", label: "Tickets", icon: ListChecks },
   { href: "/automations", label: "Automations", icon: Zap },

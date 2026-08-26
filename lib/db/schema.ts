@@ -29,6 +29,8 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   email: text("email"),
   phoneNumber: text("phone_number"),
+  /** Unguessable public URL token for the owner's shared contact card. */
+  shareToken: text("share_token").unique(),
   preferredLanguage: text("preferred_language").notNull().default("sv"),
   timezone: text("timezone").notNull().default("Europe/Stockholm"),
   /** Communication profile: tone, emoji usage, common expressions, ... */

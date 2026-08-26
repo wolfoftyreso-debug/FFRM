@@ -118,6 +118,37 @@ test.describe.serial("Personal Phone complete UI", () => {
     });
   });
 
+  test("shares the owner contact by QR, SMS, mail, link and vCard", async ({
+    page,
+  }) => {
+    await page.goto("/me/share");
+    await expect(
+      page.getByRole("heading", { name: "Dela min kontakt" }).first(),
+    ).toBeVisible();
+    await expect(page.getByAltText(/QR-kod för/)).toBeVisible();
+    await expect(page.getByRole("link", { name: "SMS" })).toHaveAttribute(
+      "href",
+      /^sms:/,
+    );
+    await expect(page.getByRole("link", { name: "Mail" })).toHaveAttribute(
+      "href",
+      /^mailto:/,
+    );
+    await expect(
+      page.getByRole("button", { name: "Kopiera länk" }),
+    ).toBeVisible();
+    const vcard = page.getByRole("link", { name: "Lägg till i Kontakter" });
+    await expect(vcard).toHaveAttribute(
+      "href",
+      /^\/api\/public\/contact\/.+\/vcard$/,
+    );
+    await page.screenshot({
+      path: `${ARTIFACTS}/share-my-contact.png`,
+      fullPage: true,
+      caret: "initial",
+    });
+  });
+
   test("Messages filters, unified thread, AI controls and composer work", async ({
     page,
   }) => {
@@ -606,6 +637,7 @@ test.describe.serial("Personal Phone complete UI", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     for (const path of [
       "/chat",
+      "/me/share",
       "/calendar",
       "/automations",
       "/activity",
