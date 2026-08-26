@@ -13,6 +13,7 @@ import type { Db } from "@/lib/db";
 import { executeAutomation } from "@/lib/automations/engine";
 import { runDispatcher } from "@/lib/automations/dispatcher";
 import { eq } from "drizzle-orm";
+import { listConversations } from "@/lib/queries";
 
 let db: Db;
 let provider: MockMessagingProvider;
@@ -71,6 +72,14 @@ describe("automation engine", () => {
     expect(message.providerMessageId).toBe("sTEST1");
     expect(message.automationExecutionId).toBe(execution.id);
     expect(message.sender).toBe("AI");
+    const automaticEvents = (await db.select().from(schema.messages)).filter(
+      (m) => m.channel === "AUTOMATION",
+    );
+    expect(automaticEvents).toHaveLength(1);
+    expect(automaticEvents[0].text).toContain("Birthday greeting · COMPLETED");
+    const inbox = await listConversations();
+    expect(inbox[0].isAutomated).toBe(true);
+    expect(inbox[0].unread).toBe(true);
   });
 
   it("is idempotent: the same occurrence can never send twice", async () => {

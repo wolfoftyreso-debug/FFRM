@@ -7,6 +7,7 @@ import { useState } from "react";
 
 const TRIGGERS = [
   { id: "BIRTHDAY", label: "On the contact's birthday" },
+  { id: "NAME_DAY", label: "On the contact's name day" },
   { id: "ANNIVERSARY", label: "On an anniversary (yearly date)" },
   { id: "DATE", label: "On a specific date (once)" },
   { id: "INTERVAL", label: "Every N days" },
@@ -32,15 +33,17 @@ export function AutomationFormFields({
   automation,
   contacts,
   defaultContactId,
+  defaultTriggerType,
 }: {
   automation?: Automation | null;
   contacts: Contact[];
   defaultContactId?: string;
+  defaultTriggerType?: Automation["triggerType"];
 }) {
   const tc = automation?.triggerConfig ?? {};
   const ac = automation?.actionConfig ?? {};
   const [triggerType, setTriggerType] = useState(
-    automation?.triggerType ?? "BIRTHDAY",
+    automation?.triggerType ?? defaultTriggerType ?? "BIRTHDAY",
   );
   const [actionType, setActionType] = useState(
     automation?.actionType ?? "GENERATE_SMS",
@@ -110,7 +113,7 @@ export function AutomationFormFields({
           />
         </label>
         ) : null}
-        {["DATE", "ANNIVERSARY", "BIRTHDAY", "INTERVAL"].includes(triggerType) ? (
+        {["DATE", "ANNIVERSARY", "BIRTHDAY", "NAME_DAY", "INTERVAL"].includes(triggerType) ? (
         <label className={labelClass}>
           At (local time)
           <input
@@ -182,8 +185,20 @@ export function AutomationFormFields({
         <>
         <label className={labelClass}>
           Message purpose (for AI generation)
-          <select name="actionPurpose" defaultValue={ac.purpose ?? "checkin"} className={inputClass}>
+          <select
+            name="actionPurpose"
+            defaultValue={
+              ac.purpose ??
+              (defaultTriggerType === "NAME_DAY"
+                ? "name_day"
+                : defaultTriggerType === "BIRTHDAY"
+                  ? "birthday"
+                  : "checkin")
+            }
+            className={inputClass}
+          >
             <option value="birthday">Birthday greeting</option>
+            <option value="name_day">Name-day greeting</option>
             <option value="checkin">Friendly check-in</option>
             <option value="holiday">Holiday greeting</option>
           </select>

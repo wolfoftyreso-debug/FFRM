@@ -37,6 +37,15 @@ Your Swedish number → 46elks → this app → relationship/context/policy → 
   Call/Message/Remind actions, rich work/interests fields, and unified history
   filterable by Messages, Photos, Calls, Voicemail, Automation, Facts,
   Reminders and System (40-event pagination)
+- **Contact-owned dates and automation** — birthday and Swedish name-day
+  dates live on the contact card; one tap creates a yearly automation.
+  Custom cron/interval/incoming-SMS rules are listed and managed under that
+  contact.
+- **iPhone-style inbox semantics** — conversations sort by the latest SMS,
+  MMS, call, voicemail or automation activity; opening a thread records
+  `lastReadAt`; unread rows use the native blue dot/bold style. Automation
+  executions become idempotent `AUTOMATION` events in the same thread and are
+  explicitly marked **AUTOMATIC** in the Messages list.
 - Plus: relationship memory, personal calendar, automation engine with a
   central minute-level scheduler, and a complete audit history
 

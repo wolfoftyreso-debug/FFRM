@@ -76,6 +76,24 @@ export function ContactFormFields({ contact }: { contact?: Contact | null }) {
         />
       </label>
       <label className={labelClass}>
+        Name day
+        <input
+          name="nameDay"
+          type="date"
+          defaultValue={
+            contact?.nameDayMonth && contact.nameDayDay
+              ? `2000-${String(contact.nameDayMonth).padStart(2, "0")}-${String(
+                  contact.nameDayDay,
+                ).padStart(2, "0")}`
+              : ""
+          }
+          className={inputClass}
+        />
+        <span className="mt-1 block text-xs text-stone-400">
+          Only month and day are used; it repeats every year.
+        </span>
+      </label>
+      <label className={labelClass}>
         Relationship
         <select
           name="relationshipType"

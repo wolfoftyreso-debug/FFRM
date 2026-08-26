@@ -38,6 +38,10 @@ export default async function MessagesPage({
     conversations = conversations.filter(
       (c) => c.status === "OPEN" && c.aiControlState === "ESCALATED",
     );
+  } else if (view === "unread") {
+    conversations = conversations.filter(
+      (c) => c.status === "OPEN" && c.unread,
+    );
   } else if (view === "ai") {
     conversations = conversations.filter(
       (c) => c.status === "OPEN" && c.aiControlState === "AI",
@@ -80,6 +84,7 @@ export default async function MessagesPage({
               label: "Needs You",
               href: "/messages?view=needs-you",
             },
+            { id: "unread", label: "Unread", href: "/messages?view=unread" },
             { id: "ai", label: "AI", href: "/messages?view=ai" },
             { id: "closed", label: "Closed", href: "/messages?view=closed" },
           ]}
@@ -105,9 +110,26 @@ export default async function MessagesPage({
                 leading={<ContactAvatar name={c.contactName} />}
                 title={
                   <span className="flex items-center gap-2">
-                    <span className="truncate font-semibold">{c.contactName}</span>
+                    {c.unread ? (
+                      <span
+                        aria-label="Unread"
+                        className="h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--system-blue)]"
+                      />
+                    ) : null}
+                    <span
+                      className={`truncate ${
+                        c.unread ? "font-bold" : "font-semibold"
+                      }`}
+                    >
+                      {c.contactName}
+                    </span>
                     {state === "NEEDS YOU" ? (
                       <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--system-red)]" />
+                    ) : null}
+                    {c.isAutomated ? (
+                      <span className="shrink-0 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-700">
+                        AUTOMATIC
+                      </span>
                     ) : state === "AI HANDLING" ? (
                       <span className="shrink-0 rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-700">
                         AI
@@ -115,7 +137,14 @@ export default async function MessagesPage({
                     ) : null}
                   </span>
                 }
-                subtitle={c.lastMessageText ?? "No messages yet"}
+                subtitle={`${
+                  c.isAutomated &&
+                  !c.lastMessageText?.toLowerCase().startsWith("automatic")
+                    ? "Automatic · "
+                    : ""
+                }${
+                  c.lastMessageText ?? "No messages yet"
+                }`}
                 trailing={
                   c.lastMessageAt ? (
                     <time className="self-start pt-1 text-xs text-[var(--system-gray)]">

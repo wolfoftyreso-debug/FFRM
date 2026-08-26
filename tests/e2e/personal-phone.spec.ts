@@ -75,6 +75,8 @@ test.describe.serial("Personal Phone complete UI", () => {
     await expect(page.getByRole("heading", { name: "Messages" })).toBeVisible();
     await page.getByRole("tab", { name: "Needs You", exact: true }).click();
     await expect(page).toHaveURL(/view=needs-you/);
+    await page.getByRole("tab", { name: "Unread", exact: true }).click();
+    await expect(page).toHaveURL(/view=unread/);
     await page.getByRole("tab", { name: "AI", exact: true }).click();
     await expect(page).toHaveURL(/view=ai/);
     await page.getByRole("tab", { name: "Closed", exact: true }).click();
@@ -188,6 +190,7 @@ test.describe.serial("Personal Phone complete UI", () => {
     await page.locator('input[name="company"]').fill("E2E AB");
     await page.locator('input[name="jobTitle"]').fill("Test Lead");
     await page.locator('input[name="interests"]').fill("cars, travel");
+    await page.locator('input[name="nameDay"]').fill("2000-06-24");
     await page.getByRole("button", { name: "Save changes" }).click();
     await page.getByRole("link", { name: "Edit" }).click();
     await expect(page.locator('input[name="company"]')).toHaveValue("E2E AB");
@@ -195,7 +198,13 @@ test.describe.serial("Personal Phone complete UI", () => {
     await expect(page.locator('input[name="interests"]')).toHaveValue(
       "cars, travel",
     );
+    await expect(page.locator('input[name="nameDay"]')).toHaveValue(
+      "2000-06-24",
+    );
     await page.goBack();
+    await expect(
+      page.getByRole("link", { name: /Name-day automation/ }),
+    ).toBeVisible();
 
     await expect(page.getByText("Teach AI how we talk")).toBeVisible();
     const conversationScreenshot = await sharp({
@@ -294,6 +303,15 @@ test.describe.serial("Personal Phone complete UI", () => {
     await expect(page.getByText("ENABLED")).toBeVisible();
     await page.getByRole("button", { name: "Run now" }).click();
     await expect(page.getByText("COMPLETED").first()).toBeVisible();
+
+    await page.goto("/messages?view=unread");
+    await expect(page.getByText("AUTOMATIC").first()).toBeVisible();
+    await expect(page.getByLabel("Unread").first()).toBeVisible();
+    await page.screenshot({
+      path: `${ARTIFACTS}/apple-automatic-unread-inbox.png`,
+      fullPage: true,
+      caret: "initial",
+    });
 
     await page.goto("/activity");
     await expect(page.getByText(name).or(page.getByText(/Automation/)).first()).toBeVisible();

@@ -53,6 +53,9 @@ export interface ConversationListItem {
   lastMessageAt: Date | null;
   lastMessageText: string | null;
   escalationReason: string | null;
+  unread: boolean;
+  isAutomated: boolean;
+  lastChannel: string | null;
 }
 
 export function conversationStateLabel(state: string, status: string): string {
@@ -83,7 +86,12 @@ export async function listConversations(): Promise<ConversationListItem[]> {
   const result: ConversationListItem[] = [];
   for (const row of rows) {
     const lastMessage = await db
-      .select({ text: messages.text, contentType: messages.contentType })
+      .select({
+        text: messages.text,
+        contentType: messages.contentType,
+        sender: messages.sender,
+        channel: messages.channel,
+      })
       .from(messages)
       .where(eq(messages.conversationId, row.conversation.id))
       .orderBy(desc(messages.createdAt))
@@ -105,6 +113,15 @@ export async function listConversations(): Promise<ConversationListItem[]> {
           ? "📷 Photo"
           : null),
       escalationReason: row.conversation.escalationReason,
+      unread:
+        !!row.conversation.lastMessageAt &&
+        (!row.conversation.lastReadAt ||
+          row.conversation.lastMessageAt > row.conversation.lastReadAt),
+      isAutomated:
+        lastMessage[0]?.sender === "AI" ||
+        lastMessage[0]?.sender === "AUTOMATION" ||
+        lastMessage[0]?.channel === "AUTOMATION",
+      lastChannel: lastMessage[0]?.channel ?? null,
     });
   }
   return result;
@@ -348,7 +365,13 @@ export async function listActivity(limit = 100) {
 export interface CalendarItem {
   at: Date;
   title: string;
-  kind: "AUTOMATIC" | "HUMAN" | "COMPLETED" | "ESCALATED" | "BIRTHDAY";
+  kind:
+    | "AUTOMATIC"
+    | "HUMAN"
+    | "COMPLETED"
+    | "ESCALATED"
+    | "BIRTHDAY"
+    | "NAME DAY";
   detailUrl: string | null;
   contactName: string | null;
   status?: string;
@@ -458,18 +481,40 @@ export async function getCalendarItems(
     });
   }
 
-  // Birthdays.
+  // Birthdays and name days.
   const allContacts = await db
     .select()
     .from(contacts)
-    .where(and(sql`${contacts.archivedAt} is null`, isNotNull(contacts.birthday)));
+    .where(sql`${contacts.archivedAt} is null`);
   for (const c of allContacts) {
-    if (!c.birthday) continue;
-    const [, m, d] = c.birthday.split("-").map(Number);
-    try {
+    if (c.birthday) {
+      const [, m, d] = c.birthday.split("-").map(Number);
+      try {
+        const next = nextYearlyOccurrence(
+          m,
+          d,
+          0,
+          0,
+          c.timezone ?? tz,
+          new Date(rangeStart.getTime() - 1),
+        );
+        if (next >= rangeStart && next <= rangeEnd) {
+          items.push({
+            at: next,
+            title: `${displayName(c)}'s birthday`,
+            kind: "BIRTHDAY",
+            detailUrl: `/people/${c.id}`,
+            contactName: displayName(c),
+          });
+        }
+      } catch {
+        // skip malformed birthdays
+      }
+    }
+    if (c.nameDayMonth && c.nameDayDay) {
       const next = nextYearlyOccurrence(
-        m,
-        d,
+        c.nameDayMonth,
+        c.nameDayDay,
         0,
         0,
         c.timezone ?? tz,
@@ -478,14 +523,12 @@ export async function getCalendarItems(
       if (next >= rangeStart && next <= rangeEnd) {
         items.push({
           at: next,
-          title: `${displayName(c)}'s birthday`,
-          kind: "BIRTHDAY",
+          title: `${displayName(c)}'s name day`,
+          kind: "NAME DAY",
           detailUrl: `/people/${c.id}`,
           contactName: displayName(c),
         });
       }
-    } catch {
-      // skip malformed birthdays
     }
   }
 

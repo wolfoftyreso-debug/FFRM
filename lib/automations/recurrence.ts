@@ -13,7 +13,12 @@ const NO_CONTACT_RECHECK_MS = 60 * 60 * 1000; // evaluate hourly
 export function computeNextRun(args: {
   triggerType: Automation["triggerType"];
   triggerConfig: TriggerConfig;
-  contact?: Pick<Contact, "birthday" | "timezone"> | null;
+  contact?: Partial<
+    Pick<
+    Contact,
+    "birthday" | "nameDayMonth" | "nameDayDay" | "timezone"
+    >
+  > | null;
   after: Date;
   timezone?: string;
 }): Date | null {
@@ -26,6 +31,12 @@ export function computeNextRun(args: {
       if (!birthday) return null;
       const [, m, d] = birthday.split("-").map(Number);
       return nextYearlyOccurrence(m, d, hour, minute, tz, args.after);
+    }
+    case "NAME_DAY": {
+      const month = args.contact?.nameDayMonth;
+      const day = args.contact?.nameDayDay;
+      if (!month || !day) return null;
+      return nextYearlyOccurrence(month, day, hour, minute, tz, args.after);
     }
     case "ANNIVERSARY": {
       const dateStr = args.triggerConfig.date;
@@ -196,6 +207,8 @@ export function occurrenceKeyFor(args: {
   switch (args.triggerType) {
     case "BIRTHDAY":
       return `birthday-${args.scheduledFor.toISOString().slice(0, 10)}`;
+    case "NAME_DAY":
+      return `name-day-${args.scheduledFor.toISOString().slice(0, 10)}`;
     case "ANNIVERSARY":
       return `anniversary-${args.scheduledFor.toISOString().slice(0, 10)}`;
     case "DATE":

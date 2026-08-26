@@ -87,6 +87,23 @@ CONTACT → CONVERSATION
 LOCATION/AUDIO require no table redesign. GPS-location MMS is therefore not
 blocked by the schema, but has no specialized V1 UI.
 
+### Inbox ordering, unread and automation visibility
+
+- `Conversation.lastMessageAt` is updated by every SMS/MMS plus idempotent
+  call, voicemail, AI and `AUTOMATION` event. Messages.app ordering is simply
+  newest activity first — cron executions cannot disappear into a separate
+  admin log.
+- Opening `/messages/:id` POSTs an authenticated read receipt and stores
+  `lastReadAt`. A conversation is unread iff
+  `lastMessageAt > lastReadAt` (or it has never been opened). Inbox rows use
+  the iOS blue dot/bold treatment and an Unread segment.
+- Every contact automation attempt writes a unique SYSTEM Message with
+  `channel=AUTOMATION`, `sender=AUTOMATION` and execution-attempt idempotency
+  key. The inbox and thread render **AUTOMATIC** explicitly.
+- Birthday and name-day month/day are contact-owned recurring dates.
+  `BIRTHDAY` / `NAME_DAY` recurrence is timezone-aware and contact automation
+  shortcuts preconfigure the matching yearly trigger.
+
 ## MMS/media pipeline
 
 1. **`mms_url`** (`/api/webhooks/46elks/mms`) receives form-urlencoded

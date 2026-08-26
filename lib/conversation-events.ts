@@ -1,5 +1,6 @@
 import { getDb } from "@/lib/db";
-import { messages } from "@/lib/db/schema";
+import { conversations, messages } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 
 /**
  * Persist a call/voicemail/AI event in the same Message thread as SMS/MMS.
@@ -9,14 +10,14 @@ import { messages } from "@/lib/db/schema";
 export async function appendConversationEvent(input: {
   conversationId: string | null;
   contactId: string | null;
-  channel: "VOICE_CALL" | "VOICEMAIL" | "SYSTEM";
+  channel: "VOICE_CALL" | "VOICEMAIL" | "AUTOMATION" | "SYSTEM";
   eventKey: string;
   text: string;
-  sender?: "SYSTEM" | "AI";
+  sender?: "SYSTEM" | "AI" | "AUTOMATION";
 }): Promise<void> {
   if (!input.conversationId) return;
   const db = await getDb();
-  await db
+  const inserted = await db
     .insert(messages)
     .values({
       conversationId: input.conversationId,
@@ -32,5 +33,12 @@ export async function appendConversationEvent(input: {
       status: "COMPLETED",
       sender: input.sender ?? "SYSTEM",
     })
-    .onConflictDoNothing();
+    .onConflictDoNothing()
+    .returning({ createdAt: messages.createdAt });
+  if (inserted[0]) {
+    await db
+      .update(conversations)
+      .set({ lastMessageAt: inserted[0].createdAt })
+      .where(eq(conversations.id, input.conversationId));
+  }
 }

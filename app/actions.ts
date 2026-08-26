@@ -34,6 +34,7 @@ const contactSchema = z.object({
   phoneNumber: z.string().optional(),
   email: z.string().optional(),
   birthday: z.string().optional(),
+  nameDay: z.string().optional(),
   relationshipType: z.string().default("FRIEND"),
   importance: z.enum(["LOW", "MEDIUM", "HIGH"]).default("MEDIUM"),
   preferredLanguage: z.string().optional(),
@@ -59,6 +60,11 @@ function parseContactForm(formData: FormData) {
     phoneNumber = normalizePhoneNumber(data.phoneNumber);
     if (!phoneNumber) throw new Error("Invalid phone number");
   }
+  const nameDayParts = data.nameDay?.split("-").map(Number) ?? [];
+  const nameDayMonth =
+    nameDayParts.length === 3 ? nameDayParts[1] : nameDayParts[0];
+  const nameDayDay =
+    nameDayParts.length === 3 ? nameDayParts[2] : nameDayParts[1];
   return {
     firstName: data.firstName.trim(),
     lastName: data.lastName?.trim() || null,
@@ -67,6 +73,9 @@ function parseContactForm(formData: FormData) {
     phoneNumber,
     email: data.email?.trim() || null,
     birthday: data.birthday?.trim() || null,
+    nameDayMonth:
+      nameDayMonth >= 1 && nameDayMonth <= 12 ? nameDayMonth : null,
+    nameDayDay: nameDayDay >= 1 && nameDayDay <= 31 ? nameDayDay : null,
     relationshipType: data.relationshipType,
     importance: data.importance,
     preferredLanguage: data.preferredLanguage?.trim() || null,
@@ -384,6 +393,7 @@ const automationSchema = z.object({
   triggerType: z.enum([
     "DATE",
     "BIRTHDAY",
+    "NAME_DAY",
     "ANNIVERSARY",
     "CRON",
     "INTERVAL",

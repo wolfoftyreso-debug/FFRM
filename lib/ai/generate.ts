@@ -21,6 +21,8 @@ export async function generateOutboundMessage(args: {
   const purposeText =
     args.purpose === "birthday"
       ? `Today is ${name}'s birthday. Write a warm, personal birthday greeting.`
+      : args.purpose === "name_day"
+        ? `Today is ${name}'s name day. Write a short, warm and natural name-day greeting.`
       : args.purpose === "checkin"
         ? `Write a friendly, casual check-in message to ${name} — the user simply wants to stay in touch.`
         : `Write a short friendly SMS to ${name}. Purpose: ${args.purpose}.`;

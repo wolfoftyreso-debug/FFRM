@@ -13,6 +13,7 @@ import { Badge, Card } from "@/components/ui";
 import { AUTONOMY_LABELS } from "@/lib/ai/policy";
 import { MessageComposer } from "@/components/message-composer";
 import { ContactAvatar } from "@/components/apple-ui";
+import { ConversationReadReceipt } from "@/components/conversation-read-receipt";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +36,7 @@ export default async function ConversationPage({
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
+      <ConversationReadReceipt conversationId={conversation.id} />
       <div>
         <header className="sticky top-0 z-10 mb-3 flex items-center justify-between gap-3 border-b border-black/10 bg-[var(--system-gray-6)]/90 py-2 backdrop-blur-xl">
           <div className="flex min-w-0 items-center gap-3">
@@ -68,9 +70,17 @@ export default async function ConversationPage({
             messages.map((m) => {
               const assets = mediaByMessage[m.id] ?? [];
               if (m.contentType === "SYSTEM" || m.direction === "SYSTEM") {
+                const automated = m.channel === "AUTOMATION";
                 return (
                   <div key={m.id} className="py-1 text-center">
-                    <span className="inline-block rounded-full bg-stone-100 px-3 py-1 text-[11px] text-stone-500">
+                    <span
+                      className={`inline-block rounded-full px-3 py-1 text-[11px] ${
+                        automated
+                          ? "bg-blue-50 font-semibold text-blue-700"
+                          : "bg-stone-100 text-stone-500"
+                      }`}
+                    >
+                      {automated ? "⚙ Automatic · " : ""}
                       {m.text} · {format(m.createdAt, "HH:mm")}
                     </span>
                   </div>

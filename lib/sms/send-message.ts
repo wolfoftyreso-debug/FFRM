@@ -32,14 +32,14 @@ export interface SendMessageResult {
 
 export async function getOrCreateConversation(
   contactId: string | null,
-  peerNumber: string,
+  peerNumber: string | null,
 ): Promise<string> {
   const db = await getDb();
   const openMatch = and(
     contactId
       ? eq(conversations.contactId, contactId)
       : and(
-          eq(conversations.peerNumber, peerNumber),
+          eq(conversations.peerNumber, peerNumber!),
           sql`${conversations.contactId} is null`,
         ),
     eq(conversations.status, "OPEN"),

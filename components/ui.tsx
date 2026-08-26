@@ -22,6 +22,7 @@ const badgeStyles: Record<string, string> = {
   REMINDER: "bg-amber-50 text-amber-700 border-amber-200",
   DRAFT: "bg-amber-50 text-amber-800 border-amber-200",
   BIRTHDAY: "bg-pink-50 text-pink-700 border-pink-200",
+  "NAME DAY": "bg-cyan-50 text-cyan-700 border-cyan-200",
   // misc
   ENABLED: "bg-emerald-50 text-emerald-700 border-emerald-200",
   DISABLED: "bg-stone-100 text-stone-500 border-stone-200",

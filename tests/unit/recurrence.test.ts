@@ -55,6 +55,21 @@ describe("computeNextRun", () => {
     expect(next).toBeNull();
   });
 
+  it("NAME_DAY recurs yearly from contact month/day", () => {
+    const next = computeNextRun({
+      triggerType: "NAME_DAY",
+      triggerConfig: { time: "09:00" },
+      contact: {
+        birthday: null,
+        nameDayMonth: 6,
+        nameDayDay: 24,
+        timezone: TZ,
+      },
+      after: new Date("2026-01-01T00:00:00Z"),
+    });
+    expect(next?.toISOString()).toBe("2026-06-24T07:00:00.000Z");
+  });
+
   it("DATE in the past returns null (one-shot)", () => {
     const next = computeNextRun({
       triggerType: "DATE",

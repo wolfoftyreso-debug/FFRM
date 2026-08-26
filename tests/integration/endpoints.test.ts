@@ -16,6 +16,9 @@ import {
 import { POST as captionEndpoint } from "@/app/api/compose/image-caption/route";
 import { POST as smsEndpoint } from "@/app/api/webhooks/46elks/sms/route";
 import { GET as recordingEndpoint } from "@/app/api/calls/[id]/recording/route";
+import { POST as readEndpoint } from "@/app/api/conversations/[id]/read/route";
+import { getOrCreateConversation } from "@/lib/sms/send-message";
+import { listConversations } from "@/lib/queries";
 
 let db: Db;
 
@@ -124,5 +127,24 @@ describe("authenticated and event API endpoints", () => {
       .from(schema.calls)
       .where(eq(schema.calls.id, call.id));
     expect(stored.recordingUrl).toContain("api.46elks.com");
+  });
+
+  it("marks a conversation read and removes its unread inbox state", async () => {
+    const owner = await seedOwner(db);
+    const contact = await seedContact(db, owner.id);
+    const conversationId = await getOrCreateConversation(
+      contact.id,
+      contact.phoneNumber!,
+    );
+    await db
+      .update(schema.conversations)
+      .set({ lastMessageAt: new Date(), lastReadAt: null })
+      .where(eq(schema.conversations.id, conversationId));
+    expect((await listConversations())[0].unread).toBe(true);
+    const response = await readEndpoint(new Request("http://localhost"), {
+      params: Promise.resolve({ id: conversationId }),
+    });
+    expect(response.status).toBe(200);
+    expect((await listConversations())[0].unread).toBe(false);
   });
 });

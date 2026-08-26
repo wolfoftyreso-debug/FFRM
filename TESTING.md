@@ -73,10 +73,12 @@ is fixed and a default `next build` is verified.
 PGlite database:
 
 - desktop + mobile Apple-native navigation and active states
-- Messages search/filters, unified SMS/MMS/call thread, AI state controls,
-  attachment composer hydration
-- Contacts A–Z/sort/filter, hero actions, all typed history filters, facts,
-  reminders, work/profile save + reload, real screenshot upload and retry state
+- Messages search/All/Unread/AI/Closed filters, unread read-receipt semantics,
+  automatic-run marking, unified SMS/MMS/call/automation thread, AI state
+  controls and attachment composer hydration
+- Contacts A–Z/sort/filter, hero actions, birthday/name-day save + yearly
+  automation shortcuts, all typed history filters, facts, reminders,
+  work/profile save + reload, real screenshot upload and retry state
 - Phone Recents/Missed/Voicemail, thread links, audio UI, handled state
 - Calendar save, automation conditional form + incoming-SMS rule + toggle/run,
   Activity audit, owner/call-policy Settings persistence

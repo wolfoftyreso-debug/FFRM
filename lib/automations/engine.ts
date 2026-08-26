@@ -12,8 +12,13 @@ import { and, eq, isNull, lte, or, sql } from "drizzle-orm";
 import { buildContactContext, contactDisplayName } from "@/lib/ai/context";
 import { generateOutboundMessage, evaluateRelationship } from "@/lib/ai/generate";
 import { canSendAutomatically, shouldDraft } from "@/lib/ai/policy";
-import { sendMessage, notifyOwner } from "@/lib/sms/send-message";
+import {
+  getOrCreateConversation,
+  sendMessage,
+  notifyOwner,
+} from "@/lib/sms/send-message";
 import { logActivity } from "@/lib/activity";
+import { appendConversationEvent } from "@/lib/conversation-events";
 
 export interface ExecuteResult {
   executed: boolean;
@@ -142,6 +147,22 @@ export async function executeAutomation(args: {
       entityType: "automationExecution",
       entityId: executionId,
     });
+    if (contact) {
+      const conversationId = await getOrCreateConversation(
+        contact.id,
+        contact.phoneNumber,
+      );
+      await appendConversationEvent({
+        conversationId,
+        contactId: contact.id,
+        channel: "AUTOMATION",
+        eventKey: `automation:${executionId}:attempt:${priorRetryCount}`,
+        text: `${automation.name} · ${outcome.status}${
+          outcome.summary ? ` · ${outcome.summary}` : ""
+        }`,
+        sender: "AUTOMATION",
+      });
+    }
 
     return {
       executed: true,
@@ -171,6 +192,20 @@ export async function executeAutomation(args: {
       entityType: "automationExecution",
       entityId: executionId,
     });
+    if (contact) {
+      const conversationId = await getOrCreateConversation(
+        contact.id,
+        contact.phoneNumber,
+      );
+      await appendConversationEvent({
+        conversationId,
+        contactId: contact.id,
+        channel: "AUTOMATION",
+        eventKey: `automation:${executionId}:attempt:${priorRetryCount}`,
+        text: `${automation.name} · FAILED · ${errorText.slice(0, 160)}`,
+        sender: "AUTOMATION",
+      });
+    }
     return { executed: true, status: "FAILED", executionId, detail: errorText };
   }
 }

@@ -171,6 +171,9 @@ export const contacts = pgTable(
     phoneNumber: text("phone_number"),
     email: text("email"),
     birthday: date("birthday"),
+    /** Recurring Swedish name day (month/day; year-independent). */
+    nameDayMonth: integer("name_day_month"),
+    nameDayDay: integer("name_day_day"),
     relationshipType: text("relationship_type").notNull().default("FRIEND"),
     importance: text("importance").notNull().default("MEDIUM"),
     preferredLanguage: text("preferred_language"),
@@ -253,6 +256,8 @@ export const conversations = pgTable(
     lastContactMessageAt: timestamp("last_contact_message_at", {
       withTimezone: true,
     }),
+    /** Owner has read all activity up to this instant. */
+    lastReadAt: timestamp("last_read_at", { withTimezone: true }),
   },
   (t) => [
     index("conversations_contact_idx").on(t.contactId),
@@ -378,6 +383,7 @@ export const mediaAssets = pgTable(
 export type TriggerType =
   | "DATE"
   | "BIRTHDAY"
+  | "NAME_DAY"
   | "ANNIVERSARY"
   | "CRON"
   | "INTERVAL"

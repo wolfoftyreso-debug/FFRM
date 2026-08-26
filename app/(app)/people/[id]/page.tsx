@@ -119,6 +119,21 @@ export default async function ContactPage({
             </span>
           </a>
         ) : null}
+        {contact.birthday ? (
+          <div className="ios-hairline min-h-14 px-4 py-2.5">
+            <span className="text-xs text-[var(--secondary-label)]">birthday</span>
+            <span className="block text-[17px]">{contact.birthday}</span>
+          </div>
+        ) : null}
+        {contact.nameDayMonth && contact.nameDayDay ? (
+          <div className="ios-hairline min-h-14 px-4 py-2.5">
+            <span className="text-xs text-[var(--secondary-label)]">name day</span>
+            <span className="block text-[17px]">
+              {String(contact.nameDayDay).padStart(2, "0")}/
+              {String(contact.nameDayMonth).padStart(2, "0")}
+            </span>
+          </div>
+        ) : null}
       </InsetSection>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_320px]">
@@ -330,7 +345,7 @@ export default async function ContactPage({
 
           <Card>
             <h3 className="text-xs font-semibold uppercase tracking-wide text-stone-400">
-              Automations
+              Automatic actions
             </h3>
             {automations.length === 0 ? (
               <p className="mt-2 text-sm text-stone-400">None yet.</p>
@@ -353,8 +368,26 @@ export default async function ContactPage({
               href={`/automations/new?contactId=${contact.id}`}
               className="mt-3 inline-block text-sm font-medium text-stone-900 underline underline-offset-2"
             >
-              Add automation
+              Add custom automation
             </Link>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {contact.birthday ? (
+                <Link
+                  href={`/automations/new?contactId=${contact.id}&triggerType=BIRTHDAY`}
+                  className="flex min-h-9 items-center rounded-lg bg-pink-50 px-3 text-xs font-semibold text-pink-700"
+                >
+                  + Birthday automation
+                </Link>
+              ) : null}
+              {contact.nameDayMonth && contact.nameDayDay ? (
+                <Link
+                  href={`/automations/new?contactId=${contact.id}&triggerType=NAME_DAY`}
+                  className="flex min-h-9 items-center rounded-lg bg-cyan-50 px-3 text-xs font-semibold text-cyan-700"
+                >
+                  + Name-day automation
+                </Link>
+              ) : null}
+            </div>
           </Card>
 
           {conversations.length > 0 && (
