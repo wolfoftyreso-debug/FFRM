@@ -292,11 +292,10 @@ test.describe.serial("Personal Phone complete UI", () => {
     });
   });
 
-  test("professional contact card, typed history and all save forms persist", {
-    timeout: 90_000,
-  }, async ({
+  test("professional contact card, typed history and all save forms persist", async ({
     page,
   }) => {
+    test.setTimeout(90_000);
     await page.goto("/people");
     await expect(page.getByRole("heading", { name: "Contacts" })).toBeVisible();
     await page.setViewportSize({ width: 390, height: 844 });
@@ -487,11 +486,10 @@ test.describe.serial("Personal Phone complete UI", () => {
     });
   });
 
-  test("Phone, Calendar SMS jobs, Activity and Settings are operational", {
-    timeout: 90_000,
-  }, async ({
+  test("Phone, Calendar SMS jobs, Activity and Settings are operational", async ({
     page,
   }) => {
+    test.setTimeout(90_000);
     await page.goto("/phone");
     for (const tab of ["Recents", "Missed", "Voicemail", "Callback"]) {
       await page.getByRole("tab", { name: tab, exact: true }).click();

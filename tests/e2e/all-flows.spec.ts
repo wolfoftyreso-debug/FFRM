@@ -82,11 +82,10 @@ test.describe("every destination and primary control", () => {
     }
   });
 
-  test("contact, share, public card, phone, tickets and assistant stay usable", {
-    timeout: 60_000,
-  }, async ({
+  test("contact, share, public card, phone, tickets and assistant stay usable", async ({
     page,
   }) => {
+    test.setTimeout(60_000);
     await page.goto("/people");
     if (!(await page.getByText("Johan Testsson").first().isVisible().catch(() => false))) {
       await page.goto("/people/new");
