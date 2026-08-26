@@ -31,7 +31,7 @@ export function QuoteActions({
   }
 
   return (
-    <div className="ios-safe-bottom sticky bottom-16 space-y-3 rounded-2xl bg-white p-3 shadow-lg md:bottom-2">
+    <div className="ios-safe-bottom sticky bottom-32 space-y-3 rounded-2xl bg-white p-3 shadow-lg md:bottom-2">
       <div className="grid grid-cols-3 gap-2">
         <form action={reviewInsight.bind(null, insightId, "HANDLED")}>
           <button className="min-h-12 w-full rounded-xl bg-[var(--system-green)] text-sm font-semibold text-white">

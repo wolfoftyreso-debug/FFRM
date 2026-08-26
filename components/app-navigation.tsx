@@ -93,7 +93,7 @@ export function AppNavigation({
 
       <nav
         aria-label="Tab bar"
-        className="ios-safe-bottom fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-black/10 bg-white/90 px-2 pt-1 backdrop-blur-xl md:hidden"
+        className="ios-safe-bottom fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-black/10 bg-white/90 px-2 pt-2 backdrop-blur-xl md:hidden"
       >
         {[
           ...primary,
@@ -113,16 +113,16 @@ export function AppNavigation({
               key={item.href}
               href={item.href}
               aria-current={selected ? "page" : undefined}
-              className={`relative flex min-h-14 flex-col items-center justify-center gap-0.5 text-[10px] font-medium ${
+              className={`relative flex min-h-28 flex-col items-center justify-center gap-1 text-xl font-medium ${
                 selected
                   ? "text-[var(--system-blue)]"
                   : "text-[var(--system-gray)]"
               }`}
             >
-              <item.icon className="h-6 w-6" strokeWidth={selected ? 2.5 : 2} />
+              <item.icon className="h-12 w-12" strokeWidth={selected ? 2.5 : 2} />
               {item.label}
               {count > 0 ? (
-                <span className="absolute right-[25%] top-0 rounded-full bg-[var(--system-red)] px-1.5 text-[10px] font-bold text-white">
+                <span className="absolute right-[15%] top-1 rounded-full bg-[var(--system-red)] px-2 py-0.5 text-base font-bold text-white">
                   {count}
                 </span>
               ) : null}

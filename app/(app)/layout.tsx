@@ -31,7 +31,7 @@ export default async function AppLayout({
   return (
     <div className="flex min-h-screen">
       <AppNavigation messageBadge={messageBadge} phoneBadge={phoneBadge} />
-      <div className="min-w-0 flex-1 pb-20 md:pb-0">
+      <div className="min-w-0 flex-1 pb-40 md:pb-0">
         <main className="mx-auto max-w-5xl px-4 py-5 md:px-8 md:py-8">
           <div className="mb-2 flex items-start justify-end">
             <NotificationBell count={notificationCount} />

@@ -233,7 +233,7 @@ export default async function ConversationPage({
             contactId={contact?.id ?? null}
           />
         ) : (
-          <div className="ios-safe-bottom sticky bottom-16 z-20 mt-3 rounded-2xl border border-black/10 bg-white/95 p-4 text-center shadow-lg md:bottom-2">
+          <div className="ios-safe-bottom sticky bottom-32 z-20 mt-3 rounded-2xl border border-black/10 bg-white/95 p-4 text-center shadow-lg md:bottom-2">
             <p className="text-sm text-[var(--secondary-label)]">
               This conversation is closed. Reopen it before sending a message.
             </p>

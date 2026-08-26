@@ -170,7 +170,7 @@ export function MessageComposer({
   return (
     <form
       action={submit}
-      className="ios-safe-bottom sticky bottom-16 z-20 -mx-1 mt-3 rounded-2xl border border-black/10 bg-white/90 p-2 shadow-lg backdrop-blur-xl md:bottom-2"
+      className="ios-safe-bottom sticky bottom-32 z-20 -mx-1 mt-3 rounded-2xl border border-black/10 bg-white/90 p-2 shadow-lg backdrop-blur-xl md:bottom-2"
     >
       {preview ? (
         <div className="mb-2 flex items-start gap-2">
