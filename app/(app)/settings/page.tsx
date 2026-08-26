@@ -21,6 +21,8 @@ import { getProviderStatus } from "@/lib/providers/config";
 import { ConfirmForm } from "@/components/confirm-form";
 import { AutosaveField } from "@/components/autosave-field";
 import { VoiceCloneRecorder } from "@/components/voice-clone-recorder";
+import { SegmentedLinks } from "@/components/apple-ui";
+import { PendingActionButton } from "@/components/pending-action-button";
 
 const DISPOSITIONS = [
   { value: "RING_THROUGH", label: "Ring through to my phone" },
@@ -41,7 +43,17 @@ function healthValue(value: string | undefined): string {
   }
 }
 
-export default async function SettingsPage() {
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ section?: string }>;
+}) {
+  const requestedSection = (await searchParams).section ?? "integrations";
+  const section = ["profile", "integrations", "calls", "diagnostics"].includes(
+    requestedSection,
+  )
+    ? requestedSection
+    : "integrations";
   const [owner, health, state, aiCalls, blockedNumbers, providers] =
     await Promise.all([
     getOwner(),
@@ -57,8 +69,27 @@ export default async function SettingsPage() {
   return (
     <>
       <PageHeader title="Settings" />
+      <div className="mb-6">
+        <SegmentedLinks
+          active={section}
+          items={[
+            { id: "profile", label: "Profile", href: "/settings?section=profile" },
+            {
+              id: "integrations",
+              label: "Integrations",
+              href: "/settings?section=integrations",
+            },
+            { id: "calls", label: "Calls", href: "/settings?section=calls" },
+            {
+              id: "diagnostics",
+              label: "Diagnostics",
+              href: "/settings?section=diagnostics",
+            },
+          ]}
+        />
+      </div>
       <div className="space-y-6">
-        <Card>
+        <Card className={section === "profile" ? "" : "hidden"}>
           <h2 className="mb-4 text-sm font-semibold text-stone-700">
             Your profile and voice
           </h2>
@@ -81,7 +112,7 @@ export default async function SettingsPage() {
           )}
         </Card>
 
-        {blockedNumbers.length > 0 ? (
+        {section === "calls" && blockedNumbers.length > 0 ? (
           <Card>
             <h2 className="mb-1 text-sm font-semibold text-stone-700">
               Blocked numbers
@@ -112,7 +143,7 @@ export default async function SettingsPage() {
           </Card>
         ) : null}
 
-        <Card>
+        <Card className={section === "integrations" ? "" : "hidden"}>
           <div className="flex items-start justify-between gap-3">
             <div>
               <h2 className="text-sm font-semibold text-stone-700">46elks</h2>
@@ -149,9 +180,9 @@ export default async function SettingsPage() {
           {elks ? (
             <div className="mt-2 flex flex-wrap gap-3">
               <form action={testElksSettings}>
-                <button className="min-h-11 text-sm font-semibold text-[var(--system-blue)]">
+                <PendingActionButton pendingText="Testing 46elks…">
                   Test 46elks connection
-                </button>
+                </PendingActionButton>
               </form>
               <ConfirmForm
                 action={removeProviderConfig.bind(null, "46elks")}
@@ -163,7 +194,7 @@ export default async function SettingsPage() {
           <ProviderTestDetail provider={elks} />
         </Card>
 
-        <Card>
+        <Card className={section === "integrations" ? "" : "hidden"}>
           <div className="flex items-start justify-between gap-3">
             <div>
               <h2 className="text-sm font-semibold text-stone-700">
@@ -227,14 +258,14 @@ export default async function SettingsPage() {
           {eleven ? (
             <div className="mt-2 flex flex-wrap gap-3">
               <form action={testElevenLabsSettings}>
-                <button className="min-h-11 text-sm font-semibold text-[var(--system-blue)]">
+                <PendingActionButton pendingText="Testing ElevenLabs…">
                   Test ElevenLabs connection
-                </button>
+                </PendingActionButton>
               </form>
               <form action={generateElevenLabsGreetings}>
-                <button className="min-h-11 text-sm font-semibold text-[var(--system-blue)]">
+                <PendingActionButton pendingText="Generating greetings…">
                   Generate both greetings
-                </button>
+                </PendingActionButton>
               </form>
               <ConfirmForm
                 action={removeProviderConfig.bind(null, "elevenlabs")}
@@ -260,7 +291,7 @@ export default async function SettingsPage() {
           />
         </Card>
 
-        <Card>
+        <Card className={section === "calls" ? "" : "hidden"}>
           <h2 className="mb-1 text-sm font-semibold text-stone-700">
             Call policy
           </h2>
@@ -344,7 +375,7 @@ export default async function SettingsPage() {
           ) : null}
         </Card>
 
-        <Card>
+        <Card className={section === "diagnostics" ? "" : "hidden"}>
           <h2 className="mb-3 text-sm font-semibold text-stone-700">
             System health
           </h2>
@@ -380,7 +411,7 @@ export default async function SettingsPage() {
           </dl>
         </Card>
 
-        <Card>
+        <Card className={section === "diagnostics" ? "" : "hidden"}>
           <h2 className="mb-3 text-sm font-semibold text-stone-700">
             AI models
           </h2>
@@ -419,7 +450,10 @@ export default async function SettingsPage() {
           )}
         </Card>
 
-        <form action={logout}>
+        <form
+          action={logout}
+          className={section === "profile" ? "" : "hidden"}
+        >
           <button className="text-sm text-stone-400 hover:text-stone-600">
             Sign out
           </button>
@@ -469,7 +503,22 @@ function ProviderTestDetail({
       }`}
     >
       Tested {format(provider.lastTestAt, "d MMM HH:mm")}
-      {provider.lastTestError ? ` · ${provider.lastTestError}` : " · OK"}
+      {provider.lastTestError
+        ? ` · ${friendlyProviderError(provider.lastTestError)}`
+        : " · OK"}
     </p>
   );
+}
+
+function friendlyProviderError(error: string) {
+  if (/\b401\b|authentication|unauthorized/i.test(error)) {
+    return "Credentials were rejected. Re-enter the username/key and password.";
+  }
+  if (/\b403\b|forbidden/i.test(error)) {
+    return "This account does not have access to the requested feature.";
+  }
+  if (/not configured/i.test(error)) {
+    return "Complete the required fields above.";
+  }
+  return "Connection failed. Check the provider settings and try again.";
 }

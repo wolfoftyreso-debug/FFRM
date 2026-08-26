@@ -105,10 +105,10 @@ export default async function AutomationDetailPage({
                         <p className="text-red-600">Error: {e.error}</p>
                       ) : null}
                       {e.decision != null ? (
-                        <p>Decision: {JSON.stringify(e.decision)}</p>
+                        <ExecutionValue label="Decision" value={e.decision} />
                       ) : null}
                       {e.result != null ? (
-                        <p>Result: {JSON.stringify(e.result)}</p>
+                        <ExecutionValue label="Result" value={e.result} />
                       ) : null}
                       {e.aiModel ? (
                         <p>
@@ -125,5 +125,43 @@ export default async function AutomationDetailPage({
         </section>
       </div>
     </>
+  );
+}
+
+function ExecutionValue({
+  label,
+  value,
+}: {
+  label: string;
+  value: unknown;
+}) {
+  if (!value || typeof value !== "object") {
+    return (
+      <p>
+        <span className="font-semibold">{label}:</span> {String(value)}
+      </p>
+    );
+  }
+  const entries = Object.entries(value as Record<string, unknown>).filter(
+    ([key, item]) =>
+      !/id$/i.test(key) &&
+      item !== null &&
+      ["string", "number", "boolean"].includes(typeof item),
+  );
+  if (entries.length === 0) return null;
+  return (
+    <div>
+      <p className="font-semibold">{label}</p>
+      <dl className="mt-0.5 grid gap-x-3 gap-y-0.5 sm:grid-cols-[140px_1fr]">
+        {entries.map(([key, item]) => (
+          <div key={key} className="contents">
+            <dt className="capitalize text-stone-400">
+              {key.replaceAll("_", " ")}
+            </dt>
+            <dd className="text-stone-600">{String(item)}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
   );
 }

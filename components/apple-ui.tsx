@@ -125,7 +125,7 @@ export function SegmentedLinks({
           href={item.href}
           role="tab"
           aria-selected={active === item.id}
-          className={`flex min-h-8 flex-1 items-center justify-center rounded-md px-2 text-[13px] font-medium transition ${
+            className={`flex min-h-11 flex-1 items-center justify-center rounded-md px-2 text-[13px] font-medium transition ${
             active === item.id
               ? "bg-white text-black shadow-sm"
               : "text-[var(--secondary-label)]"

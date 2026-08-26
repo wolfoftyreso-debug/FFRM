@@ -75,7 +75,7 @@ export function AutosaveField({
     },
     onBlur: () => void save(),
     className:
-      "mt-1 min-h-11 w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-[15px] focus:outline-none",
+      "mt-1 min-h-11 w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-[15px] focus-visible:ring-2 focus-visible:ring-[var(--system-blue)]",
     "aria-invalid": status === "error",
   };
 

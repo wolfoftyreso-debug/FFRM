@@ -184,6 +184,16 @@ test.describe.serial("Personal Phone complete UI", () => {
     await expect(page.getByRole("button", { name: "AI write text" })).toBeVisible();
     await page.getByRole("button", { name: "Remove" }).click();
     await expect(page.getByRole("button", { name: /Send SMS/ })).toBeVisible();
+    const conversationUrl = page.url();
+    await page.getByRole("button", { name: "Close", exact: true }).click();
+    await page.waitForURL(/\/messages$/);
+    await page.goto(conversationUrl);
+    await expect(
+      page.getByText("This conversation is closed. Reopen it before sending a message."),
+    ).toBeVisible();
+    await expect(page.getByPlaceholder(/Message/)).toHaveCount(0);
+    await page.getByRole("button", { name: "Reopen" }).click();
+    await expect(page.getByPlaceholder(/Message/)).toBeVisible();
 
     await page.screenshot({
       path: `${ARTIFACTS}/apple-messages-thread.png`,
@@ -385,8 +395,10 @@ test.describe.serial("Personal Phone complete UI", () => {
     await expect(page.getByText(name).or(page.getByText(/Automation/)).first()).toBeVisible();
 
     await page.goto("/settings");
+    await page.getByRole("tab", { name: "Profile" }).click();
     await autosaveInput(page, "name", "Owner");
     await autosaveInput(page, "preferredLanguage", "sv");
+    await page.getByRole("tab", { name: "Calls" }).click();
     await autosaveSelect(page, "knownContacts", "RING_THROUGH");
     await autosaveSelect(page, "unknownCallers", "VOICEMAIL");
     await autosaveInput(page, "nightStart", "22:00");
@@ -395,8 +407,10 @@ test.describe.serial("Personal Phone complete UI", () => {
     await expect(page.locator('select[name="unknownCallers"]')).toHaveValue(
       "VOICEMAIL",
     );
+    await page.getByRole("tab", { name: "Diagnostics" }).click();
     await expect(page.getByText("System health")).toBeVisible();
     await expect(page.getByText("AI models")).toBeVisible();
+    await page.getByRole("tab", { name: "Integrations" }).click();
     await autosaveInput(page, "username", "u_e2e");
     await autosaveInput(page, "password", "p_e2e");
     await autosaveInput(page, "fromNumber", "+46701112233");
@@ -434,6 +448,7 @@ test.describe.serial("Personal Phone complete UI", () => {
         path: `${ARTIFACTS}/apple-provider-settings.png`,
         caret: "initial",
       });
+    await page.getByRole("tab", { name: "Profile" }).click();
     await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
     await page.screenshot({
       path: `${ARTIFACTS}/apple-settings.png`,

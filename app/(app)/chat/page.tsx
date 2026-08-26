@@ -11,12 +11,12 @@ import {
   dismissReminder,
   reviewCommitment,
   reviewFact,
-  sendAssistantMessage,
 } from "@/app/actions";
 import { Badge, Card, PageHeader } from "@/components/ui";
+import { AssistantComposer } from "@/components/assistant-composer";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Chat" };
+export const metadata = { title: "Assistant" };
 
 export default async function ChatPage() {
   const [history, data, drafts] = await Promise.all([
@@ -37,7 +37,7 @@ export default async function ChatPage() {
   return (
     <>
       <PageHeader
-        title="Chat"
+        title="Assistant"
         subtitle="Your assistant — ask about people, calls, birthdays, promises"
       />
 
@@ -216,20 +216,7 @@ export default async function ChatPage() {
         )}
       </Card>
 
-      <form action={sendAssistantMessage} className="mt-4">
-        <textarea
-          name="text"
-          rows={2}
-          required
-          placeholder="Ask your assistant…"
-          className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-stone-500 focus:outline-none"
-        />
-        <div className="mt-2 flex justify-end">
-          <button className="rounded-md bg-stone-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-stone-700">
-            Send
-          </button>
-        </div>
-      </form>
+      <AssistantComposer />
     </>
   );
 }

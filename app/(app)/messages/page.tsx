@@ -19,6 +19,9 @@ export default async function MessagesPage({
   const params = await searchParams;
   const q = (params.q ?? "").trim().toLowerCase();
   const view = params.view ?? "all";
+  const searchSuffix = params.q
+    ? `&q=${encodeURIComponent(params.q)}`
+    : "";
   let conversations = await listConversations();
 
   conversations.sort((a, b) => {
@@ -78,15 +81,31 @@ export default async function MessagesPage({
         <SegmentedLinks
           active={view}
           items={[
-            { id: "all", label: "All", href: "/messages?view=all" },
+            {
+              id: "all",
+              label: "All",
+              href: `/messages?view=all${searchSuffix}`,
+            },
             {
               id: "needs-you",
               label: "Needs You",
-              href: "/messages?view=needs-you",
+              href: `/messages?view=needs-you${searchSuffix}`,
             },
-            { id: "unread", label: "Unread", href: "/messages?view=unread" },
-            { id: "ai", label: "AI", href: "/messages?view=ai" },
-            { id: "closed", label: "Closed", href: "/messages?view=closed" },
+            {
+              id: "unread",
+              label: "Unread",
+              href: `/messages?view=unread${searchSuffix}`,
+            },
+            {
+              id: "ai",
+              label: "AI",
+              href: `/messages?view=ai${searchSuffix}`,
+            },
+            {
+              id: "closed",
+              label: "Closed",
+              href: `/messages?view=closed${searchSuffix}`,
+            },
           ]}
         />
       </div>
@@ -94,9 +113,25 @@ export default async function MessagesPage({
       {conversations.length === 0 ? (
         <div className="ios-inset-group px-6 py-12 text-center">
           <MessageCircleIcon />
-          <p className="mt-3 text-lg font-semibold">No conversations</p>
+          <p className="mt-3 text-lg font-semibold">
+            {q
+              ? "No search results"
+              : view === "needs-you"
+                ? "Nothing needs you"
+                : view === "unread"
+                  ? "You’re all caught up"
+                  : view === "ai"
+                    ? "No AI-handled conversations"
+                    : view === "closed"
+                      ? "No closed conversations"
+                      : "No conversations"}
+          </p>
           <p className="mt-1 text-sm text-[var(--secondary-label)]">
-            Messages to your 46elks number will appear here.
+            {q
+              ? `No conversation matches “${params.q}”.`
+              : view === "all"
+                ? "Messages to your 46elks number will appear here."
+                : "Conversations appear here when they match this filter."}
           </p>
         </div>
       ) : (

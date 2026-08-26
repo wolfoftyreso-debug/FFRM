@@ -20,6 +20,7 @@ import {
   InsetSection,
   SegmentedLinks,
 } from "@/components/apple-ui";
+import { ConfirmForm } from "@/components/confirm-form";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Phone" };
@@ -180,11 +181,19 @@ export default async function PhonePage({
                       >
                         Create contact
                       </Link>
-                      <form action={(isBlocked ? unblockNumber : blockNumber).bind(null, number)}>
-                        <button className="rounded-lg px-3 text-sm font-medium text-[var(--system-red)]">
-                          {isBlocked ? "Unblock" : "Block"}
-                        </button>
-                      </form>
+                      {isBlocked ? (
+                        <form action={unblockNumber.bind(null, number)}>
+                          <button className="rounded-lg px-3 text-sm font-medium text-[var(--system-blue)]">
+                            Unblock
+                          </button>
+                        </form>
+                      ) : (
+                        <ConfirmForm
+                          action={blockNumber.bind(null, number)}
+                          label="Block"
+                          confirmText={`Block ${number}? Incoming calls will be rejected.`}
+                        />
+                      )}
                     </>
                   )}
                   {call.aiRequiresUser ? (

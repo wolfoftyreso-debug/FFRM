@@ -31,6 +31,7 @@ export default async function PeoplePage({
   const q = params.q ?? "";
   const filter = params.filter ?? "all";
   const sort = params.sort ?? "name";
+  const searchSuffix = q ? `&q=${encodeURIComponent(q)}` : "";
   const contacts = await searchContacts(q, filter);
   contacts.sort((a, b) => {
     if (sort === "recent") {
@@ -103,12 +104,12 @@ export default async function PeoplePage({
         <SegmentedLinks
           active={sort}
           items={[
-            { id: "name", label: "Name", href: `/people?filter=${filter}&sort=name` },
-            { id: "recent", label: "Recent", href: `/people?filter=${filter}&sort=recent` },
+            { id: "name", label: "Name", href: `/people?filter=${filter}&sort=name${searchSuffix}` },
+            { id: "recent", label: "Recent", href: `/people?filter=${filter}&sort=recent${searchSuffix}` },
             {
               id: "importance",
               label: "Priority",
-              href: `/people?filter=${filter}&sort=importance`,
+              href: `/people?filter=${filter}&sort=importance${searchSuffix}`,
             },
           ]}
         />

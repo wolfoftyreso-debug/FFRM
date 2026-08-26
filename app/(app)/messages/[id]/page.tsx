@@ -14,6 +14,8 @@ import { AUTONOMY_LABELS } from "@/lib/ai/policy";
 import { MessageComposer } from "@/components/message-composer";
 import { ContactAvatar } from "@/components/apple-ui";
 import { ConversationReadReceipt } from "@/components/conversation-read-receipt";
+import { ChevronLeft } from "lucide-react";
+import { PendingActionButton } from "@/components/pending-action-button";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +42,13 @@ export default async function ConversationPage({
       <div>
         <header className="sticky top-0 z-10 mb-3 flex items-center justify-between gap-3 border-b border-black/10 bg-[var(--system-gray-6)]/90 py-2 backdrop-blur-xl">
           <div className="flex min-w-0 items-center gap-3">
+            <Link
+              href="/messages"
+              aria-label="Back to Messages"
+              className="flex h-11 w-8 items-center justify-start text-[var(--system-blue)] md:hidden"
+            >
+              <ChevronLeft className="h-6 w-6" />
+            </Link>
             <ContactAvatar name={title} />
             <div className="min-w-0">
             <h1 className="truncate text-[17px] font-semibold">{title}</h1>
@@ -191,45 +200,53 @@ export default async function ConversationPage({
         <div className="mt-4 flex flex-wrap gap-2">
           {conversation.aiControlState !== "USER" && (
             <form action={takeOverConversation.bind(null, conversation.id)}>
-              <button className="rounded-md bg-stone-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-stone-700">
+              <PendingActionButton variant="filled" pendingText="Taking over…">
                 Take over
-              </button>
+              </PendingActionButton>
             </form>
           )}
           {conversation.aiControlState !== "AI" && (
             <form action={returnConversationToAi.bind(null, conversation.id)}>
-              <button className="rounded-md border border-stone-300 px-3 py-1.5 text-sm text-stone-700 hover:bg-stone-50">
+              <PendingActionButton variant="tinted" pendingText="Returning…">
                 Return to AI
-              </button>
+              </PendingActionButton>
             </form>
           )}
           {conversation.aiControlState !== "PAUSED" && (
             <form action={pauseConversation.bind(null, conversation.id)}>
-              <button className="rounded-md border border-stone-300 px-3 py-1.5 text-sm text-stone-700 hover:bg-stone-50">
+              <PendingActionButton variant="plain" pendingText="Pausing…">
                 Pause AI
-              </button>
+              </PendingActionButton>
             </form>
           )}
           {conversation.status === "OPEN" && (
             <form action={closeConversation.bind(null, conversation.id)}>
-              <button className="rounded-md px-3 py-1.5 text-sm text-stone-400 hover:text-stone-600">
+              <PendingActionButton pendingText="Closing…">
                 Close
-              </button>
+              </PendingActionButton>
             </form>
           )}
           {conversation.status === "CLOSED" && (
             <form action={reopenConversation.bind(null, conversation.id)}>
-              <button className="rounded-lg px-3 text-sm font-medium text-[var(--system-blue)]">
+              <PendingActionButton variant="filled" pendingText="Reopening…">
                 Reopen
-              </button>
+              </PendingActionButton>
             </form>
           )}
         </div>
 
-        <MessageComposer
-          conversationId={conversation.id}
-          contactId={contact?.id ?? null}
-        />
+        {conversation.status === "OPEN" ? (
+          <MessageComposer
+            conversationId={conversation.id}
+            contactId={contact?.id ?? null}
+          />
+        ) : (
+          <div className="ios-safe-bottom sticky bottom-16 z-20 mt-3 rounded-2xl border border-black/10 bg-white/95 p-4 text-center shadow-lg md:bottom-2">
+            <p className="text-sm text-[var(--secondary-label)]">
+              This conversation is closed. Reopen it before sending a message.
+            </p>
+          </div>
+        )}
       </div>
 
       <aside className="space-y-4">

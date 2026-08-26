@@ -106,12 +106,7 @@ export async function listConversations(): Promise<ConversationListItem[]> {
       aiControlState: row.conversation.aiControlState,
       status: row.conversation.status,
       lastMessageAt: row.conversation.lastMessageAt,
-      lastMessageText:
-        lastMessage[0]?.text ||
-        (lastMessage[0]?.contentType === "IMAGE" ||
-        lastMessage[0]?.contentType === "TEXT_AND_IMAGE"
-          ? "📷 Photo"
-          : null),
+      lastMessageText: humanizeConversationPreview(lastMessage[0]),
       escalationReason: row.conversation.escalationReason,
       unread:
         !!row.conversation.lastMessageAt &&
@@ -125,6 +120,44 @@ export async function listConversations(): Promise<ConversationListItem[]> {
     });
   }
   return result;
+}
+
+function humanizeConversationPreview(
+  message:
+    | {
+        text: string;
+        contentType: string;
+        sender: string | null;
+        channel: string;
+      }
+    | undefined,
+): string | null {
+  if (!message) return null;
+  if (message.channel === "AUTOMATION") {
+    const [name, status] = message.text.split(" · ");
+    const result =
+      status === "COMPLETED"
+        ? "completed"
+        : status === "FAILED"
+          ? "needs attention"
+          : status?.toLowerCase() ?? "updated";
+    return `${name || "Automation"} ${result}`;
+  }
+  if (message.channel === "VOICE_CALL") return message.text || "Phone call";
+  if (message.channel === "VOICEMAIL") return message.text || "Voicemail";
+  if (message.contentType === "SYSTEM" && message.text.startsWith("AI:")) {
+    return message.text.includes("ESCALATE")
+      ? "AI escalated a message for you"
+      : "AI handled a message";
+  }
+  if (
+    !message.text &&
+    (message.contentType === "IMAGE" ||
+      message.contentType === "TEXT_AND_IMAGE")
+  ) {
+    return "📷 Photo";
+  }
+  return message.text || null;
 }
 
 export async function getConversationDetail(id: string) {
