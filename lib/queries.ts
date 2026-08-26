@@ -12,7 +12,7 @@ import {
   users,
   type Contact,
 } from "@/lib/db/schema";
-import { and, asc, desc, eq, gte, inArray, isNotNull, lte, ne, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, isNotNull, lte, ne, or, sql } from "drizzle-orm";
 import { nextYearlyOccurrence } from "@/lib/automations/recurrence";
 import { defaultTimezone } from "@/lib/env";
 
@@ -539,30 +539,3 @@ export async function searchContacts(query: string, filter?: string) {
   return result;
 }
 
-/** Ensure a message can be linked back to conversation. */
-export async function getMessagesForConversation(conversationId: string) {
-  const db = await getDb();
-  return db
-    .select()
-    .from(messages)
-    .where(eq(messages.conversationId, conversationId))
-    .orderBy(asc(messages.createdAt));
-}
-
-export async function listArchivedContacts() {
-  const db = await getDb();
-  return db
-    .select()
-    .from(contacts)
-    .where(isNotNull(contacts.archivedAt))
-    .orderBy(asc(contacts.firstName));
-}
-
-export async function getExecutionsByIds(ids: string[]) {
-  if (ids.length === 0) return [];
-  const db = await getDb();
-  return db
-    .select()
-    .from(automationExecutions)
-    .where(inArray(automationExecutions.id, ids));
-}
