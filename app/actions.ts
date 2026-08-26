@@ -1537,6 +1537,18 @@ export async function testElksSettings(): Promise<void> {
   revalidatePath("/settings");
 }
 
+export async function testTwilioSettings(): Promise<void> {
+  const { testTwilioConnection } = await import("@/lib/providers/twilio");
+  const { updateProviderTestStatus } = await import("@/lib/providers/config");
+  try {
+    await testTwilioConnection();
+    await updateProviderTestStatus("twilio", true);
+  } catch (error) {
+    await updateProviderTestStatus("twilio", false, error);
+  }
+  revalidatePath("/settings");
+}
+
 export async function testElevenLabsSettings(): Promise<void> {
   const { listElevenLabsVoices } = await import(
     "@/lib/providers/elevenlabs"
@@ -1674,7 +1686,7 @@ export async function generateReceptionistPrompts(): Promise<void> {
 }
 
 export async function removeProviderConfig(
-  provider: "46elks" | "elevenlabs",
+  provider: "46elks" | "twilio" | "elevenlabs",
 ): Promise<void> {
   const db = await getDb();
   const { audioAssets, providerSettings } = await import("@/lib/db/schema");
@@ -1686,6 +1698,15 @@ export async function removeProviderConfig(
       await tx.delete(audioAssets).where(eq(audioAssets.provider, provider));
     }
   });
+  if (provider === "twilio") {
+    const {
+      getActiveMessagingProvider,
+      setActiveMessagingProvider,
+    } = await import("@/lib/providers/selection");
+    if ((await getActiveMessagingProvider()) === "twilio") {
+      await setActiveMessagingProvider("46elks");
+    }
+  }
   await logActivity({
     actor: "USER",
     action: "PROVIDER_REMOVED",

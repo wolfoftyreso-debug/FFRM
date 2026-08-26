@@ -17,7 +17,9 @@ const inputSchema = z.object({
     "owner",
     "callPolicy",
     "receptionist",
+    "messaging",
     "46elks",
+    "twilio",
     "elevenlabs",
   ]),
   field: z.string().min(1).max(64),
@@ -41,8 +43,12 @@ export async function POST(req: Request) {
       await saveCallPolicyField(input.field, input.value);
     else if (input.section === "receptionist")
       await saveReceptionistField(input.field, input.value);
+    else if (input.section === "messaging")
+      await saveMessagingField(input.field, input.value);
     else if (input.section === "46elks")
       await saveElksField(input.field, input.value);
+    else if (input.section === "twilio")
+      await saveTwilioField(input.field, input.value);
     else await saveElevenField(input.field, input.value);
     return NextResponse.json({ ok: true, savedAt: new Date().toISOString() });
   } catch (error) {
@@ -51,6 +57,20 @@ export async function POST(req: Request) {
       { status: 400 },
     );
   }
+}
+
+async function saveMessagingField(field: string, value: string) {
+  if (field !== "provider" || !["46elks", "twilio"].includes(value)) {
+    throw new Error("Unsupported messaging provider");
+  }
+  if (value === "twilio") {
+    const { getTwilioCredentials } = await import("@/lib/providers/config");
+    await getTwilioCredentials();
+  }
+  const { setActiveMessagingProvider } = await import(
+    "@/lib/providers/selection"
+  );
+  await setActiveMessagingProvider(value as "46elks" | "twilio");
 }
 
 async function saveReceptionistField(field: string, value: string) {
@@ -261,6 +281,38 @@ async function saveElksField(field: string, value: string) {
     secrets[field] = value;
   }
   await saveProviderConfig("46elks", secrets, publicConfig);
+}
+
+async function saveTwilioField(field: string, value: string) {
+  const allowed = new Set([
+    "accountSid",
+    "apiKeySid",
+    "apiKeySecret",
+    "authToken",
+    "fromNumber",
+  ]);
+  if (!allowed.has(field)) throw new Error("Unsupported Twilio field");
+  const current = (await getProviderStatus()).twilio?.publicConfig ?? {};
+  const publicConfig = { ...current };
+  const secrets: Record<string, string> = {};
+  if (field === "accountSid") {
+    const sid = value.trim();
+    if (!/^AC[a-fA-F0-9]{32}$/.test(sid)) {
+      throw new Error("Use a valid Twilio Account SID");
+    }
+    publicConfig.accountSid = sid;
+  } else if (field === "fromNumber") {
+    const phone = normalizePhoneNumber(value);
+    if (!phone) throw new Error("Use a valid E.164 phone number");
+    publicConfig.fromNumber = phone;
+  } else {
+    if (!value.trim()) return;
+    if (field === "apiKeySid" && !/^SK[a-fA-F0-9]{32}$/.test(value.trim())) {
+      throw new Error("Use a valid Twilio API Key SID");
+    }
+    secrets[field] = value.trim();
+  }
+  await saveProviderConfig("twilio", secrets, publicConfig);
 }
 
 async function saveElevenField(field: string, value: string) {

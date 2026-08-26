@@ -7,7 +7,9 @@ type Section =
   | "owner"
   | "callPolicy"
   | "receptionist"
+  | "messaging"
   | "46elks"
+  | "twilio"
   | "elevenlabs";
 
 export function AutosaveField({

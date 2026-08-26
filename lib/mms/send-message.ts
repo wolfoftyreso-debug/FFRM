@@ -2,8 +2,9 @@ import { eq, sql } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { contacts, conversations, mediaAssets, messages } from "@/lib/db/schema";
 import { isE164 } from "@/lib/phone";
-import { getElksCredentials } from "@/lib/providers/config";
 import { getMessagingProvider } from "@/lib/sms/provider";
+import { getActiveMessagingSender } from "@/lib/providers/selection";
+import { appUrl, optionalEnv } from "@/lib/env";
 import { getOrCreateConversation } from "@/lib/sms/send-message";
 import { prepareMmsImage, MAX_MMS_PAYLOAD_BYTES } from "@/lib/media/image";
 import { logActivity } from "@/lib/activity";
@@ -33,7 +34,8 @@ export async function sendMediaMessage(input: {
   const conversationId =
     input.conversationId ??
     (await getOrCreateConversation(input.contactId ?? null, input.to));
-  const { fromNumber: from } = await getElksCredentials();
+  const senderConfig = await getActiveMessagingSender();
+  const from = senderConfig.fromNumber;
 
   // Persist Message + sanitized media before the provider side effect.
   const [message] = await db
@@ -44,7 +46,7 @@ export async function sendMediaMessage(input: {
       direction: "OUTBOUND",
       channel: "MMS",
       contentType: input.text.trim() ? "TEXT_AND_IMAGE" : "IMAGE",
-      provider: "46elks",
+      provider: senderConfig.provider,
       fromNumber: from,
       toNumber: input.to,
       text: input.text.trim(),
@@ -76,10 +78,19 @@ export async function sendMediaMessage(input: {
   try {
     const provider = await getMessagingProvider();
     if (!provider.sendMms) throw new Error("Messaging provider does not support MMS");
+    const publicUrl = appUrl();
+    const token = optionalEnv("WEBHOOK_TOKEN");
+    const imageUrl =
+      publicUrl && token
+        ? `${publicUrl}/api/public/media/${asset.id}?token=${encodeURIComponent(
+            token,
+          )}`
+        : undefined;
     const result = await provider.sendMms({
       to: input.to,
       text: input.text,
       imageDataUrl: dataUrl,
+      imageUrl,
     });
     acceptedProviderId = result.providerMessageId;
     const [updated] = await db

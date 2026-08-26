@@ -13,6 +13,7 @@ import {
   generateReceptionistPrompts,
   testElevenLabsSettings,
   testElksSettings,
+  testTwilioSettings,
   unblockNumber,
 } from "@/app/actions";
 import { Card, PageHeader } from "@/components/ui";
@@ -70,7 +71,10 @@ export default async function SettingsPage({
       getProviderStatus(),
     ]);
   const elks = providers["46elks"];
+  const twilio = providers.twilio;
   const eleven = providers.elevenlabs;
+  const messagingProvider =
+    state.messagingProvider === "twilio" ? "twilio" : "46elks";
   const receptionistConfig = {
     ...DEFAULT_RECEPTIONIST_CONFIG,
     ...(owner?.receptionistConfig ?? {}),
@@ -196,6 +200,28 @@ export default async function SettingsPage({
         ) : null}
 
         <Card className={section === "integrations" ? "" : "hidden"}>
+          <h2 className="text-sm font-semibold text-stone-700">
+            Aktiv SMS/MMS-leverantör
+          </h2>
+          <p className="mt-1 text-sm text-stone-500">
+            Bytet påverkar nya utgående meddelanden. AI-växel och samtal ligger
+            kvar på 46elks.
+          </p>
+          <div className="mt-4">
+            <AutosaveField
+              section="messaging"
+              field="provider"
+              label="Leverantör"
+              options={[
+                { value: "46elks", label: "46elks" },
+                { value: "twilio", label: "Twilio" },
+              ]}
+              defaultValue={messagingProvider}
+            />
+          </div>
+        </Card>
+
+        <Card className={section === "integrations" ? "" : "hidden"}>
           <div className="flex items-start justify-between gap-3">
             <div>
               <h2 className="text-sm font-semibold text-stone-700">46elks</h2>
@@ -244,6 +270,75 @@ export default async function SettingsPage({
             </div>
           ) : null}
           <ProviderTestDetail provider={elks} />
+        </Card>
+
+        <Card className={section === "integrations" ? "" : "hidden"}>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-semibold text-stone-700">Twilio</h2>
+              <p className="mt-1 text-sm text-stone-500">
+                Alternativ adapter för SMS och MMS. Hemligheter krypteras.
+              </p>
+            </div>
+            <ProviderStatus status={twilio?.lastTestStatus} />
+          </div>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <AutosaveField
+              section="twilio"
+              field="accountSid"
+              label="Account SID"
+              placeholder="AC…"
+              defaultValue={String(twilio?.publicConfig.accountSid ?? "")}
+            />
+            <AutosaveField
+              section="twilio"
+              field="fromNumber"
+              label="Twilio-nummer"
+              placeholder="+46…"
+              defaultValue={String(twilio?.publicConfig.fromNumber ?? "")}
+            />
+            <AutosaveField
+              section="twilio"
+              field="apiKeySid"
+              label="API Key SID"
+              type="password"
+              placeholder={twilio ? "SK… (sparad)" : "SK…"}
+            />
+            <AutosaveField
+              section="twilio"
+              field="apiKeySecret"
+              label="API Key Secret"
+              type="password"
+              placeholder={twilio ? "•••••••• (sparad)" : "API key secret"}
+            />
+            <div className="sm:col-span-2">
+              <AutosaveField
+                section="twilio"
+                field="authToken"
+                label="Auth Token för webhook-signaturer"
+                type="password"
+                placeholder={twilio ? "•••••••• (sparad)" : "Auth token"}
+              />
+            </div>
+          </div>
+          {twilio ? (
+            <div className="mt-2 flex flex-wrap gap-3">
+              <form action={testTwilioSettings}>
+                <PendingActionButton pendingText="Testar Twilio…">
+                  Testa Twilio
+                </PendingActionButton>
+              </form>
+              <ConfirmForm
+                action={removeProviderConfig.bind(null, "twilio")}
+                label="Ta bort Twilio"
+                confirmText="Ta bort krypterade Twilio-uppgifter?"
+              />
+            </div>
+          ) : null}
+          <ProviderTestDetail provider={twilio} />
+          <p className="mt-3 text-xs text-stone-500">
+            Inkommande webhook: <code>/api/webhooks/twilio/messaging</code>
+          </p>
         </Card>
 
         <Card className={section === "integrations" ? "" : "hidden"}>

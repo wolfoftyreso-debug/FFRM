@@ -8,7 +8,7 @@ import {
 } from "@/lib/db/schema";
 import { getMessagingProvider } from "./provider";
 import { isE164 } from "@/lib/phone";
-import { getElksCredentials } from "@/lib/providers/config";
+import { getActiveMessagingSender } from "@/lib/providers/selection";
 import { logActivity, type Actor } from "@/lib/activity";
 import { touchSystemState } from "@/lib/system-state";
 import { and, eq, sql } from "drizzle-orm";
@@ -84,7 +84,9 @@ export async function sendMessage(
   const text = input.text.trim();
   if (!text) throw new Error("Message text is empty");
 
-  const { fromNumber: from } = await getElksCredentials();
+  const senderConfig = await getActiveMessagingSender();
+  const from = senderConfig.fromNumber;
+  const provider = await getMessagingProvider();
 
   let conversationId = input.conversationId ?? null;
   if (!input.system && !conversationId) {
@@ -100,7 +102,7 @@ export async function sendMessage(
       conversationId,
       contactId: input.contactId ?? null,
       direction: "OUTBOUND",
-      provider: "46elks",
+      provider: senderConfig.provider,
       fromNumber: from,
       toNumber: input.to,
       text,
@@ -112,7 +114,6 @@ export async function sendMessage(
 
   let acceptedProviderId: string | null = null;
   try {
-    const provider = await getMessagingProvider();
     const result = await provider.sendSms({ to: input.to, text });
     acceptedProviderId = result.providerMessageId;
 
@@ -173,7 +174,7 @@ export async function sendMessage(
       actor: input.sender,
       action: ambiguous ? "SMS_STATUS_UNKNOWN" : "SMS_FAILED",
       summary: ambiguous
-        ? `46elks accepted SMS ${acceptedProviderId}, but local confirmation failed; automatic resend blocked`
+        ? `${senderConfig.provider} accepted SMS ${acceptedProviderId}, but local confirmation failed; automatic resend blocked`
         : `SMS to ${input.to} failed: ${errorText.slice(0, 200)}`,
       contactId: input.contactId,
       conversationId,

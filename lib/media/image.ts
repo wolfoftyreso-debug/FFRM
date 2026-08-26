@@ -1,6 +1,10 @@
 import sharp from "sharp";
-import { getElksCredentials } from "@/lib/providers/config";
+import {
+  getElksCredentials,
+  getTwilioCredentials,
+} from "@/lib/providers/config";
 import { elksBasicAuth } from "@/lib/providers/elks46";
+import { twilioBasicAuth } from "@/lib/providers/twilio";
 
 export const MAX_INBOUND_IMAGE_BYTES = 10 * 1024 * 1024;
 export const MAX_MMS_PAYLOAD_BYTES = 320 * 1024;
@@ -100,15 +104,22 @@ export async function prepareMmsImage(
 export async function fetchProviderImage(url: string): Promise<Uint8Array> {
   const parsed = new URL(url);
   if (parsed.protocol !== "https:") throw new Error("Media URL must use HTTPS");
-  if (
-    parsed.hostname !== "api.46elks.com" &&
-    !parsed.hostname.endsWith(".46elks.com")
-  ) {
-    throw new Error("Media URL is not a trusted 46elks host");
-  }
   const headers: Record<string, string> = {};
-  const { username, password } = await getElksCredentials();
-  headers.Authorization = elksBasicAuth(username, password);
+  if (
+    parsed.hostname === "api.46elks.com" ||
+    parsed.hostname.endsWith(".46elks.com")
+  ) {
+    const { username, password } = await getElksCredentials();
+    headers.Authorization = elksBasicAuth(username, password);
+  } else if (parsed.hostname === "api.twilio.com") {
+    const credentials = await getTwilioCredentials();
+    headers.Authorization = twilioBasicAuth(
+      credentials.apiKeySid,
+      credentials.apiKeySecret,
+    );
+  } else {
+    throw new Error("Media URL is not a trusted messaging-provider host");
+  }
   const res = await fetch(url, { headers, redirect: "error" });
   if (!res.ok) throw new Error(`Media fetch failed (${res.status})`);
   const length = Number(res.headers.get("content-length") ?? 0);

@@ -26,7 +26,15 @@ export interface ElevenLabsConfig {
   screeningAudioId?: string;
 }
 
-type ProviderName = "46elks" | "elevenlabs";
+export interface TwilioCredentials {
+  accountSid: string;
+  apiKeySid: string;
+  apiKeySecret: string;
+  authToken: string;
+  fromNumber: string;
+}
+
+type ProviderName = "46elks" | "elevenlabs" | "twilio";
 
 async function encryptionKey(): Promise<Buffer> {
   const configured = process.env.AUTH_SECRET;
@@ -193,6 +201,29 @@ export async function getElevenLabsConfig(): Promise<ElevenLabsConfig> {
       ? String(config.screeningAudioId)
       : undefined,
   };
+}
+
+export async function getTwilioCredentials(): Promise<TwilioCredentials> {
+  const row = await readProvider("twilio");
+  const secrets = row
+    ? await decryptProviderSecrets("twilio", row.encryptedSecrets)
+    : {};
+  const publicConfig = row?.publicConfig ?? {};
+  const accountSid = String(publicConfig.accountSid ?? "");
+  const fromNumber = String(publicConfig.fromNumber ?? "");
+  const apiKeySid = secrets.apiKeySid ?? "";
+  const apiKeySecret = secrets.apiKeySecret ?? "";
+  const authToken = secrets.authToken ?? "";
+  if (
+    !/^AC[a-fA-F0-9]{32}$/.test(accountSid) ||
+    !/^SK[a-fA-F0-9]{32}$/.test(apiKeySid) ||
+    !apiKeySecret ||
+    !authToken ||
+    !fromNumber
+  ) {
+    throw new Error("Twilio is not configured");
+  }
+  return { accountSid, apiKeySid, apiKeySecret, authToken, fromNumber };
 }
 
 export async function updateProviderTestStatus(

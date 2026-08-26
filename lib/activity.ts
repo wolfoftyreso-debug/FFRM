@@ -1,7 +1,13 @@
 import { getDb } from "@/lib/db";
 import { activityLog } from "@/lib/db/schema";
 
-export type Actor = "USER" | "AI" | "SYSTEM" | "46ELKS" | "AUTOMATION";
+export type Actor =
+  | "USER"
+  | "AI"
+  | "SYSTEM"
+  | "46ELKS"
+  | "TWILIO"
+  | "AUTOMATION";
 
 export interface LogActivityInput {
   actor: Actor;

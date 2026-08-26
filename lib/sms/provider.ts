@@ -12,6 +12,8 @@ export interface SendSmsResult {
 export interface SendMmsInput extends SendSmsInput {
   /** Sanitized PNG/JPEG as a data URL. */
   imageDataUrl: string;
+  /** Public provider-fetchable URL (required by Twilio). */
+  imageUrl?: string;
 }
 
 export interface MessagingProvider {
@@ -31,6 +33,13 @@ export function setMessagingProviderForTests(
 
 export async function getMessagingProvider(): Promise<MessagingProvider> {
   if (providerOverride) return providerOverride;
+  const { getActiveMessagingProvider } = await import(
+    "@/lib/providers/selection"
+  );
+  if ((await getActiveMessagingProvider()) === "twilio") {
+    const { TwilioMessagingProvider } = await import("./twilio");
+    return new TwilioMessagingProvider();
+  }
   const { Elks46MessagingProvider } = await import("./elks46");
   return new Elks46MessagingProvider();
 }

@@ -529,6 +529,9 @@ test.describe.serial("Personal Phone complete UI", () => {
     await expect(page.getByText("System health")).toBeVisible();
     await expect(page.getByText("AI models")).toBeVisible();
     await page.getByRole("tab", { name: "Integrations" }).click();
+    await expect(page.locator('select[name="provider"]')).toHaveValue("46elks");
+    await expect(page.locator('input[name="accountSid"]')).toBeVisible();
+    await expect(page.getByText("Alternativ adapter för SMS och MMS.")).toBeVisible();
     await autosaveInput(page, "username", "u_e2e");
     await autosaveInput(page, "password", "p_e2e");
     await autosaveInput(page, "fromNumber", "+46701112233");
