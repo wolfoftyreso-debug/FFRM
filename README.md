@@ -132,6 +132,15 @@ No model strings are hardcoded — switch vendors by changing the env vars.
 4. Press **Generate both greetings**. The app stores the MP3 assets privately;
    call actions use tokenized audio URLs when `APP_URL` + `WEBHOOK_TOKEN` exist.
 
+### Create “Min röst”
+
+Settings contains a guided Swedish recording script covering conversational
+tone, emotion, questions, names, numbers and pacing. Record 60–120 seconds,
+review/re-record, explicitly confirm that it is your own voice, then create an
+ElevenLabs Instant Voice Clone. The returned Voice ID is encrypted/configured
+automatically as **Min röst**. Raw training audio is sent directly to
+ElevenLabs and is not retained in Personal Phone.
+
 Runtime resolver order is encrypted Settings first, environment variables
 second. Keys are never rendered back to the browser or logged.
 

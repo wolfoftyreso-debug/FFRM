@@ -74,3 +74,53 @@ export async function generateElevenLabsSpeech(
   };
 }
 
+export async function cloneElevenLabsVoice(input: {
+  audio: Uint8Array;
+  mimeType: string;
+  fileName: string;
+}): Promise<{ voiceId: string }> {
+  const config = await getElevenLabsConfig();
+  if (input.audio.byteLength < 50_000) {
+    throw new Error("Recording is too short for a useful voice clone");
+  }
+  if (input.audio.byteLength > 25 * 1024 * 1024) {
+    throw new Error("Recording exceeds the 25MB upload limit");
+  }
+  const form = new FormData();
+  form.set("name", "Min röst");
+  form.set(
+    "description",
+    "Ägarens egen röst, inspelad och uttryckligen godkänd i Personal Phone.",
+  );
+  form.set("labels", JSON.stringify({ language: "sv", source: "personal-phone" }));
+  form.set("remove_background_noise", "false");
+  form.append(
+    "files",
+    new File(
+      [
+        input.audio.buffer.slice(
+          input.audio.byteOffset,
+          input.audio.byteOffset + input.audio.byteLength,
+        ) as ArrayBuffer,
+      ],
+      input.fileName,
+      { type: input.mimeType },
+    ),
+  );
+  const response = await fetch(`${BASE_URL}/v1/voices/add`, {
+    method: "POST",
+    headers: { "xi-api-key": config.apiKey },
+    body: form,
+  });
+  if (!response.ok) {
+    throw new Error(
+      `ElevenLabs voice cloning failed (${response.status}): ${(
+        await response.text()
+      ).slice(0, 300)}`,
+    );
+  }
+  const result = (await response.json()) as { voice_id?: string };
+  if (!result.voice_id) throw new Error("ElevenLabs returned no voice ID");
+  return { voiceId: result.voice_id };
+}
+

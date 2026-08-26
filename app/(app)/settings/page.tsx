@@ -20,6 +20,7 @@ import { DEFAULT_GLOBAL_CALL_POLICY } from "@/lib/voice/policy";
 import { getProviderStatus } from "@/lib/providers/config";
 import { ConfirmForm } from "@/components/confirm-form";
 import { AutosaveField } from "@/components/autosave-field";
+import { VoiceCloneRecorder } from "@/components/voice-clone-recorder";
 
 const DISPOSITIONS = [
   { value: "RING_THROUGH", label: "Ring through to my phone" },
@@ -250,6 +251,13 @@ export default async function SettingsPage() {
             </p>
           ) : null}
           <ProviderTestDetail provider={eleven} />
+          <VoiceCloneRecorder
+            currentVoiceName={
+              eleven?.publicConfig.voiceName
+                ? String(eleven.publicConfig.voiceName)
+                : undefined
+            }
+          />
         </Card>
 
         <Card>

@@ -73,7 +73,8 @@ it cannot collide with a running dev server's embedded database.
 - `providers.test.ts` — AES-GCM round-trip/provider binding, no plaintext DB
   storage, blank-secret preservation, Settings-over-env resolution, mocked
   46elks `/a1/me`, current ElevenLabs `/v2/voices`, TTS audio validation and
-  token-protected generated greeting delivery
+  token-protected generated greeting delivery, explicit-consent multipart
+  cloning and automatic “Min röst” selection
 
 ### Browser E2E (`tests/e2e/`)
 
@@ -91,7 +92,8 @@ PGlite database:
 - Calendar save, automation conditional form + incoming-SMS rule + toggle/run,
   Activity audit, owner/call-policy Settings persistence, encrypted 46elks and
   ElevenLabs per-field autosave/reload with green checks and secret inputs
-  returning blank/masked
+  returning blank/masked; fake-microphone recorder start/stop/playback and
+  minimum-duration guard
 
 The suite also caught and now guards a Next development-origin bug that had
 left client components unhydrated while server forms still appeared to work.

@@ -20,6 +20,7 @@ import {
 } from "@/lib/providers/elevenlabs";
 import { testElksConnection } from "@/lib/providers/elks46";
 import { GET as publicAudio } from "@/app/api/public/audio/[id]/route";
+import { POST as cloneVoiceEndpoint } from "@/app/api/providers/elevenlabs/clone-voice/route";
 
 let db: Db;
 
@@ -152,5 +153,63 @@ describe("encrypted provider configuration", () => {
     );
     expect(allowed.status).toBe(200);
     expect(Buffer.from(await allowed.arrayBuffer())).toEqual(bytes);
+  });
+
+  it("creates and selects Min röst only with explicit own-voice consent", async () => {
+    await saveProviderConfig(
+      "elevenlabs",
+      { apiKey: "xi-secret" },
+      {
+        voiceId: "old-voice",
+        modelId: "eleven_multilingual_v2",
+      },
+    );
+    globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+      expect(init?.method).toBe("POST");
+      expect(init?.body).toBeInstanceOf(FormData);
+      const form = init!.body as FormData;
+      expect(form.get("name")).toBe("Min röst");
+      expect(form.get("files")).toBeInstanceOf(File);
+      return new Response(JSON.stringify({ voice_id: "my-cloned-voice" }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }) as typeof fetch;
+    const form = new FormData();
+    form.set(
+      "audio",
+      new File([new ArrayBuffer(60_000)], "min-rost.webm", {
+        type: "audio/webm",
+      }),
+    );
+    form.set("consent", "own-voice-confirmed");
+    const response = await cloneVoiceEndpoint(
+      new Request("http://localhost/api/providers/elevenlabs/clone-voice", {
+        method: "POST",
+        body: form,
+      }),
+    );
+    expect(response.status).toBe(200);
+    expect((await response.json()).voiceName).toBe("Min röst");
+    const config = await getElevenLabsConfig();
+    expect(config.voiceId).toBe("my-cloned-voice");
+    expect(
+      (await getProviderStatus()).elevenlabs?.publicConfig.voiceName,
+    ).toBe("Min röst");
+
+    const noConsent = new FormData();
+    noConsent.set(
+      "audio",
+      new File([new ArrayBuffer(60_000)], "other.webm", {
+        type: "audio/webm",
+      }),
+    );
+    const denied = await cloneVoiceEndpoint(
+      new Request("http://localhost/api/providers/elevenlabs/clone-voice", {
+        method: "POST",
+        body: noConsent,
+      }),
+    );
+    expect(denied.status).toBe(400);
   });
 });

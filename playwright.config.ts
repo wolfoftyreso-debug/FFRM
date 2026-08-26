@@ -14,11 +14,21 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+      use: {
+        ...devices["Desktop Chrome"],
+        launchOptions: {
+          args: [
+            "--use-fake-device-for-media-stream",
+            "--use-fake-ui-for-media-stream",
+          ],
+        },
+        permissions: ["microphone"],
+      },
     },
   ],
   webServer: {
-    command: "pnpm dev",
+    command:
+      "DATABASE_URL=pglite://.data/e2e pnpm db:migrate && DATABASE_URL=pglite://.data/e2e pnpm db:seed && DATABASE_URL=pglite://.data/e2e pnpm dev",
     url: "http://127.0.0.1:3000/login",
     reuseExistingServer: true,
     timeout: 120_000,

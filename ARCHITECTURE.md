@@ -80,6 +80,10 @@ falls back to environment variables.
 - **TTS:** current `POST /v1/text-to-speech/:voice_id`, multilingual model and
   request-scoped voice settings. Generated voicemail/screening MP3s live in
   `audio_assets`.
+- **Own-voice cloning:** guided browser `MediaRecorder` capture, local
+  playback/re-record, minimum-size validation and explicit own-voice consent;
+  multipart `POST /v1/voices/add`. Only the returned Voice ID/name/consent
+  timestamp persist — Personal Phone does not retain the raw training audio.
 - **Call playback:** 46elks receives a tokenized
   `/api/public/audio/:id?token=...` URL. The route is public only in routing
   terms; `WEBHOOK_TOKEN` is mandatory and bytes use no-sniff/private caching.
