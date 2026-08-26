@@ -398,6 +398,16 @@ test.describe.serial("Personal Phone complete UI", () => {
     await page.getByRole("tab", { name: "Profile" }).click();
     await autosaveInput(page, "name", "Owner");
     await autosaveInput(page, "preferredLanguage", "sv");
+    await autosaveInput(
+      page,
+      "dialogueOpenings",
+      "Hej! Hur är läget?\nTjena!",
+    );
+    await autosaveInput(
+      page,
+      "dialogueClosings",
+      "Vi hörs!\nHa det fint.",
+    );
     await page.getByRole("tab", { name: "Calls" }).click();
     await autosaveSelect(page, "knownContacts", "RING_THROUGH");
     await autosaveSelect(page, "unknownCallers", "VOICEMAIL");

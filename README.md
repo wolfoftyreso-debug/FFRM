@@ -36,6 +36,9 @@ Your Swedish number → 46elks → this app → relationship/context/policy → 
 - **Zero-save-button Settings** — every profile/provider/call-policy field
   autosaves on blur or selection, with per-field saving spinner, persistent
   green check or inline validation error. Provider secrets remain masked.
+- **Dialogue phrase variation** — the owner can add multiple openings and
+  closings, one per line. AI uses at most one when contextually natural,
+  varies between messages and always lets contact-specific style win.
 - **Professional Contacts** — A–Z grouping, search/filter/sort, hero card with
   Call/Message/Remind actions, rich work/interests fields, and unified history
   filterable by Messages, Photos, Calls, Voicemail, Automation, Facts,

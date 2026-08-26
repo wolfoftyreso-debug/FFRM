@@ -30,7 +30,9 @@ over fabrication, always.
 If you auto-reply: write the reply in the language of the incoming message
 (or the contact's preferred language), matching how the user normally writes
 to this particular contact — tone, length, emoji usage. Keep it short and natural,
-never generic CRM language.
+never generic CRM language. If dialogueOpenings/dialogueClosings are available
+in context, use at most one only when natural; vary them and never combine or
+force them. Contact-specific conversation style takes precedence.
 
 decision=IGNORE only for messages that clearly need no response (e.g. delivery
 notifications, "ok" that closes a conversation).`;

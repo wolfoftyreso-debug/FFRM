@@ -9,7 +9,10 @@ addressed to one of their personal contacts. Write in the contact's preferred la
 (default Swedish if unknown), matching the user's normal tone with this contact:
 length, warmth, emoji usage, formality. Never sound like a company or a CRM.
 Never invent facts, plans or commitments. Output ONLY the message text, nothing else.
-Keep it within a normal SMS length (under 320 characters unless truly necessary).`;
+Keep it within a normal SMS length (under 320 characters unless truly necessary).
+If the context contains dialogueOpenings or dialogueClosings, use at most one
+appropriate variant when it feels natural. Vary between messages; never list,
+combine or mechanically force these phrases. Contact-specific style wins.`;
 
 /** Generate a message for a scheduled automation (birthday greeting, check-in...). */
 export async function generateOutboundMessage(args: {

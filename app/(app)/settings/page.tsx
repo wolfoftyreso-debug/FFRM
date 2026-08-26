@@ -104,6 +104,30 @@ export default async function SettingsPage({
               <div className="sm:col-span-2">
                 <AutosaveField section="owner" field="commonExpressions" label="Common expressions (comma-separated)" defaultValue={(owner.voiceProfile?.commonExpressions ?? []).join(", ")} />
               </div>
+              <div className="sm:col-span-2">
+                <AutosaveField
+                  section="owner"
+                  field="dialogueOpenings"
+                  label="Dialogue openings (one per line)"
+                  multiline
+                  placeholder={"Hej! Hur är läget?\nTjena! Hoppas allt är bra.\nHallå där!"}
+                  defaultValue={(owner.voiceProfile?.dialogueOpenings ?? []).join(
+                    "\n",
+                  )}
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <AutosaveField
+                  section="owner"
+                  field="dialogueClosings"
+                  label="Dialogue closings (one per line)"
+                  multiline
+                  placeholder={"Vi hörs!\nHa det fint.\nHör av dig när du kan."}
+                  defaultValue={(owner.voiceProfile?.dialogueClosings ?? []).join(
+                    "\n",
+                  )}
+                />
+              </div>
             </div>
           ) : (
             <p className="text-sm text-stone-500">

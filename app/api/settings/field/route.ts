@@ -60,6 +60,8 @@ async function saveOwnerField(field: string, value: string) {
     "emojiUsage",
     "formality",
     "commonExpressions",
+    "dialogueOpenings",
+    "dialogueClosings",
   ]);
   if (!allowed.has(field)) throw new Error("Unsupported owner field");
   const db = await getDb();
@@ -73,11 +75,19 @@ async function saveOwnerField(field: string, value: string) {
     return;
   }
   const voiceProfile = { ...(current.voiceProfile ?? {}) };
-  if (field === "commonExpressions") {
-    voiceProfile.commonExpressions = value
-      .split(",")
+  if (
+    field === "commonExpressions" ||
+    field === "dialogueOpenings" ||
+    field === "dialogueClosings"
+  ) {
+    const values = value
+      .split(field === "commonExpressions" ? "," : /\r?\n/)
       .map((part) => part.trim())
       .filter(Boolean);
+    if (field === "commonExpressions") voiceProfile.commonExpressions = values;
+    else if (field === "dialogueOpenings")
+      voiceProfile.dialogueOpenings = values;
+    else voiceProfile.dialogueClosings = values;
   } else {
     voiceProfile[field as "defaultTone" | "emojiUsage" | "formality"] =
       value.trim();

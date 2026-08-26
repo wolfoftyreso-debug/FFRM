@@ -166,6 +166,20 @@ describe("authenticated and event API endpoints", () => {
 
     expect((await save("owner", "name", "Autosaved Owner")).status).toBe(200);
     expect(
+      (
+        await save(
+          "owner",
+          "dialogueOpenings",
+          "Hej! Hur är läget?\nTjena!",
+        )
+      ).status,
+    ).toBe(200);
+    await save(
+      "owner",
+      "dialogueClosings",
+      "Vi hörs!\nHa det fint.",
+    );
+    expect(
       (await save("callPolicy", "ownerPhone", "0709123223")).status,
     ).toBe(200);
     await save("46elks", "username", "u_autosave");
@@ -176,6 +190,14 @@ describe("authenticated and event API endpoints", () => {
     expect(updatedOwner.id).toBe(owner.id);
     expect(updatedOwner.name).toBe("Autosaved Owner");
     expect(updatedOwner.phoneNumber).toBe("+46709123223");
+    expect(updatedOwner.voiceProfile?.dialogueOpenings).toEqual([
+      "Hej! Hur är läget?",
+      "Tjena!",
+    ]);
+    expect(updatedOwner.voiceProfile?.dialogueClosings).toEqual([
+      "Vi hörs!",
+      "Ha det fint.",
+    ]);
     expect(await getElksCredentials()).toEqual({
       username: "u_autosave",
       password: "p_autosave",

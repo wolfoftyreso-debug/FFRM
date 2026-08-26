@@ -139,6 +139,8 @@ export interface VoiceProfile {
   humorStyle?: string;
   commonExpressions?: string[];
   avoidExpressions?: string[];
+  dialogueOpenings?: string[];
+  dialogueClosings?: string[];
 }
 
 export interface ContactProfile {
