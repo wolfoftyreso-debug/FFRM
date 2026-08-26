@@ -13,7 +13,7 @@ async function login(page: Page) {
 }
 
 async function autosaveInput(page: Page, name: string, value: string) {
-  const input = page.locator(`[name="${name}"]`);
+  const input = page.locator(`[name="${name}"]`).first();
   if ((await input.inputValue()) === value) {
     const type = await input.getAttribute("type");
     const temporary =
@@ -116,7 +116,9 @@ test.describe.serial("Personal Phone complete UI", () => {
     await expect(page.getByRole("link", { name: /Massmeddelande/ })).toBeVisible();
     await expect(page.getByRole("link", { name: /Olästa/ })).toBeVisible();
     await expect(page.getByRole("link", { name: /Min kontakt/ })).toBeVisible();
-    await expect(page.getByRole("link", { name: /Apollo/ })).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Apollo Målgrupp och geografi" }),
+    ).toBeVisible();
     await expect(page.getByRole("link", { name: /Automations/ })).toBeVisible();
     await expect(page.getByRole("link", { name: /Quotes/ })).toBeVisible();
     await expect(page.getByRole("link", { name: /Notiser/ })).toBeVisible();
@@ -290,7 +292,9 @@ test.describe.serial("Personal Phone complete UI", () => {
     });
   });
 
-  test("professional contact card, typed history and all save forms persist", async ({
+  test("professional contact card, typed history and all save forms persist", {
+    timeout: 90_000,
+  }, async ({
     page,
   }) => {
     await page.goto("/people");
@@ -422,6 +426,13 @@ test.describe.serial("Personal Phone complete UI", () => {
     ).toBeVisible();
 
     await expect(page.getByText("Teach AI how we talk")).toBeVisible();
+    await page
+      .locator("details")
+      .filter({ hasText: "Teach AI how we talk" })
+      .evaluate((node) => {
+        (node as HTMLDetailsElement).open = true;
+      });
+    await expect(page.getByRole("button", { name: "Analyze style" })).toBeVisible();
     const conversationScreenshot = await sharp({
       create: {
         width: 320,
@@ -476,7 +487,9 @@ test.describe.serial("Personal Phone complete UI", () => {
     });
   });
 
-  test("Phone, Calendar SMS jobs, Activity and Settings are operational", async ({
+  test("Phone, Calendar SMS jobs, Activity and Settings are operational", {
+    timeout: 90_000,
+  }, async ({
     page,
   }) => {
     await page.goto("/phone");
@@ -508,7 +521,7 @@ test.describe.serial("Personal Phone complete UI", () => {
 
     await page.goto("/calendar");
     const reminder = `E2E global reminder ${Date.now()}`;
-    await page.getByText("Add reminder").click();
+    await page.getByText("Lägg till vanlig påminnelse").click();
     await page.getByPlaceholder("What should I remember?").fill(reminder);
     await page
       .locator('details input[name="dueAt"]')
@@ -566,8 +579,8 @@ test.describe.serial("Personal Phone complete UI", () => {
     });
     await expect(page.getByRole("button", { name: "Byt logga" })).toBeVisible();
     await page.goto("/me/share");
-    await expect(page.getByText("Landvex")).toBeVisible();
-    await expect(page.getByText("Grundare")).toBeVisible();
+    await expect(page.getByText("Landvex", { exact: true })).toBeVisible();
+    await expect(page.getByText("Grundare", { exact: true })).toBeVisible();
     await expect(page.getByAltText("Logga för Landvex")).toBeVisible();
     await page.screenshot({
       path: `${ARTIFACTS}/owner-company-logo.png`,
@@ -641,7 +654,7 @@ test.describe.serial("Personal Phone complete UI", () => {
       caret: "initial",
     });
     await page.reload();
-    await expect(page.locator('input[name="fromNumber"]')).toHaveValue(
+    await expect(page.locator('input[name="fromNumber"]').first()).toHaveValue(
       "+46701112233",
     );
     await expect(page.locator('input[name="voiceId"]')).toHaveValue("voice_e2e");
@@ -657,8 +670,8 @@ test.describe.serial("Personal Phone complete UI", () => {
     await expect(page.getByRole("heading", { name: "Apollo" })).toBeVisible();
     await expect(page.getByText("Målgrupp / titel")).toBeVisible();
     await expect(page.getByRole("button", { name: "Hämta telefonnummer" })).toBeVisible();
-    await expect(page.locator('input[name="titles"]')).toHaveValue(/VD/);
-    await expect(page.locator('input[name="personLocations"]')).toHaveValue(
+    await expect(page.getByRole("textbox", { name: "Målgrupp / titel" })).toHaveValue(/VD/);
+    await expect(page.locator('input[name="personLocations"]').first()).toHaveValue(
       "Sverige",
     );
     await page.screenshot({

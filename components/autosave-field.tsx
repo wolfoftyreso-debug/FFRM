@@ -71,6 +71,7 @@ export function AutosaveField({
   }
 
   const common = {
+    id: `${section}-${field}`,
     name: field,
     value,
     onChange: (
