@@ -264,7 +264,18 @@ test.describe.serial("Personal Phone complete UI", () => {
     await page.locator('input[name="company"]').fill("E2E AB");
     await page.locator('input[name="jobTitle"]').fill("Test Lead");
     await page.locator('input[name="interests"]').fill("cars, travel");
-    await page.locator('input[name="nameDay"]').fill("2000-06-24");
+    await page
+      .locator('select[name="preferredLanguage"]')
+      .selectOption("sv");
+    await page
+      .locator('select[name="timezone"]')
+      .selectOption("Europe/Stockholm");
+    await page
+      .locator('select[name="communicationStyle"]')
+      .selectOption("informal, warm, short messages");
+    await page.locator('select[name="emojiStyle"]').selectOption("light");
+    await page.locator('select[name="nameDayMonth"]').selectOption("6");
+    await page.locator('select[name="nameDayDay"]').selectOption("24");
     await page.getByRole("button", { name: "Save changes" }).click();
     await page.getByRole("link", { name: "Edit" }).click();
     await expect(page.locator('input[name="company"]')).toHaveValue("E2E AB");
@@ -272,9 +283,14 @@ test.describe.serial("Personal Phone complete UI", () => {
     await expect(page.locator('input[name="interests"]')).toHaveValue(
       "cars, travel",
     );
-    await expect(page.locator('input[name="nameDay"]')).toHaveValue(
-      "2000-06-24",
+    await expect(
+      page.locator('select[name="preferredLanguage"]'),
+    ).toHaveValue("sv");
+    await expect(page.locator('select[name="timezone"]')).toHaveValue(
+      "Europe/Stockholm",
     );
+    await expect(page.locator('select[name="nameDayMonth"]')).toHaveValue("6");
+    await expect(page.locator('select[name="nameDayDay"]')).toHaveValue("24");
     await page.goBack();
     await expect(
       page.getByRole("link", { name: /Name-day automation/ }),

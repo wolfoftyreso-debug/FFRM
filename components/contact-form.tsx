@@ -11,6 +11,57 @@ const RELATIONSHIP_TYPES = [
   "OTHER",
 ];
 
+const LANGUAGE_OPTIONS = [
+  ["sv", "Svenska"],
+  ["en", "English"],
+  ["nb", "Norsk"],
+  ["da", "Dansk"],
+  ["fi", "Suomi"],
+  ["de", "Deutsch"],
+  ["fr", "Français"],
+  ["es", "Español"],
+] as const;
+
+const TIMEZONE_OPTIONS = [
+  "Europe/Stockholm",
+  "Europe/Oslo",
+  "Europe/Copenhagen",
+  "Europe/Helsinki",
+  "Europe/London",
+  "Europe/Berlin",
+  "Europe/Paris",
+  "America/New_York",
+  "America/Chicago",
+  "America/Los_Angeles",
+  "Asia/Tokyo",
+  "Australia/Sydney",
+  "UTC",
+];
+
+const COMMUNICATION_STYLES = [
+  ["informal, warm, short messages", "Informal, warm and short"],
+  ["warm and supportive", "Warm and supportive"],
+  ["concise and direct", "Concise and direct"],
+  ["formal and professional", "Formal and professional"],
+  ["playful and humorous", "Playful and humorous"],
+  ["neutral", "Neutral"],
+] as const;
+
+const MONTHS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
 export function ContactFormFields({ contact }: { contact?: Contact | null }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2">
@@ -83,20 +134,34 @@ export function ContactFormFields({ contact }: { contact?: Contact | null }) {
       </label>
       <label className={labelClass}>
         Name day
-        <input
-          name="nameDay"
-          type="date"
-          defaultValue={
-            contact?.nameDayMonth && contact.nameDayDay
-              ? `2000-${String(contact.nameDayMonth).padStart(2, "0")}-${String(
-                  contact.nameDayDay,
-                ).padStart(2, "0")}`
-              : ""
-          }
-          className={inputClass}
-        />
+        <span className="mt-1 grid grid-cols-[1fr_100px] gap-2">
+          <select
+            name="nameDayMonth"
+            defaultValue={contact?.nameDayMonth ?? ""}
+            className={inputClass}
+          >
+            <option value="">Month</option>
+            {MONTHS.map((month, index) => (
+              <option key={month} value={index + 1}>
+                {month}
+              </option>
+            ))}
+          </select>
+          <select
+            name="nameDayDay"
+            defaultValue={contact?.nameDayDay ?? ""}
+            className={inputClass}
+          >
+            <option value="">Day</option>
+            {Array.from({ length: 31 }, (_, index) => (
+              <option key={index + 1} value={index + 1}>
+                {index + 1}
+              </option>
+            ))}
+          </select>
+        </span>
         <span className="mt-1 block text-xs text-stone-400">
-          Only month and day are used; it repeats every year.
+          Name days repeat every year.
         </span>
       </label>
       <div className="sm:col-span-2 mt-2 border-t border-black/10 pt-4">
@@ -130,21 +195,37 @@ export function ContactFormFields({ contact }: { contact?: Contact | null }) {
       </label>
       <label className={labelClass}>
         Preferred language
-        <input
+        <select
           name="preferredLanguage"
-          placeholder="sv"
           defaultValue={contact?.preferredLanguage ?? ""}
           className={inputClass}
-        />
+        >
+          <option value="">Use owner default</option>
+          {LANGUAGE_OPTIONS.map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </select>
       </label>
       <label className={labelClass}>
         Timezone
-        <input
+        <select
           name="timezone"
-          placeholder="Europe/Stockholm"
           defaultValue={contact?.timezone ?? ""}
           className={inputClass}
-        />
+        >
+          <option value="">Use owner default</option>
+          {contact?.timezone &&
+          !TIMEZONE_OPTIONS.includes(contact.timezone) ? (
+            <option value={contact.timezone}>{contact.timezone}</option>
+          ) : null}
+          {TIMEZONE_OPTIONS.map((timezone) => (
+            <option key={timezone} value={timezone}>
+              {timezone.replaceAll("_", " ")}
+            </option>
+          ))}
+        </select>
       </label>
       <div className="sm:col-span-2 mt-2 border-t border-black/10 pt-4">
         <h3 className="text-sm font-semibold text-stone-800">
@@ -166,21 +247,40 @@ export function ContactFormFields({ contact }: { contact?: Contact | null }) {
       </label>
       <label className={labelClass}>
         Communication style
-        <input
+        <select
           name="communicationStyle"
-          placeholder="informal, warm, short messages"
           defaultValue={contact?.communicationStyle ?? ""}
           className={inputClass}
-        />
+        >
+          <option value="">Learn from conversations</option>
+          {contact?.communicationStyle &&
+          !COMMUNICATION_STYLES.some(
+            ([value]) => value === contact.communicationStyle,
+          ) ? (
+            <option value={contact.communicationStyle}>
+              {contact.communicationStyle}
+            </option>
+          ) : null}
+          {COMMUNICATION_STYLES.map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </select>
       </label>
       <label className={labelClass}>
         Emoji style
-        <input
+        <select
           name="emojiStyle"
-          placeholder="light / none / heavy"
           defaultValue={contact?.emojiStyle ?? ""}
           className={inputClass}
-        />
+        >
+          <option value="">Learn from conversations</option>
+          <option value="none">None</option>
+          <option value="light">Light</option>
+          <option value="moderate">Moderate</option>
+          <option value="heavy">Heavy</option>
+        </select>
       </label>
       <label className={labelClass}>
         AI autonomy

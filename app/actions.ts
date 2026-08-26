@@ -34,7 +34,8 @@ const contactSchema = z.object({
   phoneNumber: z.string().optional(),
   email: z.string().optional(),
   birthday: z.string().optional(),
-  nameDay: z.string().optional(),
+  nameDayMonth: z.string().optional(),
+  nameDayDay: z.string().optional(),
   relationshipType: z.string().default("FRIEND"),
   importance: z.enum(["LOW", "MEDIUM", "HIGH"]).default("MEDIUM"),
   preferredLanguage: z.string().optional(),
@@ -60,11 +61,19 @@ function parseContactForm(formData: FormData) {
     phoneNumber = normalizePhoneNumber(data.phoneNumber);
     if (!phoneNumber) throw new Error("Invalid phone number");
   }
-  const nameDayParts = data.nameDay?.split("-").map(Number) ?? [];
-  const nameDayMonth =
-    nameDayParts.length === 3 ? nameDayParts[1] : nameDayParts[0];
-  const nameDayDay =
-    nameDayParts.length === 3 ? nameDayParts[2] : nameDayParts[1];
+  const nameDayMonth = Number(data.nameDayMonth);
+  const nameDayDay = Number(data.nameDayDay);
+  const hasNameDay = !!data.nameDayMonth || !!data.nameDayDay;
+  const nameDayDate = new Date(2000, nameDayMonth - 1, nameDayDay);
+  const validNameDay =
+    !hasNameDay ||
+    (nameDayMonth >= 1 &&
+      nameDayMonth <= 12 &&
+      nameDayDay >= 1 &&
+      nameDayDay <= 31 &&
+      nameDayDate.getMonth() === nameDayMonth - 1 &&
+      nameDayDate.getDate() === nameDayDay);
+  if (!validNameDay) throw new Error("Choose a valid name day");
   return {
     firstName: data.firstName.trim(),
     lastName: data.lastName?.trim() || null,
@@ -73,9 +82,8 @@ function parseContactForm(formData: FormData) {
     phoneNumber,
     email: data.email?.trim() || null,
     birthday: data.birthday?.trim() || null,
-    nameDayMonth:
-      nameDayMonth >= 1 && nameDayMonth <= 12 ? nameDayMonth : null,
-    nameDayDay: nameDayDay >= 1 && nameDayDay <= 31 ? nameDayDay : null,
+    nameDayMonth: hasNameDay ? nameDayMonth : null,
+    nameDayDay: hasNameDay ? nameDayDay : null,
     relationshipType: data.relationshipType,
     importance: data.importance,
     preferredLanguage: data.preferredLanguage?.trim() || null,
