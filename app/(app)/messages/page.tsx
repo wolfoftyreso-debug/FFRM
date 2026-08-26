@@ -7,6 +7,8 @@ import {
   SegmentedLinks,
 } from "@/components/apple-ui";
 import { Search } from "lucide-react";
+import { SquarePen } from "lucide-react";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Messages" };
@@ -63,6 +65,21 @@ export default async function MessagesPage({
             Personal Phone
           </p>
           <h1 className="text-[34px] font-bold tracking-tight">Messages</h1>
+        </div>
+        <div className="flex gap-2">
+          <Link
+            href="/messages/broadcast"
+            className="flex min-h-11 items-center rounded-full bg-black/[0.05] px-4 text-sm font-semibold"
+          >
+            Send to many
+          </Link>
+          <Link
+            href="/messages/new"
+            className="flex min-h-11 items-center gap-2 rounded-full bg-[var(--system-blue)] px-4 text-sm font-semibold text-white"
+          >
+            <SquarePen className="h-4 w-4" />
+            New
+          </Link>
         </div>
       </div>
       <form method="get" className="relative mb-3">

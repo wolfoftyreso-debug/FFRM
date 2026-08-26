@@ -19,6 +19,7 @@ import {
 } from "@/lib/sms/send-message";
 import { logActivity } from "@/lib/activity";
 import { appendConversationEvent } from "@/lib/conversation-events";
+import { extractConversationInsights } from "@/lib/ai/extract-insights";
 
 export interface ExecuteResult {
   executed: boolean;
@@ -110,6 +111,7 @@ export async function executeAutomation(args: {
       automation,
       contact,
       executionId,
+      scheduledFor: args.scheduledFor,
     });
 
     const failed = outcome.status === "FAILED";
@@ -231,9 +233,10 @@ async function runAction(args: {
   automation: Automation;
   contact: Contact | null;
   executionId: string;
+  scheduledFor: Date;
 }): Promise<ActionOutcome> {
   const db = await getDb();
-  const { automation, contact, executionId } = args;
+  const { automation, contact, executionId, scheduledFor } = args;
   const config: ActionConfig = automation.actionConfig ?? {};
 
   switch (automation.actionType) {
@@ -449,7 +452,45 @@ async function runAction(args: {
         result: { logged: true },
       };
     }
+
+    case "EXTRACT_INSIGHTS": {
+      const lookbackHours = Math.max(
+        1,
+        Math.min(config.lookbackHours ?? 12, 48),
+      );
+      const extracted = await extractConversationInsights({
+        windowStart: new Date(
+          scheduledFor.getTime() - lookbackHours * 60 * 60 * 1000,
+        ),
+        windowEnd: scheduledFor,
+        executionId,
+        contactLimit: config.contactLimit,
+      });
+      return {
+        status: "COMPLETED",
+        summary: `${extracted.created} findings created from ${extracted.sourcesScanned} sources`,
+        result: {
+          groupsScanned: extracted.groupsScanned,
+          sourcesScanned: extracted.sourcesScanned,
+          created: extracted.created,
+          rejected: extracted.rejected,
+        },
+        aiModel: extracted.usage[0]?.model,
+        aiInputTokens: sumUsage(extracted.usage, "inputTokens"),
+        aiOutputTokens: sumUsage(extracted.usage, "outputTokens"),
+      };
+    }
   }
+}
+
+function sumUsage(
+  usage: { inputTokens: number | null; outputTokens: number | null }[],
+  field: "inputTokens" | "outputTokens",
+): number | null {
+  const values = usage
+    .map((item) => item[field])
+    .filter((value): value is number => value !== null);
+  return values.length ? values.reduce((sum, value) => sum + value, 0) : null;
 }
 
 /** The effective autonomy is the stricter of automation and contact settings. */

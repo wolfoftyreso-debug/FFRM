@@ -12,6 +12,7 @@ import {
   contacts,
   conversations,
   mediaAssets,
+  messageCampaigns,
   messages,
   reminders,
   users,
@@ -362,7 +363,7 @@ export async function listAutomations() {
     .from(automations)
     .leftJoin(contacts, eq(automations.contactId, contacts.id))
     .orderBy(asc(automations.name));
-  return rows;
+  return rows.filter(({ automation }) => !automation.id.startsWith("system-"));
 }
 
 export async function getAutomationDetail(id: string) {
@@ -791,5 +792,36 @@ export async function searchContacts(query: string, filter?: string) {
     }
   }
   return result;
+}
+
+export async function listCampaigns(limit = 20) {
+  const db = await getDb();
+  return db
+    .select()
+    .from(messageCampaigns)
+    .orderBy(desc(messageCampaigns.createdAt))
+    .limit(limit);
+}
+
+export async function getCampaignDetail(id: string) {
+  const db = await getDb();
+  const { campaignRecipients } = await import("@/lib/db/schema");
+  const [campaign] = await db
+    .select()
+    .from(messageCampaigns)
+    .where(eq(messageCampaigns.id, id))
+    .limit(1);
+  if (!campaign) return null;
+  const recipients = await db
+    .select()
+    .from(campaignRecipients)
+    .where(eq(campaignRecipients.campaignId, id))
+    .orderBy(asc(campaignRecipients.createdAt))
+    .limit(500);
+  return {
+    campaign,
+    recipients,
+    recipientPreviewLimit: 500,
+  };
 }
 

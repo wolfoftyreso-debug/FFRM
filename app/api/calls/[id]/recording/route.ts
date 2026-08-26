@@ -5,7 +5,7 @@ import { calls } from "@/lib/db/schema";
 import { getElksCredentials } from "@/lib/providers/config";
 import { elksBasicAuth } from "@/lib/providers/elks46";
 
-/** Authenticated proxy for private 46elks voicemail audio. */
+/** Authenticated playback; permanent local copy wins over expiring provider URL. */
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -13,6 +13,19 @@ export async function GET(
   const { id } = await params;
   const db = await getDb();
   const [call] = await db.select().from(calls).where(eq(calls.id, id));
+  if (call?.recordingDataBase64) {
+    return new NextResponse(
+      Buffer.from(call.recordingDataBase64, "base64"),
+      {
+        headers: {
+          "Content-Type": call.recordingMimeType ?? "audio/wav",
+          "Content-Length": String(call.recordingByteSize ?? 0),
+          "Cache-Control": "private, max-age=31536000, immutable",
+          "X-Content-Type-Options": "nosniff",
+        },
+      },
+    );
+  }
   if (!call?.recordingUrl) return new NextResponse("not found", { status: 404 });
   const url = new URL(call.recordingUrl);
   if (

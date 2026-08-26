@@ -12,6 +12,7 @@ import { and, eq, isNull, isNotNull, lte, lt, sql } from "drizzle-orm";
 import { computeNextRun, occurrenceKeyFor } from "./recurrence";
 import { executeAutomation } from "./engine";
 import { touchSystemState } from "@/lib/system-state";
+import { ensureSystemAutomations } from "@/lib/automations/system";
 
 export interface DispatchSummary {
   locked: boolean;
@@ -72,6 +73,7 @@ export async function runDispatcher(now: Date = new Date()): Promise<DispatchSum
 
   try {
     await touchSystemState("lastCronAt");
+    await ensureSystemAutomations(now);
 
     // A crashed RUNNING execution is ambiguous: an external side effect may
     // already have happened. Mark it terminal and visible; never blindly resend.
@@ -200,6 +202,9 @@ export async function runDispatcher(now: Date = new Date()): Promise<DispatchSum
       ),
     )
     .limit(20);
+    const { processCampaignQueue } = await import("@/lib/sms/campaign");
+    await processCampaignQueue(now);
+
     for (const m of unprocessed) {
     if (m.channel === "MMS") {
       const { processInboundMms } = await import("@/lib/mms/process-inbound");

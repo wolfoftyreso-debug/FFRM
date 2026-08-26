@@ -6,6 +6,7 @@ import { getDb } from "@/lib/db";
 import {
   automations,
   commitments,
+  conversationInsights,
   contactFacts,
   contacts,
   conversations,
@@ -344,6 +345,24 @@ export async function messageContact(contactId: string): Promise<void> {
   redirect(`/messages/${conversationId}`);
 }
 
+export async function startManualConversation(formData: FormData): Promise<void> {
+  const raw = String(formData.get("phoneNumber") ?? "");
+  const phoneNumber = normalizePhoneNumber(raw);
+  if (!phoneNumber) redirect("/messages/new?error=invalid-phone");
+  const db = await getDb();
+  const [contact] = await db
+    .select()
+    .from(contacts)
+    .where(eq(contacts.phoneNumber, phoneNumber))
+    .limit(1);
+  const { getOrCreateConversation } = await import("@/lib/sms/send-message");
+  const conversationId = await getOrCreateConversation(
+    contact?.id ?? null,
+    phoneNumber,
+  );
+  redirect(`/messages/${conversationId}`);
+}
+
 async function sendManualReply(
   conversationId: string,
   formData: FormData,
@@ -399,6 +418,7 @@ export async function sendConversationMessage(
 
   if (!hasImage) {
     await sendManualReply(conversationId, formData);
+    await markSentInsightActioned(formData);
     return;
   }
   if (image === null || typeof image === "string") return;
@@ -437,7 +457,184 @@ export async function sendConversationMessage(
     contactId: conv.contactId,
     conversationId,
   });
+  await markSentInsightActioned(formData);
   revalidatePath(`/messages/${conversationId}`);
+}
+
+async function markSentInsightActioned(formData: FormData): Promise<void> {
+  const insightId = String(formData.get("insightId") ?? "");
+  if (!insightId) return;
+  const db = await getDb();
+  await db
+    .update(conversationInsights)
+    .set({
+      status: "ACTIONED",
+      actionType: "SMS",
+      handledAt: new Date(),
+      updatedAt: sql`now()`,
+    })
+    .where(
+      and(
+        eq(conversationInsights.id, insightId),
+        eq(conversationInsights.status, "PENDING"),
+      ),
+    );
+  revalidatePath("/review");
+}
+
+export async function createBroadcastCampaign(formData: FormData): Promise<void> {
+  const { createBroadcastCampaign: saveCampaign } = await import(
+    "@/lib/sms/campaign"
+  );
+  const created = await saveCampaign({
+    templateText: String(formData.get("text") ?? ""),
+    personalized: formData.get("personalized") === "1",
+    contactIds: formData.getAll("contactId").map(String),
+    importedText: String(formData.get("importedList") ?? ""),
+  });
+  revalidatePath("/messages");
+  redirect(`/messages/broadcast/${created.campaignId}`);
+}
+
+export async function reviewInsight(
+  insightId: string,
+  decision: "HANDLED" | "DISMISSED",
+): Promise<void> {
+  const db = await getDb();
+  const [row] = await db
+    .update(conversationInsights)
+    .set({
+      status: decision,
+      handledAt: new Date(),
+      updatedAt: sql`now()`,
+    })
+    .where(
+      and(
+        eq(conversationInsights.id, insightId),
+        eq(conversationInsights.status, "PENDING"),
+      ),
+    )
+    .returning();
+  if (row) {
+    await logActivity({
+      actor: "USER",
+      action: `INSIGHT_${decision}`,
+      summary: `${decision === "HANDLED" ? "Handled" : "Dismissed"} quote: ${row.summary.slice(0, 80)}`,
+      contactId: row.contactId,
+      conversationId: row.conversationId,
+      entityType: "conversationInsight",
+      entityId: row.id,
+    });
+  }
+  revalidatePath("/review");
+  revalidatePath("/notifications");
+}
+
+export async function createTicketFromInsight(
+  insightId: string,
+  formData: FormData,
+): Promise<void> {
+  const db = await getDb();
+  const [insight] = await db
+    .select()
+    .from(conversationInsights)
+    .where(eq(conversationInsights.id, insightId))
+    .limit(1);
+  if (!insight || insight.status !== "PENDING") return;
+
+  const title = String(formData.get("title") ?? "").trim() || insight.summary;
+  const dueRaw = String(formData.get("dueAt") ?? "").trim();
+  const [ticket] = await db
+    .insert(reminders)
+    .values({
+      contactId: insight.contactId,
+      kind: "TASK",
+      title,
+      description: insight.quote,
+      dueAt: dueRaw ? new Date(dueRaw) : null,
+      priority: String(formData.get("priority") ?? "MEDIUM"),
+      assignee: String(formData.get("assignee") ?? "").trim() || null,
+      sourceInsightId: insight.id,
+    })
+    .returning();
+  await db
+    .update(conversationInsights)
+    .set({
+      status: "ACTIONED",
+      actionType: "TICKET",
+      actionEntityId: ticket.id,
+      handledAt: new Date(),
+      updatedAt: sql`now()`,
+    })
+    .where(eq(conversationInsights.id, insightId));
+  await logActivity({
+    actor: "USER",
+    action: "TICKET_CREATED",
+    summary: `Ticket created: ${title}`,
+    contactId: insight.contactId,
+    entityType: "reminder",
+    entityId: ticket.id,
+  });
+  revalidatePath("/review");
+  revalidatePath("/tasks");
+  redirect(`/tasks?created=${ticket.id}`);
+}
+
+export async function createCalendarFromInsight(
+  insightId: string,
+  formData: FormData,
+): Promise<void> {
+  const db = await getDb();
+  const [insight] = await db
+    .select()
+    .from(conversationInsights)
+    .where(eq(conversationInsights.id, insightId))
+    .limit(1);
+  if (!insight) return;
+  const title = String(formData.get("title") ?? "").trim() || insight.summary;
+  const dueRaw = String(formData.get("dueAt") ?? "").trim();
+  if (!dueRaw) throw new Error("Choose a date and time");
+  const [event] = await db
+    .insert(reminders)
+    .values({
+      contactId: insight.contactId,
+      kind: "EVENT",
+      title,
+      description: insight.quote,
+      dueAt: new Date(dueRaw),
+      sourceInsightId: insight.id,
+    })
+    .returning();
+  await db
+    .update(conversationInsights)
+    .set({
+      status: "ACTIONED",
+      actionType: "CALENDAR",
+      actionEntityId: event.id,
+      handledAt: new Date(),
+      updatedAt: sql`now()`,
+    })
+    .where(eq(conversationInsights.id, insightId));
+  revalidatePath("/calendar");
+  revalidatePath("/review");
+  redirect("/calendar");
+}
+
+export async function addTask(formData: FormData): Promise<void> {
+  const title = String(formData.get("title") ?? "").trim();
+  if (!title) throw new Error("Write a task title");
+  const db = await getDb();
+  const dueRaw = String(formData.get("dueAt") ?? "").trim();
+  await db.insert(reminders).values({
+    contactId: String(formData.get("contactId") ?? "") || null,
+    kind: "TASK",
+    title,
+    description: String(formData.get("description") ?? "").trim() || null,
+    dueAt: dueRaw ? new Date(dueRaw) : null,
+    priority: String(formData.get("priority") ?? "MEDIUM"),
+    assignee: String(formData.get("assignee") ?? "").trim() || null,
+  });
+  revalidatePath("/tasks");
 }
 
 // -------------------------------------------------------------- automations
@@ -466,6 +663,7 @@ const automationSchema = z.object({
     "ESCALATE",
     "UPDATE_CONTACT",
     "LOG_EVENT",
+    "EXTRACT_INSIGHTS",
   ]),
   contactId: z.string().optional(),
   autonomyLevel: z.string().default("1"),
@@ -1023,6 +1221,23 @@ export async function callContact(contactId: string): Promise<void> {
   const { initiateCallback } = await import("@/lib/voice/service");
   await initiateCallback(contact);
   revalidatePath("/phone");
+}
+
+export async function callNumber(formData: FormData): Promise<void> {
+  const phoneNumber = normalizePhoneNumber(
+    String(formData.get("phoneNumber") ?? ""),
+  );
+  if (!phoneNumber) redirect("/phone?dial=1&error=invalid-phone");
+  const db = await getDb();
+  const [contact] = await db
+    .select()
+    .from(contacts)
+    .where(eq(contacts.phoneNumber, phoneNumber))
+    .limit(1);
+  const { initiateCallbackToNumber } = await import("@/lib/voice/service");
+  await initiateCallbackToNumber({ phoneNumber, contact: contact ?? null });
+  revalidatePath("/phone");
+  redirect("/phone?started=1");
 }
 
 export async function blockNumber(phoneNumber: string): Promise<void> {

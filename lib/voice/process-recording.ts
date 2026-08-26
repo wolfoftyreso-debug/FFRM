@@ -20,10 +20,10 @@ const voicemailAnalysisSchema = z.object({
 });
 
 /**
- * Voicemail post-processing: fetch the WAV from 46elks (basic auth),
- * transcribe through the AI Gateway, summarize/classify with the fast model,
- * then notify the owner. An expiring lease makes crashes retryable; processedAt
- * means fully persisted + notification handled, not merely "claimed".
+ * Call recording post-processing: fetch and permanently persist the WAV within
+ * 46elks' 72-hour window, transcribe through AI Gateway, then summarize.
+ * An expiring lease makes crashes retryable; processedAt means the durable
+ * audio and transcript are fully persisted.
  */
 export async function processCallRecording(callId: string): Promise<void> {
   const db = await getDb();
@@ -58,6 +58,7 @@ export async function processCallRecording(callId: string): Promise<void> {
     : null;
   const who = contact ? contactDisplayName(contact) : call.fromNumber;
   const publicUrl = appUrl() ?? "";
+  const isVoicemail = call.recordingKind !== "CALL";
 
   try {
     const { username, password } = await getElksCredentials();
@@ -69,12 +70,21 @@ export async function processCallRecording(callId: string): Promise<void> {
     });
     if (!res.ok) throw new Error(`Recording fetch failed (${res.status})`);
     const audio = new Uint8Array(await res.arrayBuffer());
+    await db
+      .update(calls)
+      .set({
+        recordingDataBase64: Buffer.from(audio).toString("base64"),
+        recordingMimeType:
+          res.headers.get("content-type")?.split(";")[0] || "audio/wav",
+        recordingByteSize: audio.byteLength,
+      })
+      .where(eq(calls.id, call.id));
 
     const transcript = await transcribeAudio({
       model:
         optionalEnv("AI_MODEL_TRANSCRIBE") ?? "fish-audio/transcribe-1",
       audio,
-      purpose: "voicemail-transcribe",
+      purpose: isVoicemail ? "voicemail-transcribe" : "call-transcribe",
     });
 
     let analysis: z.infer<typeof voicemailAnalysisSchema> | null = null;
@@ -82,12 +92,12 @@ export async function processCallRecording(callId: string): Promise<void> {
       const result = await generateStructured({
         model: fastModel(),
         system:
-          "You summarize voicemail transcripts for a personal phone assistant. Summarize in the language of the transcript, in 1-2 sentences. Decide whether the message requires the owner to act.",
+          "You summarize phone transcripts for a private personal assistant. Summarize in the language of the transcript, in 1-2 sentences. Decide whether the conversation contains a decision, promise, request, or follow-up that requires the owner to act. Do not invent details.",
         prompt: `Caller: ${who}${contact ? ` (${contact.relationshipType})` : " (unknown caller)"}
-Voicemail transcript:
+${isVoicemail ? "Voicemail" : "Full call"} transcript:
 "${transcript.text}"`,
         schema: voicemailAnalysisSchema,
-        purpose: "voicemail-analysis",
+        purpose: isVoicemail ? "voicemail-analysis" : "call-analysis",
       });
       analysis = result.output;
     }
@@ -95,7 +105,7 @@ Voicemail transcript:
     await db
       .update(calls)
       .set({
-        state: "VOICEMAIL",
+        state: isVoicemail ? "VOICEMAIL" : call.state,
         transcript: transcript.text || null,
         aiSummary: analysis?.summary ?? null,
         aiTopic: analysis?.topic ?? null,
@@ -105,8 +115,8 @@ Voicemail transcript:
 
     await logActivity({
       actor: "AI",
-      action: "VOICEMAIL_PROCESSED",
-      summary: `Voicemail from ${who} transcribed${analysis ? `: ${analysis.summary.slice(0, 120)}` : ""}`,
+      action: isVoicemail ? "VOICEMAIL_PROCESSED" : "CALL_TRANSCRIBED",
+      summary: `${isVoicemail ? "Voicemail" : "Call"} with ${who} transcribed${analysis ? `: ${analysis.summary.slice(0, 120)}` : ""}`,
       contactId: call.contactId,
       entityType: "call",
       entityId: call.id,
@@ -114,26 +124,29 @@ Voicemail transcript:
     await appendConversationEvent({
       conversationId: call.conversationId,
       contactId: call.contactId,
-      channel: "VOICEMAIL",
+      channel: isVoicemail ? "VOICEMAIL" : "VOICE_CALL",
       eventKey: `${call.providerCallId}:transcript`,
-      text: `Voicemail${analysis ? ` · ${analysis.summary}` : ""}${
+      text: `${isVoicemail ? "Voicemail" : "Call transcript"}${analysis ? ` · ${analysis.summary}` : ""}${
         analysis?.requiresUser ? " · NEEDS YOU" : ""
       }`,
       sender: "AI",
     });
 
-    const notified = await notifyOwner(
-      `Röstmeddelande från ${who}${analysis ? `:\n${analysis.summary}` : "."}${
-        analysis?.requiresUser ? "\nKräver dig." : ""
-      }\n\n${publicUrl}/phone`,
-    );
-    if (!notified) throw new Error("Owner voicemail notification failed");
+    let notified = true;
+    if (isVoicemail) {
+      notified = await notifyOwner(
+        `Röstmeddelande från ${who}${analysis ? `:\n${analysis.summary}` : "."}${
+          analysis?.requiresUser ? "\nKräver dig." : ""
+        }\n\n${publicUrl}/phone/${call.id}`,
+      );
+      if (!notified) throw new Error("Owner voicemail notification failed");
+    }
     await db
       .update(calls)
       .set({
         processedAt: new Date(),
         recordingProcessingStartedAt: null,
-        voicemailNotifiedAt: new Date(),
+        voicemailNotifiedAt: isVoicemail && notified ? new Date() : null,
         error: null,
       })
       .where(eq(calls.id, call.id));
@@ -143,20 +156,22 @@ Voicemail transcript:
     await db
       .update(calls)
       .set({
-        state: "VOICEMAIL",
+        state: isVoicemail ? "VOICEMAIL" : call.state,
         error: message,
         recordingProcessingStartedAt: null,
       })
       .where(eq(calls.id, call.id));
     await logActivity({
       actor: "SYSTEM",
-      action: "VOICEMAIL_PROCESSING_FAILED",
-      summary: `Voicemail from ${who} could not be transcribed: ${message.slice(0, 150)}`,
+      action: isVoicemail
+        ? "VOICEMAIL_PROCESSING_FAILED"
+        : "CALL_TRANSCRIPTION_FAILED",
+      summary: `${isVoicemail ? "Voicemail" : "Call"} with ${who} could not be transcribed: ${message.slice(0, 150)}`,
       contactId: call.contactId,
       entityType: "call",
       entityId: call.id,
     });
-    if (finalAiAttempt) {
+    if (finalAiAttempt && isVoicemail) {
       await appendConversationEvent({
         conversationId: call.conversationId,
         contactId: call.contactId,

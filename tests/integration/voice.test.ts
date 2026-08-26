@@ -29,7 +29,18 @@ function formRequest(path: string, body: Record<string, string>): NextRequest {
 async function setOwnerPhone(db: Db, ownerId: string) {
   await db
     .update(schema.users)
-    .set({ phoneNumber: "+46700000099" })
+    .set({
+      phoneNumber: "+46700000099",
+      // Equal start/end disables the night window so routing tests stay stable.
+      callPolicy: {
+        knownContacts: "RING_THROUGH",
+        unknownCallers: "SCREEN",
+        nightStart: "00:00",
+        nightEnd: "00:00",
+        nightAction: "VOICEMAIL",
+        nightPriorityThreshold: 85,
+      },
+    })
     .where(eq(schema.users.id, ownerId));
 }
 

@@ -33,14 +33,34 @@ export async function POST(req: NextRequest) {
   }
 
   const db = await getDb();
+  const [call] = await db
+    .select({
+      id: calls.id,
+      state: calls.state,
+      disposition: calls.disposition,
+    })
+    .from(calls)
+    .where(eq(calls.providerCallId, parsed.callid))
+    .limit(1);
+  if (!call) return new NextResponse(null, { status: 200 });
+  const isVoicemail =
+    call.state === "VOICEMAIL" ||
+    call.disposition === "VOICEMAIL" ||
+    call.disposition === "SCREEN";
   const updated = await db
     .update(calls)
     .set({
       recordingUrl: parsed.wav,
       recordingDurationSeconds: parsed.duration ? Number(parsed.duration) : null,
-      state: "VOICEMAIL",
+      recordingKind:
+        call.disposition === "SCREEN"
+          ? "SCREENING"
+          : isVoicemail
+            ? "VOICEMAIL"
+            : "CALL",
+      state: isVoicemail ? "VOICEMAIL" : call.state,
     })
-    .where(eq(calls.providerCallId, parsed.callid))
+    .where(eq(calls.id, call.id))
     .returning({ id: calls.id });
 
   if (updated[0]) {

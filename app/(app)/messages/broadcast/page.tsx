@@ -1,0 +1,47 @@
+import { listCampaigns, listContacts } from "@/lib/queries";
+import { BroadcastComposer } from "@/components/broadcast-composer";
+import { AppleRow, InsetSection } from "@/components/apple-ui";
+import { Badge, PageHeader } from "@/components/ui";
+
+export const dynamic = "force-dynamic";
+export const metadata = { title: "Send to many" };
+
+export default async function BroadcastPage() {
+  const [contacts, campaigns] = await Promise.all([
+    listContacts(),
+    listCampaigns(8),
+  ]);
+  return (
+    <>
+      <PageHeader
+        title="Send to many"
+        subtitle="Write one SMS, pick people, save the batch. Sending continues in the background."
+      />
+      <BroadcastComposer
+        contacts={contacts.map((contact) => ({
+          id: contact.id,
+          firstName: contact.firstName,
+          lastName: contact.lastName,
+          displayName: contact.displayName,
+          nickname: contact.nickname,
+          phoneNumber: contact.phoneNumber,
+        }))}
+      />
+      {campaigns.length > 0 ? (
+        <div className="mt-8">
+          <InsetSection title="Saved batches">
+            {campaigns.map((campaign) => (
+              <AppleRow
+                key={campaign.id}
+                href={`/messages/broadcast/${campaign.id}`}
+                title={campaign.name}
+                subtitle={`${campaign.sentCount}/${campaign.totalCount} sent`}
+                trailing={<Badge label={campaign.status} />}
+              />
+            ))}
+          </InsetSection>
+        </div>
+      ) : null}
+    </>
+  );
+}

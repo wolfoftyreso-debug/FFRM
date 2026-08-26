@@ -11,6 +11,7 @@ import {
 import { listBlockedNumbers, listCalls, displayName } from "@/lib/queries";
 import {
   blockNumber,
+  callNumber,
   callContact,
   markCallHandled,
   unblockNumber,
@@ -21,6 +22,7 @@ import {
   SegmentedLinks,
 } from "@/components/apple-ui";
 import { ConfirmForm } from "@/components/confirm-form";
+import { Card, PrimaryButton, inputClass } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Phone" };
@@ -40,9 +42,15 @@ function stateIcon(state: string, direction: string) {
 export default async function PhonePage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string }>;
+  searchParams: Promise<{
+    view?: string;
+    dial?: string;
+    error?: string;
+    started?: string;
+  }>;
 }) {
-  const view = (await searchParams).view ?? "recents";
+  const params = await searchParams;
+  const view = params.view ?? "recents";
   const [allRows, blocked] = await Promise.all([
     listCalls(100),
     listBlockedNumbers(),
@@ -59,12 +67,54 @@ export default async function PhonePage({
 
   return (
     <>
-      <div className="mb-4">
-        <p className="text-sm font-medium text-[var(--system-blue)]">
-          Your 46elks number
-        </p>
-        <h1 className="text-[34px] font-bold tracking-tight">Phone</h1>
+      <div className="mb-4 flex items-end justify-between gap-3">
+        <div>
+          <p className="text-sm font-medium text-[var(--system-blue)]">
+            Your 46elks number
+          </p>
+          <h1 className="text-[34px] font-bold tracking-tight">Phone</h1>
+        </div>
+        <Link
+          href={params.dial ? "/phone" : "/phone?dial=1"}
+          className="flex min-h-11 items-center gap-2 rounded-full bg-[var(--system-blue)] px-4 text-sm font-semibold text-white"
+        >
+          <Phone className="h-4 w-4" />
+          {params.dial ? "Close" : "Call"}
+        </Link>
       </div>
+      {params.started ? (
+        <p className="mb-4 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
+          Calling your phone now. Answer to connect the outbound call.
+        </p>
+      ) : null}
+      {params.dial ? (
+        <Card className="mb-5">
+          <form action={callNumber} className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <label className="min-w-0 flex-1 text-sm font-medium">
+              Number to call
+              <input
+                name="phoneNumber"
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                placeholder="+46 70 123 45 67"
+                required
+                className={inputClass}
+              />
+            </label>
+            <PrimaryButton>Call via 46elks</PrimaryButton>
+          </form>
+          {params.error ? (
+            <p className="mt-2 text-sm text-[var(--system-red)]">
+              Enter a valid phone number including country code.
+            </p>
+          ) : null}
+          <p className="mt-2 text-xs text-[var(--secondary-label)]">
+            We call you first, then connect the recipient. Connected calls are
+            recorded and transcribed.
+          </p>
+        </Card>
+      ) : null}
       <div className="mb-5">
         <SegmentedLinks
           active={view}

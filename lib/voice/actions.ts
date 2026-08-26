@@ -20,10 +20,17 @@ export function hangupUrl(): string {
   return webhookUrl("/api/webhooks/46elks/hangup");
 }
 
+export function recordingWebhookUrl(): string {
+  return webhookUrl("/api/webhooks/46elks/recording");
+}
+
 /** Ring the owner's phone; on no answer/busy, the after-connect webhook decides (voicemail). */
 export function connectAction(ownerNumber: string): ElksCallAction {
   return {
     connect: ownerNumber,
+    // 46elks records the complete bridged conversation and posts its WAV URL
+    // to this webhook when the call ends.
+    recordcall: recordingWebhookUrl(),
     timeout: 25,
     next: webhookUrl("/api/webhooks/46elks/voice/after-connect"),
     whenhangup: hangupUrl(),
@@ -46,7 +53,7 @@ export async function voicemailAction(
         optionalEnv("VOICE_GREETING_URL"))
       : optionalEnv("VOICE_GREETING_URL"));
   const record: ElksCallAction = {
-    record: webhookUrl("/api/webhooks/46elks/recording"),
+    record: recordingWebhookUrl(),
     timelimit: 120,
     whenhangup: hangupUrl(),
   };

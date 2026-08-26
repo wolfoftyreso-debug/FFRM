@@ -202,6 +202,32 @@ test.describe.serial("Personal Phone complete UI", () => {
     });
   });
 
+  test("broadcast compose, select many, personalize and import a number list", async ({
+    page,
+  }) => {
+    await page.goto("/messages");
+    await page.getByRole("link", { name: "Send to many" }).click();
+    await expect(page.getByRole("heading", { name: "Send to many" })).toBeVisible();
+    await page.locator('textarea[name="text"]').fill("Hej *namn*, lunch imorgon?");
+    await page.getByRole("button", { name: /Personligt/ }).click();
+    await expect(page.getByText(/uses \*namn\*/)).toBeVisible();
+    await page.getByRole("button", { name: "Välj flera" }).click();
+    await page.getByText("Johan Testsson").first().click();
+    await page
+      .locator('textarea[name="importedList"]')
+      .fill("+46701112233, Anna");
+    await page.getByRole("button", { name: /Save batch/ }).click();
+    await page.waitForURL(/\/messages\/broadcast\//);
+    await expect(page.getByRole("heading", { name: "Saved batch" })).toBeVisible();
+    await expect(page.getByText("Hej *namn*, lunch imorgon?")).toBeVisible();
+    await expect(page.getByText("Anna").first()).toBeVisible();
+    await page.screenshot({
+      path: `${ARTIFACTS}/broadcast-batch.png`,
+      fullPage: true,
+      caret: "initial",
+    });
+  });
+
   test("professional contact card, typed history and all save forms persist", async ({
     page,
   }) => {
@@ -546,6 +572,16 @@ test.describe.serial("Personal Phone complete UI", () => {
       },
       {
         path: conversationPath,
+        label: "Back to Messages",
+        expected: "/messages",
+      },
+      {
+        path: "/messages/broadcast",
+        label: "Back to Messages",
+        expected: "/messages",
+      },
+      {
+        path: "/messages/new",
         label: "Back to Messages",
         expected: "/messages",
       },

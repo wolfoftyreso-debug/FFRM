@@ -78,6 +78,13 @@
       "when": 1787774246372,
       "tag": "0010_legal_brother_voodoo",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1787774789283,
+      "tag": "0011_nice_boomer",
+      "breakpoints": true
     }
   ]
 }

@@ -756,6 +756,57 @@ export const providerSettings = pgTable("provider_settings", {
   lastTestError: text("last_test_error"),
 });
 
+/** Saved multi-recipient SMS batch. Recipients are queued and sent by the dispatcher. */
+export const messageCampaigns = pgTable(
+  "message_campaigns",
+  {
+    id: id(),
+    name: text("name").notNull(),
+    templateText: text("template_text").notNull(),
+    personalized: boolean("personalized").notNull().default(false),
+    status: text("status").notNull().default("QUEUED"), // QUEUED | SENDING | COMPLETED | CANCELLED
+    totalCount: integer("total_count").notNull().default(0),
+    sentCount: integer("sent_count").notNull().default(0),
+    failedCount: integer("failed_count").notNull().default(0),
+    skippedCount: integer("skipped_count").notNull().default(0),
+    createdAt: createdAt(),
+    startedAt: timestamp("started_at", { withTimezone: true }),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index("message_campaigns_status_idx").on(t.status, t.createdAt)],
+);
+
+export const campaignRecipients = pgTable(
+  "campaign_recipients",
+  {
+    id: id(),
+    campaignId: text("campaign_id")
+      .notNull()
+      .references(() => messageCampaigns.id, { onDelete: "cascade" }),
+    contactId: text("contact_id").references(() => contacts.id, {
+      onDelete: "set null",
+    }),
+    phoneNumber: text("phone_number").notNull(),
+    firstName: text("first_name"),
+    renderedText: text("rendered_text").notNull(),
+    status: text("status").notNull().default("PENDING"), // PENDING | SENT | FAILED | SKIPPED
+    messageId: text("message_id"),
+    error: text("error"),
+    sendingStartedAt: timestamp("sending_started_at", { withTimezone: true }),
+    sendAttemptCount: integer("send_attempt_count").notNull().default(0),
+    sentAt: timestamp("sent_at", { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex("campaign_recipients_campaign_phone_unique").on(
+      t.campaignId,
+      t.phoneNumber,
+    ),
+    index("campaign_recipients_queue_idx").on(t.status, t.sendingStartedAt),
+  ],
+);
+
 /** Generated voicemail/screening prompts served to 46elks via tokenized URL. */
 export const audioAssets = pgTable("audio_assets", {
   id: id(),
@@ -787,3 +838,5 @@ export type Reminder = typeof reminders.$inferSelect;
 export type ActivityEntry = typeof activityLog.$inferSelect;
 export type ProviderSetting = typeof providerSettings.$inferSelect;
 export type AudioAsset = typeof audioAssets.$inferSelect;
+export type MessageCampaign = typeof messageCampaigns.$inferSelect;
+export type CampaignRecipient = typeof campaignRecipients.$inferSelect;

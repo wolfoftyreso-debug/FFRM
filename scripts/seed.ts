@@ -8,6 +8,7 @@ import { getDb } from "../lib/db";
 import { contacts, users, automations } from "../lib/db/schema";
 import { computeNextRun } from "../lib/automations/recurrence";
 import { eq } from "drizzle-orm";
+import { ensureSystemAutomations } from "../lib/automations/system";
 
 async function main() {
   const db = await getDb();
@@ -32,6 +33,7 @@ async function main() {
   } else {
     console.log("Owner user exists:", owner.name);
   }
+  await ensureSystemAutomations();
 
   // Dev-only test contact "Johan" — never seeded in production.
   if (process.env.NODE_ENV !== "production" || process.env.SEED_TEST_CONTACT === "true") {

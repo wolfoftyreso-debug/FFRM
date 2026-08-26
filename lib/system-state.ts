@@ -6,7 +6,8 @@ export type SystemStateKey =
   | "lastCronAt"
   | "lastWebhookAt"
   | "lastAiAt"
-  | "lastSmsSentAt";
+  | "lastSmsSentAt"
+  | "lastInsightSweepAt";
 
 export async function setSystemState(
   key: SystemStateKey,

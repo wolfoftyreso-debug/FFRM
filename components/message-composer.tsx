@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
-import { ImagePlus, Sparkles } from "lucide-react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { ImagePlus, Mic, Sparkles, Square } from "lucide-react";
 import { sendConversationMessage } from "@/app/actions";
 
 export function MessageComposer({
@@ -15,9 +15,25 @@ export function MessageComposer({
   const [image, setImage] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [drafting, setDrafting] = useState(false);
+  const [polishing, setPolishing] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sending, startSending] = useTransition();
   const fileRef = useRef<HTMLInputElement>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+
+  useEffect(
+    () => () => {
+      if (recorderRef.current?.state === "recording") {
+        recorderRef.current.stop();
+      }
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+    },
+    [],
+  );
 
   function onFile(file: File | null) {
     setImage(file);
@@ -51,6 +67,89 @@ export function MessageComposer({
       setError(err instanceof Error ? err.message : "Could not draft");
     } finally {
       setDrafting(false);
+    }
+  }
+
+  async function polishText() {
+    if (!text.trim()) return;
+    setPolishing(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/compose/polish-text", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conversationId, text }),
+      });
+      const data = (await res.json()) as { text?: string; error?: string };
+      if (!res.ok || !data.text)
+        throw new Error(data.error ?? "Could not improve text");
+      setText(data.text);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not improve text");
+    } finally {
+      setPolishing(false);
+    }
+  }
+
+  async function startDictation() {
+    setError(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      chunksRef.current = [];
+      const recorder = new MediaRecorder(stream);
+      recorderRef.current = recorder;
+      recorder.ondataavailable = (event) => {
+        if (event.data.size) chunksRef.current.push(event.data);
+      };
+      recorder.onstop = async () => {
+        stream.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
+        setRecording(false);
+        const audio = new Blob(chunksRef.current, {
+          type: recorder.mimeType || "audio/webm",
+        });
+        if (!audio.size) return;
+        setTranscribing(true);
+        try {
+          const form = new FormData();
+          form.set(
+            "audio",
+            new File([audio], "dictation.webm", { type: audio.type }),
+          );
+          const response = await fetch("/api/compose/transcribe", {
+            method: "POST",
+            body: form,
+          });
+          const data = (await response.json()) as {
+            text?: string;
+            error?: string;
+          };
+          if (!response.ok || !data.text)
+            throw new Error(data.error ?? "Could not transcribe");
+          setText((current) =>
+            current.trim() ? `${current.trim()} ${data.text}` : data.text!,
+          );
+        } catch (err) {
+          setError(
+            err instanceof Error ? err.message : "Could not transcribe",
+          );
+        } finally {
+          setTranscribing(false);
+        }
+      };
+      recorder.start();
+      setRecording(true);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Microphone is unavailable",
+      );
+    }
+  }
+
+  function stopDictation() {
+    if (recorderRef.current?.state === "recording") {
+      recorderRef.current.stop();
     }
   }
 
@@ -113,7 +212,7 @@ export function MessageComposer({
       />
       {error ? <p className="mt-1 text-xs text-red-600">{error}</p> : null}
       <div className="mt-2 flex items-center justify-between gap-2">
-        <div className="flex gap-1">
+        <div className="flex flex-wrap gap-1">
           <label
             htmlFor={`image-${conversationId}`}
             className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-full text-[var(--system-blue)] hover:bg-black/[0.04]"
@@ -122,12 +221,46 @@ export function MessageComposer({
           >
             <ImagePlus className="h-4 w-4" />
           </label>
+          <button
+            type="button"
+            onClick={recording ? stopDictation : startDictation}
+            disabled={transcribing}
+            className={`flex h-11 items-center gap-1.5 rounded-full px-3 text-xs font-semibold ${
+              recording
+                ? "bg-[var(--system-red)] text-white"
+                : "text-[var(--system-blue)] hover:bg-black/[0.04]"
+            } disabled:opacity-50`}
+            aria-label={recording ? "Stop dictation" : "Dictate message"}
+          >
+            {recording ? (
+              <Square className="h-4 w-4 fill-current" />
+            ) : (
+              <Mic className="h-4 w-4" />
+            )}
+            {recording
+              ? "Stop"
+              : transcribing
+                ? "Transcribing…"
+                : "Dictate"}
+          </button>
+          {text.trim() ? (
+            <button
+              type="button"
+              onClick={polishText}
+              disabled={polishing || recording || transcribing}
+              className="flex h-11 items-center gap-1.5 rounded-full px-3 text-xs font-semibold text-violet-700 hover:bg-violet-50 disabled:opacity-50"
+              aria-label="Improve text with AI"
+            >
+              <Sparkles className="h-4 w-4" />
+              {polishing ? "Improving…" : "Improve"}
+            </button>
+          ) : null}
           {image && contactId ? (
             <button
               type="button"
               onClick={draftWithAi}
               disabled={drafting}
-              className="flex items-center gap-1 rounded-md border border-violet-200 px-2.5 py-1.5 text-xs text-violet-700 hover:bg-violet-50 disabled:opacity-50"
+              className="flex h-11 items-center gap-1 rounded-full border border-violet-200 px-3 text-xs text-violet-700 hover:bg-violet-50 disabled:opacity-50"
             >
               <Sparkles className="h-3.5 w-3.5" />
               {drafting ? "Looking…" : "AI write text"}

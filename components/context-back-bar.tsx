@@ -10,7 +10,12 @@ type BackTarget = {
 };
 
 function targetFor(pathname: string): BackTarget | null {
-  if (/^\/messages\/[^/]+$/.test(pathname)) {
+  if (
+    pathname === "/messages/new" ||
+    pathname === "/messages/broadcast" ||
+    /^\/messages\/broadcast\//.test(pathname) ||
+    /^\/messages\/[^/]+$/.test(pathname)
+  ) {
     return { href: "/messages", label: "Messages" };
   }
   if (pathname === "/people/new") {
@@ -23,6 +28,15 @@ function targetFor(pathname: string): BackTarget | null {
   if (/^\/people\/[^/]+$/.test(pathname)) {
     return { href: "/people", label: "Contacts" };
   }
+  if (/^\/phone\/[^/]+$/.test(pathname)) {
+    return { href: "/phone", label: "Phone" };
+  }
+  if (pathname === "/review" || pathname === "/notifications") {
+    return { href: "/more", label: "More", mobileOnly: true };
+  }
+  if (/^\/review\/[^/]+$/.test(pathname)) {
+    return { href: "/review", label: "Quotes" };
+  }
   if (pathname === "/automations/new") {
     return { href: "/automations", label: "Automations" };
   }
@@ -32,6 +46,7 @@ function targetFor(pathname: string): BackTarget | null {
   const secondary: Record<string, string> = {
     "/chat": "More",
     "/calendar": "More",
+    "/tasks": "More",
     "/automations": "More",
     "/activity": "More",
     "/settings": "More",

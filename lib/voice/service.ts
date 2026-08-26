@@ -14,6 +14,7 @@ import {
   connectAction,
   voicemailAction,
   rejectAction,
+  recordingWebhookUrl,
   type ElksCallAction,
 } from "./actions";
 import { logActivity } from "@/lib/activity";
@@ -295,26 +296,43 @@ export async function handleHangup(input: HangupInput): Promise<void> {
  * the system's communication identity.
  */
 export async function initiateCallback(contact: Contact): Promise<Call> {
-  const db = await getDb();
   if (!contact.phoneNumber) throw new Error("Contact has no phone number");
+  return initiateCallbackToNumber({
+    phoneNumber: contact.phoneNumber,
+    contact,
+  });
+}
+
+/** Manual dialer path; optionally associates the number with a known contact. */
+export async function initiateCallbackToNumber(args: {
+  phoneNumber: string;
+  contact?: Contact | null;
+}): Promise<Call> {
+  const db = await getDb();
+  const phoneNumber = normalizePhoneNumber(args.phoneNumber);
+  if (!phoneNumber) throw new Error("Enter a valid international phone number");
+  const contact = args.contact ?? null;
   const target = await ownerPhone();
   if (!target) throw new Error("No owner phone number configured");
 
   const { username, password, fromNumber: from } =
     await getElksCredentials();
   const conversationId = await getOrCreateConversation(
-    contact.id,
-    contact.phoneNumber,
+    contact?.id ?? null,
+    phoneNumber,
   );
 
   const body = new URLSearchParams({
     from,
     to: target,
-    voice_start: JSON.stringify({ connect: contact.phoneNumber }),
-    whenhangup: new URL(
-      `/api/webhooks/46elks/hangup${optionalEnv("WEBHOOK_TOKEN") ? `?token=${optionalEnv("WEBHOOK_TOKEN")}` : ""}`,
-      appUrl() ?? "http://localhost:3000",
-    ).toString(),
+    voice_start: JSON.stringify({
+      connect: phoneNumber,
+      recordcall: recordingWebhookUrl(),
+      whenhangup: new URL(
+        `/api/webhooks/46elks/hangup${optionalEnv("WEBHOOK_TOKEN") ? `?token=${optionalEnv("WEBHOOK_TOKEN")}` : ""}`,
+        appUrl() ?? "http://localhost:3000",
+      ).toString(),
+    }),
   });
 
   const [record] = await db
@@ -322,10 +340,10 @@ export async function initiateCallback(contact: Contact): Promise<Call> {
     .values({
       providerCallId: `initiating:${createId()}`,
       conversationId,
-      contactId: contact.id,
+      contactId: contact?.id ?? null,
       direction: "OUTBOUND",
       fromNumber: from,
-      toNumber: contact.phoneNumber,
+      toNumber: phoneNumber,
       state: "INITIATING",
       disposition: "CONNECT_BACK",
       policyReason: "Owner-initiated callback",
@@ -360,8 +378,8 @@ export async function initiateCallback(contact: Contact): Promise<Call> {
     await logActivity({
       actor: "USER",
       action: "CALL_FAILED",
-      summary: `Callback to ${contactDisplayName(contact)} failed: ${error.slice(0, 160)}`,
-      contactId: contact.id,
+      summary: `Callback to ${contact ? contactDisplayName(contact) : phoneNumber} failed: ${error.slice(0, 160)}`,
+      contactId: contact?.id ?? null,
       entityType: "call",
       entityId: record.id,
     });
@@ -377,14 +395,14 @@ export async function initiateCallback(contact: Contact): Promise<Call> {
   await logActivity({
     actor: "USER",
     action: "CALL_INITIATED",
-    summary: `Callback started to ${contactDisplayName(contact)}`,
-    contactId: contact.id,
+    summary: `Callback started to ${contact ? contactDisplayName(contact) : phoneNumber}`,
+    contactId: contact?.id ?? null,
     entityType: "call",
     entityId: started.id,
   });
   await appendConversationEvent({
     conversationId,
-    contactId: contact.id,
+    contactId: contact?.id ?? null,
     channel: "VOICE_CALL",
     eventKey: `${started.providerCallId}:started`,
     text: "Outgoing callback initiated",

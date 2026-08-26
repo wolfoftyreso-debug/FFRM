@@ -27,6 +27,7 @@ const primary = [
 const secondary = [
   { href: "/chat", label: "Assistant", icon: Bot },
   { href: "/calendar", label: "Calendar", icon: CalendarDays },
+  { href: "/tasks", label: "Tickets", icon: ListChecks },
   { href: "/automations", label: "Automations", icon: Zap },
   { href: "/activity", label: "Activity", icon: ListChecks },
   { href: "/settings", label: "Settings", icon: Settings },
