@@ -27,6 +27,7 @@ import { VoiceCloneRecorder } from "@/components/voice-clone-recorder";
 import { SegmentedLinks } from "@/components/apple-ui";
 import { PendingActionButton } from "@/components/pending-action-button";
 import { ContactPhotoUploader } from "@/components/contact-photo-uploader";
+import { CompanyLogoUploader } from "@/components/company-logo-uploader";
 import {
   DEFAULT_RECEPTIONIST_CONFIG,
   isOwnerAjour,
@@ -127,10 +128,19 @@ export default async function SettingsPage({
                 owner.photoDataBase64 ? "/api/profile/photo" : null
               }
             />
+            <CompanyLogoUploader
+              company={owner.company}
+              endpoint="/api/profile/logo"
+              initialLogoUrl={
+                owner.companyLogoDataBase64 ? "/api/profile/logo" : null
+              }
+            />
             <div className="grid gap-4 sm:grid-cols-2">
               <AutosaveField section="owner" field="name" label="Name" defaultValue={owner.name} />
               <AutosaveField section="owner" field="phoneNumber" label="Mobile number" type="tel" defaultValue={owner.phoneNumber ?? ""} />
               <AutosaveField section="owner" field="email" label="Email" type="email" defaultValue={owner.email ?? ""} />
+              <AutosaveField section="owner" field="company" label="Company" defaultValue={owner.company ?? ""} />
+              <AutosaveField section="owner" field="jobTitle" label="Job title" defaultValue={owner.jobTitle ?? ""} />
               <AutosaveField section="owner" field="preferredLanguage" label="Preferred language" defaultValue={owner.preferredLanguage} />
               <AutosaveField section="owner" field="timezone" label="Timezone" defaultValue={owner.timezone} />
               <AutosaveField section="owner" field="defaultTone" label="Default tone" placeholder="warm, informal" defaultValue={owner.voiceProfile?.defaultTone ?? ""} />

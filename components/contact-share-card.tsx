@@ -31,9 +31,26 @@ export function ContactShareCard({
         <h1 className="mt-3 text-[28px] font-bold tracking-tight">
           {contact.name}
         </h1>
+        {contact.jobTitle || contact.company ? (
+          <p className="mt-1 text-[15px] text-[var(--secondary-label)]">
+            {[contact.jobTitle, contact.company].filter(Boolean).join(" · ")}
+          </p>
+        ) : null}
         <p className="mt-1 text-sm text-[var(--secondary-label)]">
           {publicView ? "Kontaktkort" : "Dela min kontakt"}
         </p>
+        {contact.companyLogoDataBase64 ? (
+          <div className="mx-auto mt-4 flex h-16 w-40 items-center justify-center">
+            <Image
+              src={`/api/public/contact/${contact.shareToken}/logo`}
+              alt={contact.company ? `Logga för ${contact.company}` : "Företagslogga"}
+              width={160}
+              height={64}
+              unoptimized
+              className="max-h-16 w-auto object-contain"
+            />
+          </div>
+        ) : null}
       </header>
 
       <div className="mx-auto w-fit rounded-[28px] bg-white p-4 shadow-sm">
@@ -82,6 +99,22 @@ export function ContactShareCard({
               {contact.email}
             </span>
           </a>
+        ) : null}
+        {contact.company ? (
+          <div className="ios-hairline min-h-14 px-4 py-3">
+            <span className="block text-xs text-[var(--secondary-label)]">
+              Företag
+            </span>
+            <span className="text-[17px]">{contact.company}</span>
+          </div>
+        ) : null}
+        {contact.jobTitle ? (
+          <div className="ios-hairline min-h-14 px-4 py-3">
+            <span className="block text-xs text-[var(--secondary-label)]">
+              Titel
+            </span>
+            <span className="text-[17px]">{contact.jobTitle}</span>
+          </div>
         ) : null}
         <a
           href={vcardUrl}

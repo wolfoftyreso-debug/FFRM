@@ -120,6 +120,13 @@
       "when": 1787780130638,
       "tag": "0016_rapid_hellcat",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1787781879202,
+      "tag": "0017_owner_company_logo",
+      "breakpoints": true
     }
   ]
 }

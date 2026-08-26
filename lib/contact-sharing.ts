@@ -22,6 +22,8 @@ export interface ContactCardData {
   jobTitle?: string | null;
   photoDataBase64: string | null;
   photoMimeType: string | null;
+  companyLogoDataBase64?: string | null;
+  companyLogoMimeType?: string | null;
 }
 
 export interface SharedContact extends ContactCardData {
@@ -95,6 +97,13 @@ export function buildVCard(contact: ContactCardData): string {
       `PHOTO;ENCODING=b;TYPE=${imageType}:${contact.photoDataBase64}`,
     );
   }
+  if (contact.companyLogoDataBase64 && contact.companyLogoMimeType) {
+    const imageType =
+      contact.companyLogoMimeType.split("/")[1]?.toUpperCase() || "PNG";
+    lines.push(
+      `LOGO;ENCODING=b;TYPE=${imageType}:${contact.companyLogoDataBase64}`,
+    );
+  }
   lines.push("END:VCARD");
   return `${lines.map(foldVCardLine).join("\r\n")}\r\n`;
 }
@@ -107,8 +116,12 @@ function sharedContact(owner: User, shareToken: string): SharedContact {
     lastName: rest.join(" ") || null,
     phoneNumber: owner.phoneNumber,
     email: owner.email,
+    company: owner.company,
+    jobTitle: owner.jobTitle,
     photoDataBase64: owner.photoDataBase64,
     photoMimeType: owner.photoMimeType,
+    companyLogoDataBase64: owner.companyLogoDataBase64,
+    companyLogoMimeType: owner.companyLogoMimeType,
     shareToken,
   };
 }

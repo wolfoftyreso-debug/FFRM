@@ -109,6 +109,18 @@ test.describe.serial("Personal Phone complete UI", () => {
     }
     await tabBar.getByText("More", { exact: true }).click();
     await expect(page).toHaveURL(/\/more/);
+    await expect(page.getByRole("heading", { name: "Kommunikation" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Personer" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Planering" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "AI och system" })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Massmeddelande/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Olästa/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Min kontakt/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Apollo/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Automations/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Quotes/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Notiser/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: /AI-växel/ })).toBeVisible();
     await expect(page.getByRole("link", { name: /Settings/ })).toBeVisible();
     await page.screenshot({
       path: `${ARTIFACTS}/apple-mobile-shell.png`,
@@ -515,6 +527,34 @@ test.describe.serial("Personal Phone complete UI", () => {
     await page.goto("/settings");
     await page.getByRole("tab", { name: "Profile" }).click();
     await autosaveInput(page, "name", "Owner");
+    await autosaveInput(page, "company", "Landvex");
+    await autosaveInput(page, "jobTitle", "Grundare");
+    const companyLogo = await sharp({
+      create: {
+        width: 240,
+        height: 80,
+        channels: 3,
+        background: { r: 10, g: 40, b: 120 },
+      },
+    })
+      .png()
+      .toBuffer();
+    await page.locator('[data-testid="company-logo-input"]').setInputFiles({
+      name: "landvex.png",
+      mimeType: "image/png",
+      buffer: companyLogo,
+    });
+    await expect(page.getByRole("button", { name: "Byt logga" })).toBeVisible();
+    await page.goto("/me/share");
+    await expect(page.getByText("Landvex")).toBeVisible();
+    await expect(page.getByText("Grundare")).toBeVisible();
+    await expect(page.getByAltText("Logga för Landvex")).toBeVisible();
+    await page.screenshot({
+      path: `${ARTIFACTS}/owner-company-logo.png`,
+      fullPage: true,
+      caret: "initial",
+    });
+    await page.goto("/settings?section=profile");
     await autosaveInput(page, "preferredLanguage", "sv");
     await autosaveInput(
       page,

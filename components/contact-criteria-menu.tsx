@@ -24,7 +24,11 @@ export const CONTACT_FILTER_GROUPS = [
   },
 ] as const;
 
-const ALL_FILTERS = CONTACT_FILTER_GROUPS.flatMap((group) => group.items);
+type ContactFilterItem = (typeof CONTACT_FILTER_GROUPS)[number]["items"][number];
+
+const ALL_FILTERS: ContactFilterItem[] = CONTACT_FILTER_GROUPS.flatMap(
+  (group) => [...group.items],
+);
 
 export function contactFilterLabel(id: string) {
   return ALL_FILTERS.find((item) => item.id === id)?.label ?? "All contacts";

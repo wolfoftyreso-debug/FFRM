@@ -1,4 +1,5 @@
-import { getAttentionSummary } from "@/lib/queries";
+import { Suspense } from "react";
+import { getAttentionSummary, getOwner } from "@/lib/queries";
 import { getNotificationCount } from "@/lib/review";
 import { AppNavigation } from "@/components/app-navigation";
 import { NotificationBell } from "@/components/notification-bell";
@@ -16,15 +17,20 @@ export default async function AppLayout({
   let messageBadge = 0;
   let phoneBadge = 0;
   let notificationCount = 0;
+  let ownerName = "Personal Phone";
+  let ownerPhotoUrl: string | null = null;
   try {
     await ensureOwner();
-    const [attention, reviewCount] = await Promise.all([
+    const [attention, reviewCount, owner] = await Promise.all([
       getAttentionSummary(),
       getNotificationCount(),
+      getOwner(),
     ]);
     messageBadge = attention.escalated.length + attention.draftCount;
     phoneBadge = attention.voicemailNeedsYou;
     notificationCount = reviewCount;
+    if (owner?.name) ownerName = owner.name;
+    if (owner?.photoDataBase64) ownerPhotoUrl = "/api/profile/photo";
   } catch {
     // Database may be unavailable during first-time setup; render anyway.
   }
@@ -32,7 +38,15 @@ export default async function AppLayout({
   return (
     <div className="flex min-h-screen">
       <PresenceHeartbeat />
-      <AppNavigation messageBadge={messageBadge} phoneBadge={phoneBadge} />
+      <Suspense fallback={null}>
+        <AppNavigation
+          messageBadge={messageBadge}
+          phoneBadge={phoneBadge}
+          notificationCount={notificationCount}
+          ownerName={ownerName}
+          ownerPhotoUrl={ownerPhotoUrl}
+        />
+      </Suspense>
       <div className="min-w-0 flex-1 pb-40 md:pb-0">
         <main className="mx-auto max-w-5xl px-4 py-5 md:px-8 md:py-8">
           <div className="mb-2 flex items-start justify-end">

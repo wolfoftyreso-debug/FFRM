@@ -3,6 +3,9 @@ import sharp from "sharp";
 import { createTestDb, seedContact, seedOwner } from "./helpers";
 import type { Db } from "@/lib/db";
 import { POST as uploadProfile, GET as getProfilePhoto } from "@/app/api/profile/photo/route";
+import { POST as uploadLogo, GET as getProfileLogo } from "@/app/api/profile/logo/route";
+import { GET as getPublicLogo } from "@/app/api/public/contact/[token]/logo/route";
+import { getOrCreateOwnerShareProfile } from "@/lib/contact-sharing";
 import {
   POST as uploadContact,
   GET as getContactPhoto,
@@ -26,6 +29,24 @@ describe("contact photos", () => {
     const metadata = await sharp(Buffer.from(await image.arrayBuffer())).metadata();
     expect(metadata.width).toBe(512);
     expect(metadata.height).toBe(512);
+  });
+
+  it("normalizes and serves the owner company logo", async () => {
+    await seedOwner(db);
+    const response = await uploadLogo(await photoRequest());
+    expect(response.status).toBe(200);
+    const image = await getProfileLogo();
+    expect(image.status).toBe(200);
+    expect(image.headers.get("content-type")).toBe("image/png");
+    const metadata = await sharp(Buffer.from(await image.arrayBuffer())).metadata();
+    expect(metadata.width).toBeLessThanOrEqual(800);
+    expect(metadata.height).toBeLessThanOrEqual(400);
+    const profile = await getOrCreateOwnerShareProfile();
+    const publicLogo = await getPublicLogo(new Request("http://localhost"), {
+      params: Promise.resolve({ token: profile!.shareToken }),
+    });
+    expect(publicLogo.status).toBe(200);
+    expect(publicLogo.headers.get("content-type")).toBe("image/png");
   });
 
   it("includes a contact photo and standard fields in exported vCard", async () => {

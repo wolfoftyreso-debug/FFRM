@@ -161,6 +161,8 @@ async function saveOwnerField(field: string, value: string) {
     "name",
     "email",
     "phoneNumber",
+    "company",
+    "jobTitle",
     "preferredLanguage",
     "timezone",
     "defaultTone",
@@ -198,6 +200,13 @@ async function saveOwnerField(field: string, value: string) {
     await db
       .update(users)
       .set({ [field]: value.trim(), updatedAt: sql`now()` })
+      .where(eq(users.id, current.id));
+    return;
+  }
+  if (field === "company" || field === "jobTitle") {
+    await db
+      .update(users)
+      .set({ [field]: value.trim() || null, updatedAt: sql`now()` })
       .where(eq(users.id, current.id));
     return;
   }

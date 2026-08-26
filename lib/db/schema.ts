@@ -31,6 +31,10 @@ export const users = pgTable("users", {
   phoneNumber: text("phone_number"),
   photoDataBase64: text("photo_data_base64"),
   photoMimeType: text("photo_mime_type"),
+  company: text("company"),
+  jobTitle: text("job_title"),
+  companyLogoDataBase64: text("company_logo_data_base64"),
+  companyLogoMimeType: text("company_logo_mime_type"),
   /** Unguessable public URL token for the owner's shared contact card. */
   shareToken: text("share_token").unique(),
   preferredLanguage: text("preferred_language").notNull().default("sv"),

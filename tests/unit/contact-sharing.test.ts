@@ -14,6 +14,8 @@ describe("buildVCard", () => {
       jobTitle: "Grundare",
       photoDataBase64: "aGVq",
       photoMimeType: "image/jpeg",
+      companyLogoDataBase64: "bG9nbw==",
+      companyLogoMimeType: "image/png",
     });
     expect(card).toContain("BEGIN:VCARD\r\nVERSION:3.0");
     expect(card).toContain("FN:Erik Svensson");
@@ -23,6 +25,7 @@ describe("buildVCard", () => {
     expect(card).toContain("BDAY:1980-05-10");
     expect(card).toContain("ORG:Landvex");
     expect(card).toContain("PHOTO;ENCODING=b;TYPE=JPEG:aGVq");
+    expect(card).toContain("LOGO;ENCODING=b;TYPE=PNG:bG9nbw==");
     expect(card).toMatch(/END:VCARD\r\n$/);
   });
 
