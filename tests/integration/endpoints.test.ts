@@ -17,8 +17,13 @@ import { POST as captionEndpoint } from "@/app/api/compose/image-caption/route";
 import { POST as smsEndpoint } from "@/app/api/webhooks/46elks/sms/route";
 import { GET as recordingEndpoint } from "@/app/api/calls/[id]/recording/route";
 import { POST as readEndpoint } from "@/app/api/conversations/[id]/read/route";
+import { POST as settingsFieldEndpoint } from "@/app/api/settings/field/route";
 import { getOrCreateConversation } from "@/lib/sms/send-message";
 import { listConversations } from "@/lib/queries";
+import {
+  decryptProviderSecrets,
+  getElksCredentials,
+} from "@/lib/providers/config";
 
 let db: Db;
 
@@ -146,5 +151,40 @@ describe("authenticated and event API endpoints", () => {
     });
     expect(response.status).toBe(200);
     expect((await listConversations())[0].unread).toBe(false);
+  });
+
+  it("autosaves owner, call policy and encrypted provider fields independently", async () => {
+    const owner = await seedOwner(db);
+    const save = (section: string, field: string, value: string) =>
+      settingsFieldEndpoint(
+        new Request("http://localhost/api/settings/field", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ section, field, value }),
+        }),
+      );
+
+    expect((await save("owner", "name", "Autosaved Owner")).status).toBe(200);
+    expect(
+      (await save("callPolicy", "ownerPhone", "0709123223")).status,
+    ).toBe(200);
+    await save("46elks", "username", "u_autosave");
+    await save("46elks", "password", "p_autosave");
+    await save("46elks", "fromNumber", "+46701112233");
+
+    const [updatedOwner] = await db.select().from(schema.users);
+    expect(updatedOwner.id).toBe(owner.id);
+    expect(updatedOwner.name).toBe("Autosaved Owner");
+    expect(updatedOwner.phoneNumber).toBe("+46709123223");
+    expect(await getElksCredentials()).toEqual({
+      username: "u_autosave",
+      password: "p_autosave",
+      fromNumber: "+46701112233",
+    });
+    const [provider] = await db.select().from(schema.providerSettings);
+    expect(provider.encryptedSecrets).not.toContain("p_autosave");
+    expect(
+      await decryptProviderSecrets("46elks", provider.encryptedSecrets),
+    ).toMatchObject({ password: "p_autosave" });
   });
 });

@@ -1067,43 +1067,6 @@ export async function markCallHandled(callId: string): Promise<void> {
   revalidatePath("/phone");
 }
 
-export async function updateGlobalCallPolicy(formData: FormData): Promise<void> {
-  const db = await getDb();
-  const [owner] = await db.select().from(users).limit(1);
-  if (!owner) return;
-  const disposition = (v: FormDataEntryValue | null, fallback: string) => {
-    const s = String(v ?? "");
-    return ["RING_THROUGH", "VOICEMAIL", "SCREEN", "REJECT"].includes(s)
-      ? s
-      : fallback;
-  };
-  await db
-    .update(users)
-    .set({
-      phoneNumber:
-        String(formData.get("ownerPhone") ?? "").trim() || owner.phoneNumber,
-      callPolicy: {
-        knownContacts: disposition(formData.get("knownContacts"), "RING_THROUGH"),
-        unknownCallers: disposition(formData.get("unknownCallers"), "SCREEN"),
-        nightStart: String(formData.get("nightStart") ?? "22:00"),
-        nightEnd: String(formData.get("nightEnd") ?? "07:00"),
-        nightAction: disposition(formData.get("nightAction"), "VOICEMAIL"),
-        nightPriorityThreshold: Math.min(
-          100,
-          Math.max(0, Number(formData.get("nightPriorityThreshold")) || 85),
-        ),
-      } as NonNullable<typeof owner.callPolicy>,
-      updatedAt: sql`now()`,
-    })
-    .where(eq(users.id, owner.id));
-  await logActivity({
-    actor: "USER",
-    action: "CALL_POLICY_UPDATED",
-    summary: "Global call policy updated",
-  });
-  revalidatePath("/settings");
-}
-
 // ----------------------------------------------------------------- assistant
 
 export async function sendAssistantMessage(formData: FormData): Promise<void> {
@@ -1114,65 +1077,7 @@ export async function sendAssistantMessage(formData: FormData): Promise<void> {
   revalidatePath("/chat");
 }
 
-// ------------------------------------------------------------------ settings
-
-export async function updateOwnerSettings(formData: FormData): Promise<void> {
-  const db = await getDb();
-  const name = String(formData.get("name") ?? "").trim();
-  const preferredLanguage =
-    String(formData.get("preferredLanguage") ?? "").trim() || "sv";
-  const timezone =
-    String(formData.get("timezone") ?? "").trim() || "Europe/Stockholm";
-  const defaultTone = String(formData.get("defaultTone") ?? "").trim();
-  const emojiUsage = String(formData.get("emojiUsage") ?? "").trim();
-  const formality = String(formData.get("formality") ?? "").trim();
-  const commonExpressions = String(formData.get("commonExpressions") ?? "")
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-
-  const [owner] = await db.select().from(users).limit(1);
-  if (!owner) return;
-  await db
-    .update(users)
-    .set({
-      name: name || owner.name,
-      preferredLanguage,
-      timezone,
-      voiceProfile: {
-        ...(owner.voiceProfile ?? {}),
-        ...(defaultTone ? { defaultTone } : {}),
-        ...(emojiUsage ? { emojiUsage } : {}),
-        ...(formality ? { formality } : {}),
-        ...(commonExpressions.length > 0 ? { commonExpressions } : {}),
-      },
-      updatedAt: sql`now()`,
-    })
-    .where(eq(users.id, owner.id));
-  revalidatePath("/settings");
-}
-
 // ----------------------------------------------------------- provider settings
-
-export async function saveElksSettings(formData: FormData): Promise<void> {
-  const username = String(formData.get("username") ?? "").trim();
-  const password = String(formData.get("password") ?? "");
-  const rawNumber = String(formData.get("fromNumber") ?? "").trim();
-  const fromNumber = normalizePhoneNumber(rawNumber);
-  if (!fromNumber) throw new Error("46elks number must be valid E.164");
-  const { saveProviderConfig } = await import("@/lib/providers/config");
-  await saveProviderConfig(
-    "46elks",
-    { username, password },
-    { fromNumber },
-  );
-  await logActivity({
-    actor: "USER",
-    action: "PROVIDER_CONFIGURED",
-    summary: "46elks provider settings saved",
-  });
-  revalidatePath("/settings");
-}
 
 export async function testElksSettings(): Promise<void> {
   const { testElksConnection } = await import("@/lib/providers/elks46");
@@ -1183,37 +1088,6 @@ export async function testElksSettings(): Promise<void> {
   } catch (error) {
     await updateProviderTestStatus("46elks", false, error);
   }
-  revalidatePath("/settings");
-}
-
-export async function saveElevenLabsSettings(
-  formData: FormData,
-): Promise<void> {
-  const apiKey = String(formData.get("apiKey") ?? "");
-  const voiceId = String(formData.get("voiceId") ?? "").trim();
-  if (!voiceId) throw new Error("ElevenLabs voice ID is required");
-  const { saveProviderConfig, getProviderStatus } = await import(
-    "@/lib/providers/config"
-  );
-  const current = (await getProviderStatus()).elevenlabs?.publicConfig ?? {};
-  await saveProviderConfig(
-    "elevenlabs",
-    { apiKey },
-    {
-      ...current,
-      voiceId,
-      modelId:
-        String(formData.get("modelId") ?? "").trim() ||
-        "eleven_multilingual_v2",
-      voicemailText: String(formData.get("voicemailText") ?? "").trim(),
-      screeningText: String(formData.get("screeningText") ?? "").trim(),
-    },
-  );
-  await logActivity({
-    actor: "USER",
-    action: "PROVIDER_CONFIGURED",
-    summary: "ElevenLabs provider settings saved",
-  });
   revalidatePath("/settings");
 }
 

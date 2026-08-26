@@ -5,7 +5,8 @@
   "description": "AI-native personal phone — SMS, MMS, voice, relationship context and policy on Vercel",
   "scripts": {
     "dev": "next dev",
-    "build": "pnpm db:migrate && next build --webpack",
+    "build": "next build --webpack",
+    "vercel-build": "pnpm db:migrate && next build --webpack",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",

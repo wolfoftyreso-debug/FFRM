@@ -33,6 +33,9 @@ Your Swedish number → 46elks → this app → relationship/context/policy → 
 - **Apple-native operational UI** — iOS system colors/typography, desktop
   sidebar and mobile Phone/Messages/Contacts/More tab bar, grouped lists,
   initials avatars, native message bubbles and safe-area-aware sticky composer
+- **Zero-save-button Settings** — every profile/provider/call-policy field
+  autosaves on blur or selection, with per-field saving spinner, persistent
+  green check or inline validation error. Provider secrets remain masked.
 - **Professional Contacts** — A–Z grouping, search/filter/sort, hero card with
   Call/Message/Remind actions, rich work/interests fields, and unified history
   filterable by Messages, Photos, Calls, Voicemail, Automation, Facts,

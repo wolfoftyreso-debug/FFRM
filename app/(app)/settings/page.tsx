@@ -10,19 +10,16 @@ import {
   logout,
   removeProviderConfig,
   generateElevenLabsGreetings,
-  saveElevenLabsSettings,
-  saveElksSettings,
   testElevenLabsSettings,
   testElksSettings,
   unblockNumber,
-  updateGlobalCallPolicy,
-  updateOwnerSettings,
 } from "@/app/actions";
-import { Card, PageHeader, PrimaryButton, inputClass, labelClass } from "@/components/ui";
+import { Card, PageHeader } from "@/components/ui";
 import { fastModel, smartModel } from "@/lib/ai/config";
 import { DEFAULT_GLOBAL_CALL_POLICY } from "@/lib/voice/policy";
 import { getProviderStatus } from "@/lib/providers/config";
 import { ConfirmForm } from "@/components/confirm-form";
+import { AutosaveField } from "@/components/autosave-field";
 
 const DISPOSITIONS = [
   { value: "RING_THROUGH", label: "Ring through to my phone" },
@@ -65,62 +62,17 @@ export default async function SettingsPage() {
             Your profile and voice
           </h2>
           {owner ? (
-            <form action={updateOwnerSettings} className="grid gap-4 sm:grid-cols-2">
-              <label className={labelClass}>
-                Name
-                <input name="name" defaultValue={owner.name} className={inputClass} />
-              </label>
-              <label className={labelClass}>
-                Preferred language
-                <input
-                  name="preferredLanguage"
-                  defaultValue={owner.preferredLanguage}
-                  className={inputClass}
-                />
-              </label>
-              <label className={labelClass}>
-                Timezone
-                <input name="timezone" defaultValue={owner.timezone} className={inputClass} />
-              </label>
-              <label className={labelClass}>
-                Default tone
-                <input
-                  name="defaultTone"
-                  placeholder="warm, informal"
-                  defaultValue={owner.voiceProfile?.defaultTone ?? ""}
-                  className={inputClass}
-                />
-              </label>
-              <label className={labelClass}>
-                Emoji usage
-                <input
-                  name="emojiUsage"
-                  placeholder="light"
-                  defaultValue={owner.voiceProfile?.emojiUsage ?? ""}
-                  className={inputClass}
-                />
-              </label>
-              <label className={labelClass}>
-                Formality
-                <input
-                  name="formality"
-                  placeholder="casual"
-                  defaultValue={owner.voiceProfile?.formality ?? ""}
-                  className={inputClass}
-                />
-              </label>
-              <label className={`${labelClass} sm:col-span-2`}>
-                Common expressions (comma-separated)
-                <input
-                  name="commonExpressions"
-                  defaultValue={(owner.voiceProfile?.commonExpressions ?? []).join(", ")}
-                  className={inputClass}
-                />
-              </label>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <AutosaveField section="owner" field="name" label="Name" defaultValue={owner.name} />
+              <AutosaveField section="owner" field="preferredLanguage" label="Preferred language" defaultValue={owner.preferredLanguage} />
+              <AutosaveField section="owner" field="timezone" label="Timezone" defaultValue={owner.timezone} />
+              <AutosaveField section="owner" field="defaultTone" label="Default tone" placeholder="warm, informal" defaultValue={owner.voiceProfile?.defaultTone ?? ""} />
+              <AutosaveField section="owner" field="emojiUsage" label="Emoji usage" placeholder="light" defaultValue={owner.voiceProfile?.emojiUsage ?? ""} />
+              <AutosaveField section="owner" field="formality" label="Formality" placeholder="casual" defaultValue={owner.voiceProfile?.formality ?? ""} />
               <div className="sm:col-span-2">
-                <PrimaryButton>Save</PrimaryButton>
+                <AutosaveField section="owner" field="commonExpressions" label="Common expressions (comma-separated)" defaultValue={(owner.voiceProfile?.commonExpressions ?? []).join(", ")} />
               </div>
-            </form>
+            </div>
           ) : (
             <p className="text-sm text-stone-500">
               No owner profile found — run the seed script (`pnpm db:seed`).
@@ -169,39 +121,30 @@ export default async function SettingsPage() {
             </div>
             <ProviderStatus status={elks?.lastTestStatus} />
           </div>
-          <form action={saveElksSettings} className="mt-4 grid gap-4 sm:grid-cols-2">
-            <label className={labelClass}>
-              API username
-              <input
-                name="username"
-                placeholder={elks ? "Saved — leave blank to keep" : "u_..."}
-                className={inputClass}
-              />
-            </label>
-            <label className={labelClass}>
-              API password
-              <input
-                name="password"
-                type="password"
-                autoComplete="new-password"
-                placeholder={elks ? "•••••••• (saved)" : "API password"}
-                className={inputClass}
-              />
-            </label>
-            <label className={`${labelClass} sm:col-span-2`}>
-              MMS/SMS/voice-enabled number
-              <input
-                name="fromNumber"
-                required
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <AutosaveField
+              section="46elks"
+              field="username"
+              label="API username"
+              placeholder={elks ? "Saved — leave blank to keep" : "u_..."}
+            />
+            <AutosaveField
+              section="46elks"
+              field="password"
+              label="API password"
+              type="password"
+              placeholder={elks ? "•••••••• (saved)" : "API password"}
+            />
+            <div className="sm:col-span-2">
+              <AutosaveField
+                section="46elks"
+                field="fromNumber"
+                label="MMS/SMS/voice-enabled number"
                 placeholder="+467..."
                 defaultValue={String(elks?.publicConfig.fromNumber ?? "")}
-                className={inputClass}
               />
-            </label>
-            <div className="flex flex-wrap gap-2 sm:col-span-2">
-              <PrimaryButton>Save 46elks</PrimaryButton>
             </div>
-          </form>
+          </div>
           {elks ? (
             <div className="mt-2 flex flex-wrap gap-3">
               <form action={testElksSettings}>
@@ -231,69 +174,55 @@ export default async function SettingsPage() {
             </div>
             <ProviderStatus status={eleven?.lastTestStatus} />
           </div>
-          <form
-            action={saveElevenLabsSettings}
-            className="mt-4 grid gap-4 sm:grid-cols-2"
-          >
-            <label className={labelClass}>
-              API key
-              <input
-                name="apiKey"
-                type="password"
-                autoComplete="new-password"
-                placeholder={eleven ? "•••••••• (saved)" : "sk_..."}
-                className={inputClass}
-              />
-            </label>
-            <label className={labelClass}>
-              Voice ID
-              <input
-                name="voiceId"
-                required
-                placeholder="Voice ID from ElevenLabs"
-                defaultValue={String(eleven?.publicConfig.voiceId ?? "")}
-                className={inputClass}
-              />
-            </label>
-            <label className={labelClass}>
-              Model
-              <input
-                name="modelId"
-                defaultValue={String(
-                  eleven?.publicConfig.modelId ?? "eleven_multilingual_v2",
-                )}
-                className={inputClass}
-              />
-            </label>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <AutosaveField
+              section="elevenlabs"
+              field="apiKey"
+              label="API key"
+              type="password"
+              placeholder={eleven ? "•••••••• (saved)" : "sk_..."}
+            />
+            <AutosaveField
+              section="elevenlabs"
+              field="voiceId"
+              label="Voice ID"
+              placeholder="Voice ID from ElevenLabs"
+              defaultValue={String(eleven?.publicConfig.voiceId ?? "")}
+            />
+            <AutosaveField
+              section="elevenlabs"
+              field="modelId"
+              label="Model"
+              defaultValue={String(
+                eleven?.publicConfig.modelId ?? "eleven_multilingual_v2",
+              )}
+            />
             <div />
-            <label className={`${labelClass} sm:col-span-2`}>
-              Voicemail greeting
-              <textarea
-                name="voicemailText"
-                rows={2}
+            <div className="sm:col-span-2">
+              <AutosaveField
+                section="elevenlabs"
+                field="voicemailText"
+                label="Voicemail greeting"
+                multiline
                 defaultValue={String(
                   eleven?.publicConfig.voicemailText ??
                     "Hej! Jag kan inte svara just nu. Lämna gärna ett meddelande efter tonen.",
                 )}
-                className={inputClass}
               />
-            </label>
-            <label className={`${labelClass} sm:col-span-2`}>
-              Unknown-caller screening greeting
-              <textarea
-                name="screeningText"
-                rows={2}
+            </div>
+            <div className="sm:col-span-2">
+              <AutosaveField
+                section="elevenlabs"
+                field="screeningText"
+                label="Unknown-caller screening greeting"
+                multiline
                 defaultValue={String(
                   eleven?.publicConfig.screeningText ??
                     "Hej! Du har kommit till min telefonassistent. Berätta gärna kort vad ärendet gäller.",
                 )}
-                className={inputClass}
               />
-            </label>
-            <div className="sm:col-span-2">
-              <PrimaryButton>Save ElevenLabs</PrimaryButton>
             </div>
-          </form>
+          </div>
           {eleven ? (
             <div className="mt-2 flex flex-wrap gap-3">
               <form action={testElevenLabsSettings}>
@@ -332,86 +261,78 @@ export default async function SettingsPage() {
             settings override this.
           </p>
           {owner ? (
-            <form action={updateGlobalCallPolicy} className="grid gap-4 sm:grid-cols-2">
-              <label className={labelClass}>
-                Your real phone (ring-through target)
-                <input
-                  name="ownerPhone"
-                  placeholder="+46701234567"
-                  defaultValue={owner.phoneNumber ?? ""}
-                  className={inputClass}
-                />
-              </label>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <AutosaveField
+                section="callPolicy"
+                field="ownerPhone"
+                label="Your real phone (ring-through target)"
+                placeholder="+46701234567"
+                defaultValue={owner.phoneNumber ?? ""}
+              />
               <div />
-              <label className={labelClass}>
-                Known contacts
-                <select
-                  name="knownContacts"
-                  defaultValue={owner.callPolicy?.knownContacts ?? DEFAULT_GLOBAL_CALL_POLICY.knownContacts}
-                  className={inputClass}
-                >
-                  {DISPOSITIONS.map((d) => (
-                    <option key={d.value} value={d.value}>{d.label}</option>
-                  ))}
-                </select>
-              </label>
-              <label className={labelClass}>
-                Unknown callers
-                <select
-                  name="unknownCallers"
-                  defaultValue={owner.callPolicy?.unknownCallers ?? DEFAULT_GLOBAL_CALL_POLICY.unknownCallers}
-                  className={inputClass}
-                >
-                  {DISPOSITIONS.map((d) => (
-                    <option key={d.value} value={d.value}>{d.label}</option>
-                  ))}
-                </select>
-              </label>
-              <label className={labelClass}>
-                Night starts
-                <input
-                  name="nightStart"
-                  type="time"
-                  defaultValue={owner.callPolicy?.nightStart ?? DEFAULT_GLOBAL_CALL_POLICY.nightStart}
-                  className={inputClass}
-                />
-              </label>
-              <label className={labelClass}>
-                Night ends
-                <input
-                  name="nightEnd"
-                  type="time"
-                  defaultValue={owner.callPolicy?.nightEnd ?? DEFAULT_GLOBAL_CALL_POLICY.nightEnd}
-                  className={inputClass}
-                />
-              </label>
-              <label className={labelClass}>
-                At night
-                <select
-                  name="nightAction"
-                  defaultValue={owner.callPolicy?.nightAction ?? DEFAULT_GLOBAL_CALL_POLICY.nightAction}
-                  className={inputClass}
-                >
-                  {DISPOSITIONS.filter((d) => d.value !== "RING_THROUGH").map((d) => (
-                    <option key={d.value} value={d.value}>{d.label}</option>
-                  ))}
-                </select>
-              </label>
-              <label className={labelClass}>
-                Ring through at night when call-through priority ≥
-                <input
-                  name="nightPriorityThreshold"
-                  type="number"
-                  min={0}
-                  max={100}
-                  defaultValue={owner.callPolicy?.nightPriorityThreshold ?? DEFAULT_GLOBAL_CALL_POLICY.nightPriorityThreshold}
-                  className={inputClass}
-                />
-              </label>
-              <div className="sm:col-span-2">
-                <PrimaryButton>Save call policy</PrimaryButton>
-              </div>
-            </form>
+              <AutosaveField
+                section="callPolicy"
+                field="knownContacts"
+                label="Known contacts"
+                options={DISPOSITIONS}
+                defaultValue={
+                  owner.callPolicy?.knownContacts ??
+                  DEFAULT_GLOBAL_CALL_POLICY.knownContacts
+                }
+              />
+              <AutosaveField
+                section="callPolicy"
+                field="unknownCallers"
+                label="Unknown callers"
+                options={DISPOSITIONS}
+                defaultValue={
+                  owner.callPolicy?.unknownCallers ??
+                  DEFAULT_GLOBAL_CALL_POLICY.unknownCallers
+                }
+              />
+              <AutosaveField
+                section="callPolicy"
+                field="nightStart"
+                label="Night starts"
+                type="time"
+                defaultValue={
+                  owner.callPolicy?.nightStart ??
+                  DEFAULT_GLOBAL_CALL_POLICY.nightStart
+                }
+              />
+              <AutosaveField
+                section="callPolicy"
+                field="nightEnd"
+                label="Night ends"
+                type="time"
+                defaultValue={
+                  owner.callPolicy?.nightEnd ??
+                  DEFAULT_GLOBAL_CALL_POLICY.nightEnd
+                }
+              />
+              <AutosaveField
+                section="callPolicy"
+                field="nightAction"
+                label="At night"
+                options={DISPOSITIONS.filter(
+                  (disposition) => disposition.value !== "RING_THROUGH",
+                )}
+                defaultValue={
+                  owner.callPolicy?.nightAction ??
+                  DEFAULT_GLOBAL_CALL_POLICY.nightAction
+                }
+              />
+              <AutosaveField
+                section="callPolicy"
+                field="nightPriorityThreshold"
+                label="Ring through at night when call-through priority ≥"
+                type="number"
+                defaultValue={String(
+                  owner.callPolicy?.nightPriorityThreshold ??
+                    DEFAULT_GLOBAL_CALL_POLICY.nightPriorityThreshold,
+                )}
+              />
+            </div>
           ) : null}
         </Card>
 

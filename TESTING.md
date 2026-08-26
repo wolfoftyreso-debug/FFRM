@@ -17,6 +17,10 @@ clean lint/typecheck/tests; the Webpack build compiles every route successfully.
 Development still uses Turbopack. Remove the fallback after the upstream panic
 is fixed and a default `next build` is verified.
 
+Vercel uses `pnpm vercel-build`, which applies durable Postgres migrations
+before compiling. Local `pnpm build` deliberately does not migrate PGlite, so
+it cannot collide with a running dev server's embedded database.
+
 ## What is covered
 
 ### Unit tests (`tests/unit/`)
@@ -86,7 +90,8 @@ PGlite database:
 - Phone Recents/Missed/Voicemail, thread links, audio UI, handled state
 - Calendar save, automation conditional form + incoming-SMS rule + toggle/run,
   Activity audit, owner/call-policy Settings persistence, encrypted 46elks and
-  ElevenLabs form save/reload with secret inputs returning blank/masked
+  ElevenLabs per-field autosave/reload with green checks and secret inputs
+  returning blank/masked
 
 The suite also caught and now guards a Next development-origin bug that had
 left client components unhydrated while server forms still appeared to work.

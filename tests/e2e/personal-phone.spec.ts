@@ -12,6 +12,56 @@ async function login(page: Page) {
   }
 }
 
+async function autosaveInput(page: Page, name: string, value: string) {
+  const input = page.locator(`[name="${name}"]`);
+  if ((await input.inputValue()) === value) {
+    const type = await input.getAttribute("type");
+    const temporary =
+      name === "fromNumber"
+        ? value === "+46701112234"
+          ? "+46701112235"
+          : "+46701112234"
+        : name === "ownerPhone"
+          ? value === "+46709123224"
+            ? "+46709123225"
+            : "+46709123224"
+      : type === "time"
+        ? value === "21:59"
+          ? "22:01"
+          : "21:59"
+        : type === "number"
+          ? value === "84"
+            ? "85"
+            : "84"
+          : `${value} temp`;
+    await input.fill(temporary);
+    await input.blur();
+    await expect(input.locator("xpath=..").getByText("Saved")).toBeVisible();
+  }
+  await input.fill(value);
+  await input.blur();
+  await expect(input.locator("xpath=..").getByText("Saved")).toBeVisible();
+}
+
+async function autosaveSelect(page: Page, name: string, value: string) {
+  const select = page.locator(`select[name="${name}"]`);
+  if ((await select.inputValue()) === value) {
+    const alternative = await select.locator("option").evaluateAll(
+      (options, selected) =>
+        options.map((option) => (option as HTMLOptionElement).value).find(
+          (option) => option !== selected,
+        ),
+      value,
+    );
+    if (alternative) {
+      await select.selectOption(alternative);
+      await expect(select.locator("xpath=..").getByText("Saved")).toBeVisible();
+    }
+  }
+  await select.selectOption(value);
+  await expect(select.locator("xpath=..").getByText("Saved")).toBeVisible();
+}
+
 test.describe.serial("Personal Phone complete UI", () => {
   test.beforeEach(async ({ page }) => {
     page.on("pageerror", (error) =>
@@ -325,28 +375,29 @@ test.describe.serial("Personal Phone complete UI", () => {
     await expect(page.getByText(name).or(page.getByText(/Automation/)).first()).toBeVisible();
 
     await page.goto("/settings");
-    await page.locator('input[name="name"]').fill("Owner");
-    await page.locator('input[name="preferredLanguage"]').fill("sv");
-    await page.getByRole("button", { name: "Save", exact: true }).click();
-    await page.locator('select[name="knownContacts"]').selectOption("RING_THROUGH");
-    await page.locator('select[name="unknownCallers"]').selectOption("VOICEMAIL");
-    await page.locator('input[name="nightStart"]').fill("22:00");
-    await page.locator('input[name="nightEnd"]').fill("07:00");
-    await page.locator('input[name="nightPriorityThreshold"]').fill("85");
-    await page.getByRole("button", { name: "Save call policy" }).click();
+    await autosaveInput(page, "name", "Owner");
+    await autosaveInput(page, "preferredLanguage", "sv");
+    await autosaveSelect(page, "knownContacts", "RING_THROUGH");
+    await autosaveSelect(page, "unknownCallers", "VOICEMAIL");
+    await autosaveInput(page, "nightStart", "22:00");
+    await autosaveInput(page, "nightEnd", "07:00");
+    await autosaveInput(page, "nightPriorityThreshold", "85");
     await expect(page.locator('select[name="unknownCallers"]')).toHaveValue(
       "VOICEMAIL",
     );
     await expect(page.getByText("System health")).toBeVisible();
     await expect(page.getByText("AI models")).toBeVisible();
-    await page.locator('input[name="username"]').fill("u_e2e");
-    await page.locator('input[name="password"]').fill("p_e2e");
-    await page.locator('input[name="fromNumber"]').fill("+46701112233");
-    await page.getByRole("button", { name: "Save 46elks" }).click();
-    await page.locator('input[name="apiKey"]').fill("xi_e2e");
-    await page.locator('input[name="voiceId"]').fill("voice_e2e");
-    await page.locator('input[name="modelId"]').fill("eleven_multilingual_v2");
-    await page.getByRole("button", { name: "Save ElevenLabs" }).click();
+    await autosaveInput(page, "username", "u_e2e");
+    await autosaveInput(page, "password", "p_e2e");
+    await autosaveInput(page, "fromNumber", "+46701112233");
+    await autosaveInput(page, "apiKey", "xi_e2e");
+    await autosaveInput(page, "voiceId", "voice_e2e");
+    await autosaveInput(page, "modelId", "eleven_multilingual_v2");
+    await page.screenshot({
+      path: `${ARTIFACTS}/apple-settings-autosave.png`,
+      fullPage: true,
+      caret: "initial",
+    });
     await page.reload();
     await expect(page.locator('input[name="fromNumber"]')).toHaveValue(
       "+46701112233",
