@@ -24,6 +24,7 @@ import { AutosaveField } from "@/components/autosave-field";
 import { VoiceCloneRecorder } from "@/components/voice-clone-recorder";
 import { SegmentedLinks } from "@/components/apple-ui";
 import { PendingActionButton } from "@/components/pending-action-button";
+import { ContactPhotoUploader } from "@/components/contact-photo-uploader";
 import {
   DEFAULT_RECEPTIONIST_CONFIG,
   isOwnerAjour,
@@ -110,6 +111,14 @@ export default async function SettingsPage({
             Your profile and voice
           </h2>
           {owner ? (
+            <>
+            <ContactPhotoUploader
+              name={owner.name}
+              endpoint="/api/profile/photo"
+              initialPhotoUrl={
+                owner.photoDataBase64 ? "/api/profile/photo" : null
+              }
+            />
             <div className="grid gap-4 sm:grid-cols-2">
               <AutosaveField section="owner" field="name" label="Name" defaultValue={owner.name} />
               <AutosaveField section="owner" field="phoneNumber" label="Mobile number" type="tel" defaultValue={owner.phoneNumber ?? ""} />
@@ -147,6 +156,7 @@ export default async function SettingsPage({
                 />
               </div>
             </div>
+            </>
           ) : (
             <p className="text-sm text-stone-500">
               No owner profile found — run the seed script (`pnpm db:seed`).

@@ -281,7 +281,7 @@ test.describe.serial("Personal Phone complete UI", () => {
     await johanLink.click();
 
     await expect(page.getByRole("heading", { name: "Johan Testsson" })).toBeVisible();
-    for (const action of ["Call", "Message", "Remind"]) {
+    for (const action of ["Call", "Message", "Remind", "AirDrop / Dela"]) {
       await expect(page.getByText(action, { exact: true }).first()).toBeVisible();
     }
     for (const filter of [
@@ -290,7 +290,7 @@ test.describe.serial("Personal Phone complete UI", () => {
       "Photos",
       "Calls",
       "Voicemail",
-      "Automation",
+      "SMS-jobb",
       "Facts",
       "Reminders",
       "System",
@@ -316,6 +316,24 @@ test.describe.serial("Personal Phone complete UI", () => {
     await page.getByRole("button", { name: "Create reminder" }).click();
 
     await page.getByRole("link", { name: "Edit" }).click();
+    const contactPhoto = await sharp({
+      create: {
+        width: 180,
+        height: 240,
+        channels: 3,
+        background: { r: 20, g: 90, b: 160 },
+      },
+    })
+      .png()
+      .toBuffer();
+    await page
+      .locator('input[type="file"][accept*="image/jpeg"]')
+      .setInputFiles({
+        name: "johan.png",
+        mimeType: "image/png",
+        buffer: contactPhoto,
+      });
+    await expect(page.getByRole("button", { name: "Byt foto" })).toBeVisible();
     await page.locator('input[name="displayName"]').fill("Johan Testsson");
     await page.locator('input[name="company"]').fill("E2E AB");
     await page.locator('input[name="jobTitle"]').fill("Test Lead");
@@ -348,8 +366,9 @@ test.describe.serial("Personal Phone complete UI", () => {
     await expect(page.locator('select[name="nameDayMonth"]')).toHaveValue("6");
     await expect(page.locator('select[name="nameDayDay"]')).toHaveValue("24");
     await page.goBack();
+    await expect(page.locator("header img")).toBeVisible();
     await expect(
-      page.getByRole("link", { name: /Name-day automation/ }),
+      page.getByRole("link", { name: /\+ Namnsdag/ }),
     ).toBeVisible();
 
     await expect(page.getByText("Teach AI how we talk")).toBeVisible();

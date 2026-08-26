@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import type { ReactNode } from "react";
 import { ChevronRight } from "lucide-react";
 
@@ -14,9 +15,11 @@ const AVATAR_COLORS = [
 export function ContactAvatar({
   name,
   size = "md",
+  photoUrl,
 }: {
   name: string;
   size?: "sm" | "md" | "lg" | "xl";
+  photoUrl?: string | null;
 }) {
   const initials = name
     .split(/\s+/)
@@ -38,9 +41,20 @@ export function ContactAvatar({
   return (
     <span
       aria-hidden="true"
-      className={`inline-flex shrink-0 items-center justify-center rounded-full font-semibold text-white shadow-sm ${color} ${sizes[size]}`}
+      className={`relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full font-semibold text-white shadow-sm ${color} ${sizes[size]}`}
     >
-      {initials || "?"}
+      {photoUrl ? (
+        <Image
+          src={photoUrl}
+          alt=""
+          fill
+          sizes={size === "xl" ? "96px" : size === "lg" ? "64px" : "44px"}
+          className="object-cover"
+          unoptimized
+        />
+      ) : (
+        initials || "?"
+      )}
     </span>
   );
 }

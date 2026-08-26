@@ -39,6 +39,23 @@ export async function listContacts() {
     .orderBy(asc(contacts.firstName));
 }
 
+/** Lightweight recipient picker; deliberately excludes stored photo blobs. */
+export async function listContactOptions() {
+  const db = await getDb();
+  return db
+    .select({
+      id: contacts.id,
+      firstName: contacts.firstName,
+      lastName: contacts.lastName,
+      displayName: contacts.displayName,
+      nickname: contacts.nickname,
+      phoneNumber: contacts.phoneNumber,
+    })
+    .from(contacts)
+    .where(sql`${contacts.archivedAt} is null`)
+    .orderBy(asc(contacts.firstName));
+}
+
 export async function getContact(id: string) {
   const db = await getDb();
   const [contact] = await db.select().from(contacts).where(eq(contacts.id, id));

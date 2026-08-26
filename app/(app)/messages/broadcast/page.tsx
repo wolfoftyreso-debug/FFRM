@@ -1,4 +1,4 @@
-import { listCampaigns, listContacts } from "@/lib/queries";
+import { listCampaigns, listContactOptions } from "@/lib/queries";
 import { BroadcastComposer } from "@/components/broadcast-composer";
 import { AppleRow, InsetSection } from "@/components/apple-ui";
 import { Badge, PageHeader } from "@/components/ui";
@@ -8,7 +8,7 @@ export const metadata = { title: "Send to many" };
 
 export default async function BroadcastPage() {
   const [contacts, campaigns] = await Promise.all([
-    listContacts(),
+    listContactOptions(),
     listCampaigns(8),
   ]);
   return (

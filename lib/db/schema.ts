@@ -29,6 +29,8 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   email: text("email"),
   phoneNumber: text("phone_number"),
+  photoDataBase64: text("photo_data_base64"),
+  photoMimeType: text("photo_mime_type"),
   /** Unguessable public URL token for the owner's shared contact card. */
   shareToken: text("share_token").unique(),
   preferredLanguage: text("preferred_language").notNull().default("sv"),
@@ -196,6 +198,8 @@ export const contacts = pgTable(
     /** E.164, canonical. */
     phoneNumber: text("phone_number"),
     email: text("email"),
+    photoDataBase64: text("photo_data_base64"),
+    photoMimeType: text("photo_mime_type"),
     birthday: date("birthday"),
     /** Recurring Swedish name day (month/day; year-independent). */
     nameDayMonth: integer("name_day_month"),

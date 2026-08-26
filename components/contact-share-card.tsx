@@ -19,7 +19,15 @@ export function ContactShareCard({
   return (
     <div className="mx-auto max-w-lg space-y-6">
       <header className="text-center">
-        <ContactAvatar name={contact.name} size="xl" />
+        <ContactAvatar
+          name={contact.name}
+          size="xl"
+          photoUrl={
+            contact.photoDataBase64
+              ? `/api/public/contact/${contact.shareToken}/photo`
+              : null
+          }
+        />
         <h1 className="mt-3 text-[28px] font-bold tracking-tight">
           {contact.name}
         </h1>
@@ -42,7 +50,11 @@ export function ContactShareCard({
         Skanna QR-koden för att öppna och spara kontaktkortet.
       </p>
 
-      <ContactShareActions name={contact.name} shareUrl={shareUrl} />
+      <ContactShareActions
+        name={contact.name}
+        shareUrl={shareUrl}
+        vcardUrl={vcardUrl}
+      />
 
       <InsetSection title="Kontakt">
         {contact.phoneNumber ? (

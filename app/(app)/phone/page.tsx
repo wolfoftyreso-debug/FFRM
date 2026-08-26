@@ -181,7 +181,14 @@ export default async function PhonePage({
             return (
               <div key={call.id} className="ios-hairline px-4 py-3">
                 <div className="flex items-start gap-3">
-                  <ContactAvatar name={who} />
+                  <ContactAvatar
+                    name={who}
+                    photoUrl={
+                      contact?.photoDataBase64
+                        ? `/api/contacts/${contact.id}/photo`
+                        : null
+                    }
+                  />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
                       {stateIcon(call.state, call.direction)}

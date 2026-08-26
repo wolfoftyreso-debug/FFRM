@@ -129,7 +129,16 @@ export default async function PeoplePage({
                   <AppleRow
                     key={c.id}
                     href={`/people/${c.id}`}
-                    leading={<ContactAvatar name={displayName(c)} />}
+                    leading={
+                      <ContactAvatar
+                        name={displayName(c)}
+                        photoUrl={
+                          c.photoDataBase64
+                            ? `/api/contacts/${c.id}/photo`
+                            : null
+                        }
+                      />
+                    }
                     title={
                       <span className="font-semibold">
                         {displayName(c)}

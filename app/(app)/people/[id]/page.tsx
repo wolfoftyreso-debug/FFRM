@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { ConfirmForm } from "@/components/confirm-form";
 import { isCalendarSmsJob } from "@/lib/calendar-activities";
+import { VCardShareButton } from "@/components/contact-share-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -77,7 +78,15 @@ export default async function ContactPage({
             Edit
           </Link>
         </div>
-        <ContactAvatar name={displayName(contact)} size="xl" />
+        <ContactAvatar
+          name={displayName(contact)}
+          size="xl"
+          photoUrl={
+            contact.photoDataBase64
+              ? `/api/contacts/${contact.id}/photo`
+              : null
+          }
+        />
         <h1 className="mt-3 text-[28px] font-bold tracking-tight">
           {displayName(contact)}
         </h1>
@@ -109,6 +118,10 @@ export default async function ContactPage({
             </>
           ) : null}
           <AppleAction href="#reminder" icon={<Bell className="h-5 w-5" />} label="Remind" />
+          <VCardShareButton
+            name={displayName(contact)}
+            vcardUrl={`/api/contacts/${contact.id}/vcard`}
+          />
         </div>
       </header>
 
