@@ -2,7 +2,7 @@ import { eq, sql } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { contacts, conversations, mediaAssets, messages } from "@/lib/db/schema";
 import { isE164 } from "@/lib/phone";
-import { requireEnv } from "@/lib/env";
+import { getElksCredentials } from "@/lib/providers/config";
 import { getMessagingProvider } from "@/lib/sms/provider";
 import { getOrCreateConversation } from "@/lib/sms/send-message";
 import { prepareMmsImage, MAX_MMS_PAYLOAD_BYTES } from "@/lib/media/image";
@@ -33,7 +33,7 @@ export async function sendMediaMessage(input: {
   const conversationId =
     input.conversationId ??
     (await getOrCreateConversation(input.contactId ?? null, input.to));
-  const from = requireEnv("ELKS46_FROM_NUMBER");
+  const { fromNumber: from } = await getElksCredentials();
 
   // Persist Message + sanitized media before the provider side effect.
   const [message] = await db

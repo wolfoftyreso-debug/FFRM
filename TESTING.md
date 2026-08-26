@@ -66,6 +66,10 @@ is fixed and a default `next build` is verified.
   screenshot → communication profile
 - `endpoints.test.ts` — image-caption API, event-driven INCOMING_SMS automation
   dedupe and authenticated voicemail-audio proxy
+- `providers.test.ts` — AES-GCM round-trip/provider binding, no plaintext DB
+  storage, blank-secret preservation, Settings-over-env resolution, mocked
+  46elks `/a1/me`, current ElevenLabs `/v2/voices`, TTS audio validation and
+  token-protected generated greeting delivery
 
 ### Browser E2E (`tests/e2e/`)
 
@@ -81,7 +85,8 @@ PGlite database:
   work/profile save + reload, real screenshot upload and retry state
 - Phone Recents/Missed/Voicemail, thread links, audio UI, handled state
 - Calendar save, automation conditional form + incoming-SMS rule + toggle/run,
-  Activity audit, owner/call-policy Settings persistence
+  Activity audit, owner/call-policy Settings persistence, encrypted 46elks and
+  ElevenLabs form save/reload with secret inputs returning blank/masked
 
 The suite also caught and now guards a Next development-origin bug that had
 left client components unhydrated while server forms still appeared to work.

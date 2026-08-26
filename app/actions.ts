@@ -1105,6 +1105,140 @@ export async function updateOwnerSettings(formData: FormData): Promise<void> {
   revalidatePath("/settings");
 }
 
+// ----------------------------------------------------------- provider settings
+
+export async function saveElksSettings(formData: FormData): Promise<void> {
+  const username = String(formData.get("username") ?? "").trim();
+  const password = String(formData.get("password") ?? "");
+  const rawNumber = String(formData.get("fromNumber") ?? "").trim();
+  const fromNumber = normalizePhoneNumber(rawNumber);
+  if (!fromNumber) throw new Error("46elks number must be valid E.164");
+  const { saveProviderConfig } = await import("@/lib/providers/config");
+  await saveProviderConfig(
+    "46elks",
+    { username, password },
+    { fromNumber },
+  );
+  await logActivity({
+    actor: "USER",
+    action: "PROVIDER_CONFIGURED",
+    summary: "46elks provider settings saved",
+  });
+  revalidatePath("/settings");
+}
+
+export async function testElksSettings(): Promise<void> {
+  const { testElksConnection } = await import("@/lib/providers/elks46");
+  const { updateProviderTestStatus } = await import("@/lib/providers/config");
+  try {
+    await testElksConnection();
+    await updateProviderTestStatus("46elks", true);
+  } catch (error) {
+    await updateProviderTestStatus("46elks", false, error);
+  }
+  revalidatePath("/settings");
+}
+
+export async function saveElevenLabsSettings(
+  formData: FormData,
+): Promise<void> {
+  const apiKey = String(formData.get("apiKey") ?? "");
+  const voiceId = String(formData.get("voiceId") ?? "").trim();
+  if (!voiceId) throw new Error("ElevenLabs voice ID is required");
+  const { saveProviderConfig, getProviderStatus } = await import(
+    "@/lib/providers/config"
+  );
+  const current = (await getProviderStatus()).elevenlabs?.publicConfig ?? {};
+  await saveProviderConfig(
+    "elevenlabs",
+    { apiKey },
+    {
+      ...current,
+      voiceId,
+      modelId:
+        String(formData.get("modelId") ?? "").trim() ||
+        "eleven_multilingual_v2",
+      voicemailText: String(formData.get("voicemailText") ?? "").trim(),
+      screeningText: String(formData.get("screeningText") ?? "").trim(),
+    },
+  );
+  await logActivity({
+    actor: "USER",
+    action: "PROVIDER_CONFIGURED",
+    summary: "ElevenLabs provider settings saved",
+  });
+  revalidatePath("/settings");
+}
+
+export async function testElevenLabsSettings(): Promise<void> {
+  const { listElevenLabsVoices } = await import(
+    "@/lib/providers/elevenlabs"
+  );
+  const { updateProviderTestStatus } = await import("@/lib/providers/config");
+  try {
+    await listElevenLabsVoices();
+    await updateProviderTestStatus("elevenlabs", true);
+  } catch (error) {
+    await updateProviderTestStatus("elevenlabs", false, error);
+  }
+  revalidatePath("/settings");
+}
+
+export async function generateElevenLabsGreetings(): Promise<void> {
+  const db = await getDb();
+  const { audioAssets } = await import("@/lib/db/schema");
+  const {
+    getElevenLabsConfig,
+    getProviderStatus,
+    saveProviderConfig,
+  } = await import("@/lib/providers/config");
+  const { generateElevenLabsSpeech } = await import(
+    "@/lib/providers/elevenlabs"
+  );
+  const config = await getElevenLabsConfig();
+  const [voicemail, screening] = await Promise.all([
+    generateElevenLabsSpeech(config.voicemailText),
+    generateElevenLabsSpeech(config.screeningText),
+  ]);
+  const [voicemailAsset, screeningAsset] = await db.transaction(async (tx) => {
+    const [vm] = await tx
+      .insert(audioAssets)
+      .values({
+        provider: "elevenlabs",
+        purpose: "VOICEMAIL_GREETING",
+        mimeType: voicemail.mimeType,
+        dataBase64: Buffer.from(voicemail.data).toString("base64"),
+        byteSize: voicemail.data.byteLength,
+        sourceText: config.voicemailText,
+      })
+      .returning();
+    const [screen] = await tx
+      .insert(audioAssets)
+      .values({
+        provider: "elevenlabs",
+        purpose: "SCREEN_GREETING",
+        mimeType: screening.mimeType,
+        dataBase64: Buffer.from(screening.data).toString("base64"),
+        byteSize: screening.data.byteLength,
+        sourceText: config.screeningText,
+      })
+      .returning();
+    return [vm, screen];
+  });
+  const current = (await getProviderStatus()).elevenlabs.publicConfig;
+  await saveProviderConfig("elevenlabs", {}, {
+    ...current,
+    voicemailAudioId: voicemailAsset.id,
+    screeningAudioId: screeningAsset.id,
+  });
+  await logActivity({
+    actor: "USER",
+    action: "VOICE_GREETINGS_GENERATED",
+    summary: "ElevenLabs voicemail and screening greetings generated",
+  });
+  revalidatePath("/settings");
+}
+
 export async function logout(): Promise<void> {
   await destroySession();
   redirect("/login");

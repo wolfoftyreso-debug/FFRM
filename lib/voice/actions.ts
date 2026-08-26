@@ -1,4 +1,5 @@
 import { optionalEnv } from "@/lib/env";
+import { getElevenLabsConfig } from "@/lib/providers/config";
 
 /**
  * Builders for 46elks call-action JSON structures
@@ -34,11 +35,16 @@ export function connectAction(ownerNumber: string): ElksCallAction {
  * posted to the recording webhook (wav URL), where it is transcribed and
  * summarized.
  */
-export function voicemailAction(kind: "VOICEMAIL" | "SCREEN"): ElksCallAction {
+export async function voicemailAction(
+  kind: "VOICEMAIL" | "SCREEN",
+): Promise<ElksCallAction> {
+  const generatedGreeting = await elevenLabsGreeting(kind);
   const greeting =
-    kind === "SCREEN"
-      ? (optionalEnv("SCREEN_GREETING_URL") ?? optionalEnv("VOICE_GREETING_URL"))
-      : optionalEnv("VOICE_GREETING_URL");
+    generatedGreeting ??
+    (kind === "SCREEN"
+      ? (optionalEnv("SCREEN_GREETING_URL") ??
+        optionalEnv("VOICE_GREETING_URL"))
+      : optionalEnv("VOICE_GREETING_URL"));
   const record: ElksCallAction = {
     record: webhookUrl("/api/webhooks/46elks/recording"),
     timelimit: 120,
@@ -52,6 +58,26 @@ export function voicemailAction(kind: "VOICEMAIL" | "SCREEN"): ElksCallAction {
     };
   }
   return record;
+}
+
+async function elevenLabsGreeting(
+  kind: "VOICEMAIL" | "SCREEN",
+): Promise<string | null> {
+  try {
+    const config = await getElevenLabsConfig();
+    const id =
+      kind === "SCREEN"
+        ? config.screeningAudioId
+        : config.voicemailAudioId;
+    const appUrl = optionalEnv("APP_URL");
+    const token = optionalEnv("WEBHOOK_TOKEN");
+    if (!id || !appUrl || !token) return null;
+    const url = new URL(`/api/public/audio/${id}`, appUrl);
+    url.searchParams.set("token", token);
+    return url.toString();
+  } catch {
+    return null;
+  }
 }
 
 /** Decline the call with a busy signal. */

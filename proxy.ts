@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
-const PUBLIC_PATHS = ["/login", "/api/webhooks", "/api/cron"];
+const PUBLIC_PATHS = ["/login", "/api/webhooks", "/api/cron", "/api/public"];
 
 /**
  * Request guard: everything except the login page and the secret-protected

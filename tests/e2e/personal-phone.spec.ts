@@ -331,6 +331,28 @@ test.describe.serial("Personal Phone complete UI", () => {
     );
     await expect(page.getByText("System health")).toBeVisible();
     await expect(page.getByText("AI models")).toBeVisible();
+    await page.locator('input[name="username"]').fill("u_e2e");
+    await page.locator('input[name="password"]').fill("p_e2e");
+    await page.locator('input[name="fromNumber"]').fill("+46701112233");
+    await page.getByRole("button", { name: "Save 46elks" }).click();
+    await page.locator('input[name="apiKey"]').fill("xi_e2e");
+    await page.locator('input[name="voiceId"]').fill("voice_e2e");
+    await page.locator('input[name="modelId"]').fill("eleven_multilingual_v2");
+    await page.getByRole("button", { name: "Save ElevenLabs" }).click();
+    await page.reload();
+    await expect(page.locator('input[name="fromNumber"]')).toHaveValue(
+      "+46701112233",
+    );
+    await expect(page.locator('input[name="voiceId"]')).toHaveValue("voice_e2e");
+    await expect(page.locator('input[name="password"]')).toHaveValue("");
+    await expect(page.locator('input[name="apiKey"]')).toHaveValue("");
+    await page
+      .getByRole("heading", { name: "46elks" })
+      .locator("xpath=../../..")
+      .screenshot({
+        path: `${ARTIFACTS}/apple-provider-settings.png`,
+        caret: "initial",
+      });
     await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
     await page.screenshot({
       path: `${ARTIFACTS}/apple-settings.png`,

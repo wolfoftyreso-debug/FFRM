@@ -37,6 +37,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(action);
   } catch {
     // Routing failure must not hang up on the caller silently — take a message.
-    return NextResponse.json(voicemailAction("VOICEMAIL"));
+    return NextResponse.json(await voicemailAction("VOICEMAIL"));
   }
 }

@@ -8,6 +8,11 @@ import {
 import { getSystemState } from "@/lib/system-state";
 import {
   logout,
+  generateElevenLabsGreetings,
+  saveElevenLabsSettings,
+  saveElksSettings,
+  testElevenLabsSettings,
+  testElksSettings,
   unblockNumber,
   updateGlobalCallPolicy,
   updateOwnerSettings,
@@ -15,6 +20,7 @@ import {
 import { Card, PageHeader, PrimaryButton, inputClass, labelClass } from "@/components/ui";
 import { fastModel, smartModel } from "@/lib/ai/config";
 import { DEFAULT_GLOBAL_CALL_POLICY } from "@/lib/voice/policy";
+import { getProviderStatus } from "@/lib/providers/config";
 
 const DISPOSITIONS = [
   { value: "RING_THROUGH", label: "Ring through to my phone" },
@@ -36,13 +42,17 @@ function healthValue(value: string | undefined): string {
 }
 
 export default async function SettingsPage() {
-  const [owner, health, state, aiCalls, blockedNumbers] = await Promise.all([
+  const [owner, health, state, aiCalls, blockedNumbers, providers] =
+    await Promise.all([
     getOwner(),
     getSystemHealth(),
     getSystemState(),
     listRecentAiCalls(15),
     listBlockedNumbers(),
-  ]);
+      getProviderStatus(),
+    ]);
+  const elks = providers["46elks"];
+  const eleven = providers.elevenlabs;
 
   return (
     <>
@@ -146,6 +156,158 @@ export default async function SettingsPage() {
             </div>
           </Card>
         ) : null}
+
+        <Card>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-semibold text-stone-700">46elks</h2>
+              <p className="mt-1 text-sm text-stone-500">
+                Your SMS, MMS and voice number. Secrets are encrypted at rest.
+              </p>
+            </div>
+            <ProviderStatus status={elks?.lastTestStatus} />
+          </div>
+          <form action={saveElksSettings} className="mt-4 grid gap-4 sm:grid-cols-2">
+            <label className={labelClass}>
+              API username
+              <input
+                name="username"
+                placeholder={elks ? "Saved — leave blank to keep" : "u_..."}
+                className={inputClass}
+              />
+            </label>
+            <label className={labelClass}>
+              API password
+              <input
+                name="password"
+                type="password"
+                autoComplete="new-password"
+                placeholder={elks ? "•••••••• (saved)" : "API password"}
+                className={inputClass}
+              />
+            </label>
+            <label className={`${labelClass} sm:col-span-2`}>
+              MMS/SMS/voice-enabled number
+              <input
+                name="fromNumber"
+                required
+                placeholder="+467..."
+                defaultValue={String(elks?.publicConfig.fromNumber ?? "")}
+                className={inputClass}
+              />
+            </label>
+            <div className="flex flex-wrap gap-2 sm:col-span-2">
+              <PrimaryButton>Save 46elks</PrimaryButton>
+            </div>
+          </form>
+          {elks ? (
+            <form action={testElksSettings} className="mt-2">
+              <button className="min-h-11 text-sm font-semibold text-[var(--system-blue)]">
+                Test 46elks connection
+              </button>
+            </form>
+          ) : null}
+          <ProviderTestDetail provider={elks} />
+        </Card>
+
+        <Card>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-semibold text-stone-700">
+                ElevenLabs
+              </h2>
+              <p className="mt-1 text-sm text-stone-500">
+                Generates the voicemail and caller-screening voice.
+              </p>
+            </div>
+            <ProviderStatus status={eleven?.lastTestStatus} />
+          </div>
+          <form
+            action={saveElevenLabsSettings}
+            className="mt-4 grid gap-4 sm:grid-cols-2"
+          >
+            <label className={labelClass}>
+              API key
+              <input
+                name="apiKey"
+                type="password"
+                autoComplete="new-password"
+                placeholder={eleven ? "•••••••• (saved)" : "sk_..."}
+                className={inputClass}
+              />
+            </label>
+            <label className={labelClass}>
+              Voice ID
+              <input
+                name="voiceId"
+                required
+                placeholder="Voice ID from ElevenLabs"
+                defaultValue={String(eleven?.publicConfig.voiceId ?? "")}
+                className={inputClass}
+              />
+            </label>
+            <label className={labelClass}>
+              Model
+              <input
+                name="modelId"
+                defaultValue={String(
+                  eleven?.publicConfig.modelId ?? "eleven_multilingual_v2",
+                )}
+                className={inputClass}
+              />
+            </label>
+            <div />
+            <label className={`${labelClass} sm:col-span-2`}>
+              Voicemail greeting
+              <textarea
+                name="voicemailText"
+                rows={2}
+                defaultValue={String(
+                  eleven?.publicConfig.voicemailText ??
+                    "Hej! Jag kan inte svara just nu. Lämna gärna ett meddelande efter tonen.",
+                )}
+                className={inputClass}
+              />
+            </label>
+            <label className={`${labelClass} sm:col-span-2`}>
+              Unknown-caller screening greeting
+              <textarea
+                name="screeningText"
+                rows={2}
+                defaultValue={String(
+                  eleven?.publicConfig.screeningText ??
+                    "Hej! Du har kommit till min telefonassistent. Berätta gärna kort vad ärendet gäller.",
+                )}
+                className={inputClass}
+              />
+            </label>
+            <div className="sm:col-span-2">
+              <PrimaryButton>Save ElevenLabs</PrimaryButton>
+            </div>
+          </form>
+          {eleven ? (
+            <div className="mt-2 flex flex-wrap gap-3">
+              <form action={testElevenLabsSettings}>
+                <button className="min-h-11 text-sm font-semibold text-[var(--system-blue)]">
+                  Test ElevenLabs connection
+                </button>
+              </form>
+              <form action={generateElevenLabsGreetings}>
+                <button className="min-h-11 text-sm font-semibold text-[var(--system-blue)]">
+                  Generate both greetings
+                </button>
+              </form>
+            </div>
+          ) : null}
+          {eleven?.publicConfig.voicemailAudioId &&
+          eleven.publicConfig.screeningAudioId ? (
+            <p className="mt-2 text-xs font-medium text-[var(--system-green)]">
+              Generated greetings are saved. They become active for 46elks
+              when APP_URL and WEBHOOK_TOKEN are configured.
+            </p>
+          ) : null}
+          <ProviderTestDetail provider={eleven} />
+        </Card>
 
         <Card>
           <h2 className="mb-1 text-sm font-semibold text-stone-700">
@@ -321,5 +483,50 @@ export default async function SettingsPage() {
         </form>
       </div>
     </>
+  );
+}
+
+function ProviderStatus({ status }: { status?: string | null }) {
+  if (status === "OK") {
+    return (
+      <span className="rounded-full bg-green-50 px-2 py-1 text-xs font-semibold text-green-700">
+        CONNECTED
+      </span>
+    );
+  }
+  if (status === "FAILED") {
+    return (
+      <span className="rounded-full bg-red-50 px-2 py-1 text-xs font-semibold text-red-700">
+        FAILED
+      </span>
+    );
+  }
+  return (
+    <span className="rounded-full bg-stone-100 px-2 py-1 text-xs font-semibold text-stone-500">
+      NOT TESTED
+    </span>
+  );
+}
+
+function ProviderTestDetail({
+  provider,
+}: {
+  provider?:
+    | {
+        lastTestAt: Date | null;
+        lastTestError: string | null;
+      }
+    | undefined;
+}) {
+  if (!provider?.lastTestAt) return null;
+  return (
+    <p
+      className={`mt-2 text-xs ${
+        provider.lastTestError ? "text-red-600" : "text-stone-400"
+      }`}
+    >
+      Tested {format(provider.lastTestAt, "d MMM HH:mm")}
+      {provider.lastTestError ? ` · ${provider.lastTestError}` : " · OK"}
+    </p>
   );
 }

@@ -115,8 +115,22 @@ No model strings are hardcoded — switch vendors by changing the env vars.
 ## Configure 46elks
 
 1. Create an account at [46elks.com](https://46elks.com) and allocate a number.
-2. Set `ELKS46_USERNAME`, `ELKS46_PASSWORD`, `ELKS46_FROM_NUMBER`.
+2. Enter username, API password and number under **Settings → 46elks**, then
+   press **Test 46elks connection**. Values are AES-256-GCM encrypted at rest.
+   `ELKS46_USERNAME`, `ELKS46_PASSWORD`, `ELKS46_FROM_NUMBER` remain optional
+   environment fallbacks.
 3. Set `OWNER_PHONE_NUMBER` (your own phone, E.164) for escalation notifications.
+
+## Configure ElevenLabs
+
+1. Enter API key, Voice ID and model under **Settings → ElevenLabs**.
+2. Save, then **Test ElevenLabs connection** (current `/v2/voices` API).
+3. Edit the Swedish voicemail and unknown-caller screening text.
+4. Press **Generate both greetings**. The app stores the MP3 assets privately;
+   call actions use tokenized audio URLs when `APP_URL` + `WEBHOOK_TOKEN` exist.
+
+Runtime resolver order is encrypted Settings first, environment variables
+second. Keys are never rendered back to the browser or logged.
 
 ## Configure the 46elks number (SMS + MMS + voice)
 

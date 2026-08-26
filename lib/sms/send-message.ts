@@ -8,7 +8,7 @@ import {
 } from "@/lib/db/schema";
 import { getMessagingProvider } from "./provider";
 import { isE164 } from "@/lib/phone";
-import { requireEnv } from "@/lib/env";
+import { getElksCredentials } from "@/lib/providers/config";
 import { logActivity, type Actor } from "@/lib/activity";
 import { touchSystemState } from "@/lib/system-state";
 import { and, eq, sql } from "drizzle-orm";
@@ -84,7 +84,7 @@ export async function sendMessage(
   const text = input.text.trim();
   if (!text) throw new Error("Message text is empty");
 
-  const from = requireEnv("ELKS46_FROM_NUMBER");
+  const { fromNumber: from } = await getElksCredentials();
 
   let conversationId = input.conversationId ?? null;
   if (!input.system && !conversationId) {

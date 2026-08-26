@@ -1,5 +1,6 @@
 import "server-only";
-import { requireEnv } from "@/lib/env";
+import { getElksCredentials } from "@/lib/providers/config";
+import { elksBasicAuth } from "@/lib/providers/elks46";
 import type {
   MessagingProvider,
   SendMmsInput,
@@ -18,9 +19,8 @@ export class Elks46MessagingProvider implements MessagingProvider {
   readonly name = "46elks";
 
   async sendSms(input: SendSmsInput): Promise<SendSmsResult> {
-    const username = requireEnv("ELKS46_USERNAME");
-    const password = requireEnv("ELKS46_PASSWORD");
-    const from = input.from ?? requireEnv("ELKS46_FROM_NUMBER");
+    const { username, password, fromNumber } = await getElksCredentials();
+    const from = input.from ?? fromNumber;
 
     const body = new URLSearchParams({
       from,
@@ -41,7 +41,7 @@ export class Elks46MessagingProvider implements MessagingProvider {
       method: "POST",
       headers: {
         Authorization:
-          "Basic " + Buffer.from(`${username}:${password}`).toString("base64"),
+          elksBasicAuth(username, password),
         "Content-Type": "application/x-www-form-urlencoded",
       },
       body: body.toString(),
@@ -62,9 +62,8 @@ export class Elks46MessagingProvider implements MessagingProvider {
   }
 
   async sendMms(input: SendMmsInput): Promise<SendSmsResult> {
-    const username = requireEnv("ELKS46_USERNAME");
-    const password = requireEnv("ELKS46_PASSWORD");
-    const from = input.from ?? requireEnv("ELKS46_FROM_NUMBER");
+    const { username, password, fromNumber } = await getElksCredentials();
+    const from = input.from ?? fromNumber;
     const body = new URLSearchParams({
       from,
       to: input.to,
@@ -76,7 +75,7 @@ export class Elks46MessagingProvider implements MessagingProvider {
       method: "POST",
       headers: {
         Authorization:
-          "Basic " + Buffer.from(`${username}:${password}`).toString("base64"),
+          elksBasicAuth(username, password),
         "Content-Type": "application/x-www-form-urlencoded",
       },
       body: body.toString(),

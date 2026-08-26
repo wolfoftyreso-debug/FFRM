@@ -4,11 +4,13 @@ import { and, eq, isNull, lt, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { transcribeAudio, generateStructured } from "@/lib/ai/client";
 import { fastModel } from "@/lib/ai/config";
-import { optionalEnv, requireEnv } from "@/lib/env";
+import { optionalEnv } from "@/lib/env";
 import { logActivity } from "@/lib/activity";
 import { notifyOwner } from "@/lib/sms/send-message";
 import { contactDisplayName } from "@/lib/ai/context";
 import { appendConversationEvent } from "@/lib/conversation-events";
+import { getElksCredentials } from "@/lib/providers/config";
+import { elksBasicAuth } from "@/lib/providers/elks46";
 
 const voicemailAnalysisSchema = z.object({
   summary: z.string(),
@@ -58,12 +60,11 @@ export async function processCallRecording(callId: string): Promise<void> {
   const appUrl = optionalEnv("APP_URL") ?? "";
 
   try {
-    const username = requireEnv("ELKS46_USERNAME");
-    const password = requireEnv("ELKS46_PASSWORD");
+    const { username, password } = await getElksCredentials();
     const res = await fetch(call.recordingUrl, {
       headers: {
         Authorization:
-          "Basic " + Buffer.from(`${username}:${password}`).toString("base64"),
+          elksBasicAuth(username, password),
       },
     });
     if (!res.ok) throw new Error(`Recording fetch failed (${res.status})`);

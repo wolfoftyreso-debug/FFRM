@@ -19,10 +19,12 @@ import {
 import { logActivity } from "@/lib/activity";
 import { notifyOwner } from "@/lib/sms/send-message";
 import { getOrCreateConversation } from "@/lib/sms/send-message";
-import { requireEnv, optionalEnv } from "@/lib/env";
+import { optionalEnv } from "@/lib/env";
 import { contactDisplayName } from "@/lib/ai/context";
 import { appendConversationEvent } from "@/lib/conversation-events";
 import { createId } from "@/lib/id";
+import { getElksCredentials } from "@/lib/providers/config";
+import { elksBasicAuth } from "@/lib/providers/elks46";
 
 export interface IncomingCallInput {
   callid: string;
@@ -146,7 +148,7 @@ export async function handleIncomingCall(
   }
 }
 
-function actionForStoredCall(call: Call): ElksCallAction {
+async function actionForStoredCall(call: Call): Promise<ElksCallAction> {
   switch (call.disposition) {
     case "RING_THROUGH":
       return call.routedToNumber
@@ -298,9 +300,8 @@ export async function initiateCallback(contact: Contact): Promise<Call> {
   const target = await ownerPhone();
   if (!target) throw new Error("No owner phone number configured");
 
-  const username = requireEnv("ELKS46_USERNAME");
-  const password = requireEnv("ELKS46_PASSWORD");
-  const from = requireEnv("ELKS46_FROM_NUMBER");
+  const { username, password, fromNumber: from } =
+    await getElksCredentials();
   const conversationId = await getOrCreateConversation(
     contact.id,
     contact.phoneNumber,
@@ -337,7 +338,7 @@ export async function initiateCallback(contact: Contact): Promise<Call> {
       method: "POST",
       headers: {
         Authorization:
-          "Basic " + Buffer.from(`${username}:${password}`).toString("base64"),
+        elksBasicAuth(username, password),
         "Content-Type": "application/x-www-form-urlencoded",
       },
       body: body.toString(),

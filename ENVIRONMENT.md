@@ -13,6 +13,9 @@ production. Never commit real values. See `.env.example` for a template.
 | `AI_MODEL_SMART` | no | Gateway model ID for ambiguous conversations/escalation analysis, style extraction and the assistant chat. Default `openai/gpt-5.4`. |
 | `AI_MODEL_VISION` | no | Vision-capable Gateway model for MMS image understanding and image-message drafts. Default `google/gemini-3.7-flash`. |
 | `AI_MODEL_TRANSCRIBE` | no | Gateway transcription model for voicemail. Default `openai/whisper-1`. |
+| `ELEVENLABS_API_KEY` | no | Optional environment fallback for ElevenLabs. Prefer encrypted Settings UI for private/self-hosted use. |
+| `ELEVENLABS_VOICE_ID` | no | Optional ElevenLabs voice-id fallback. |
+| `ELEVENLABS_MODEL_ID` | no | Optional model fallback; default `eleven_multilingual_v2`. |
 | `VOICE_GREETING_URL` | no | mp3/wav URL played before voicemail recording starts. Without it, recording starts immediately. |
 | `SCREEN_GREETING_URL` | no | Separate greeting for AI screening of unknown callers (falls back to `VOICE_GREETING_URL`). |
 | `ELKS46_USERNAME` | yes | 46elks API username. |
@@ -39,3 +42,11 @@ from the feature that needs it, without breaking unrelated parts or the build.
 - All provider calls are server-side; the 46elks adapter imports `server-only`.
 - Secrets are never logged; delivery/error logs contain provider message IDs,
   not credentials.
+- 46elks and ElevenLabs credentials entered in Settings are encrypted with
+  AES-256-GCM using a key derived from `AUTH_SECRET`; only masked placeholders
+  return to the browser. Environment variables remain fallback values.
+- **Do not rotate `AUTH_SECRET` without re-entering provider credentials.**
+  Rotation intentionally makes existing encrypted provider rows undecryptable.
+- ElevenLabs-generated greetings are stored privately; 46elks receives a
+  tokenized `/api/public/audio/:id` URL. This requires `APP_URL` and
+  `WEBHOOK_TOKEN`.

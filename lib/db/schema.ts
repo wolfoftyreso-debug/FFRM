@@ -675,6 +675,30 @@ export const systemState = pgTable("system_state", {
   updatedAt: updatedAt(),
 });
 
+/** Encrypted runtime provider credentials + non-secret configuration/status. */
+export const providerSettings = pgTable("provider_settings", {
+  provider: text("provider").primaryKey(), // 46elks | elevenlabs
+  encryptedSecrets: text("encrypted_secrets").notNull(),
+  publicConfig: jsonb("public_config").$type<Record<string, unknown>>(),
+  configuredAt: createdAt(),
+  updatedAt: updatedAt(),
+  lastTestAt: timestamp("last_test_at", { withTimezone: true }),
+  lastTestStatus: text("last_test_status"), // OK | FAILED
+  lastTestError: text("last_test_error"),
+});
+
+/** Generated voicemail/screening prompts served to 46elks via tokenized URL. */
+export const audioAssets = pgTable("audio_assets", {
+  id: id(),
+  provider: text("provider").notNull(),
+  purpose: text("purpose").notNull(), // VOICEMAIL_GREETING | SCREEN_GREETING
+  mimeType: text("mime_type").notNull(),
+  dataBase64: text("data_base64").notNull(),
+  byteSize: integer("byte_size").notNull(),
+  sourceText: text("source_text"),
+  createdAt: createdAt(),
+});
+
 export type User = typeof users.$inferSelect;
 export type Call = typeof calls.$inferSelect;
 export type ContactMediaItem = typeof contactMedia.$inferSelect;
@@ -691,3 +715,5 @@ export type AutomationExecution = typeof automationExecutions.$inferSelect;
 export type Commitment = typeof commitments.$inferSelect;
 export type Reminder = typeof reminders.$inferSelect;
 export type ActivityEntry = typeof activityLog.$inferSelect;
+export type ProviderSetting = typeof providerSettings.$inferSelect;
+export type AudioAsset = typeof audioAssets.$inferSelect;

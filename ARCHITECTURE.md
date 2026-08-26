@@ -66,6 +66,28 @@ Database state — never process memory — is the source of truth:
 
 All persisted errors are stripped of ANSI/control sequences before rendering.
 
+## Provider credentials and ElevenLabs voice
+
+`provider_settings` stores public configuration separately from
+`encryptedSecrets`. Secrets use AES-256-GCM with a random 96-bit IV,
+provider-bound additional authenticated data and a key derived from
+`AUTH_SECRET`. Blank secret fields preserve the current value; no endpoint
+returns decrypted values. Runtime resolution prefers encrypted Settings and
+falls back to environment variables.
+
+- **46elks test:** authenticated `GET /a1/me`; status/error timestamp persists.
+- **ElevenLabs test:** current `GET /v2/voices`.
+- **TTS:** current `POST /v1/text-to-speech/:voice_id`, multilingual model and
+  request-scoped voice settings. Generated voicemail/screening MP3s live in
+  `audio_assets`.
+- **Call playback:** 46elks receives a tokenized
+  `/api/public/audio/:id?token=...` URL. The route is public only in routing
+  terms; `WEBHOOK_TOKEN` is mandatory and bytes use no-sniff/private caching.
+  Environment greeting URLs remain fallback.
+
+Rotating `AUTH_SECRET` invalidates stored provider ciphertext by design;
+credentials must then be re-entered.
+
 ## Unified conversation/message model
 
 `Conversation` is contact-centric. One thread contains `Message` rows from

@@ -1,4 +1,6 @@
 import sharp from "sharp";
+import { getElksCredentials } from "@/lib/providers/config";
+import { elksBasicAuth } from "@/lib/providers/elks46";
 
 export const MAX_INBOUND_IMAGE_BYTES = 10 * 1024 * 1024;
 export const MAX_MMS_PAYLOAD_BYTES = 320 * 1024;
@@ -105,12 +107,8 @@ export async function fetchProviderImage(url: string): Promise<Uint8Array> {
     throw new Error("Media URL is not a trusted 46elks host");
   }
   const headers: Record<string, string> = {};
-  const username = process.env.ELKS46_USERNAME;
-  const password = process.env.ELKS46_PASSWORD;
-  if (username && password) {
-    headers.Authorization =
-      "Basic " + Buffer.from(`${username}:${password}`).toString("base64");
-  }
+  const { username, password } = await getElksCredentials();
+  headers.Authorization = elksBasicAuth(username, password);
   const res = await fetch(url, { headers, redirect: "error" });
   if (!res.ok) throw new Error(`Media fetch failed (${res.status})`);
   const length = Number(res.headers.get("content-length") ?? 0);

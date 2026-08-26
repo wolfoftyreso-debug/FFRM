@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { calls } from "@/lib/db/schema";
-import { requireEnv } from "@/lib/env";
+import { getElksCredentials } from "@/lib/providers/config";
+import { elksBasicAuth } from "@/lib/providers/elks46";
 
 /** Authenticated proxy for private 46elks voicemail audio. */
 export async function GET(
@@ -21,11 +22,9 @@ export async function GET(
   ) {
     return new NextResponse("invalid recording source", { status: 400 });
   }
-  const auth = Buffer.from(
-    `${requireEnv("ELKS46_USERNAME")}:${requireEnv("ELKS46_PASSWORD")}`,
-  ).toString("base64");
+  const { username, password } = await getElksCredentials();
   const response = await fetch(url, {
-    headers: { Authorization: `Basic ${auth}` },
+    headers: { Authorization: elksBasicAuth(username, password) },
     redirect: "error",
   });
   if (!response.ok) return new NextResponse("unavailable", { status: 502 });
