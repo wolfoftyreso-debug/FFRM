@@ -35,6 +35,16 @@ pnpm build       # next build
   commitment extraction with provenance
 - `no-contact.test.ts` — one reminder per inactivity episode, re-arming after
   new interaction, never-contacted contacts
+- `call-policy.test.ts` (unit) — routing decisions: known/unknown callers,
+  night window incl. call-through-priority piercing, per-contact overrides,
+  blocking
+- `envelope.test.ts` (unit) — confidence-envelope defaults per autonomy
+  level, per-contact overrides, category gating of auto-replies
+- `voice.test.ts` (integration) — full voice pipeline: ring-through action
+  JSON, voice_start idempotency, screening for unknown callers, blocked-number
+  rejection, voicemail fallback on no answer, recording → transcription →
+  AI summary → owner SMS, missed-call detection + notification, completed
+  calls with duration
 
 External providers (46elks, AI Gateway) are mocked in all automated tests via
 the injection hooks in `lib/sms/provider.ts` and `lib/ai/client.ts`.
@@ -65,3 +75,15 @@ Prerequisites: deployed app (or `pnpm dev` with a public tunnel), real
    from SENT to DELIVERED in the conversation view.
 7. **Health**: Settings → System health shows recent cron/webhook/AI/SMS
    heartbeats and zero unexpected failed jobs.
+8. **Voice — ring through**: set the number's `voice_start` to
+   `/api/webhooks/46elks/voice?token=…`, call the 46elks number from a known
+   contact's phone; your real phone should ring; answer and verify the call
+   shows as COMPLETED with duration on the Phone view.
+9. **Voice — voicemail**: call again and don't answer; leave a message.
+   Verify: recording processed, transcript + AI summary on the Phone view,
+   owner notification SMS received.
+10. **Voice — screening**: call from an unknown number; verify it goes to
+    screening/voicemail per your global policy and appears with
+    "Create contact" / "Block" actions.
+11. **Callback**: press "Call" on a contact — your phone rings first, then
+    the contact is connected; the contact sees the system number.

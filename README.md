@@ -1,21 +1,35 @@
 # Personal Relationship Agent
 
-A small, reliable, AI-powered personal relationship agent. It remembers the
-people in your life — birthdays, promises, conversation history, preferences —
-and, when explicitly permitted, performs simple relationship maintenance
-automatically over SMS.
+**An AI-native personal phone**, where every person in the contact book has
+their own relationship, communication style, autonomy level and policy.
 
-This is **not** a sales CRM. It is a private tool that combines:
+Your 46elks number is the system's **primary communication identity**:
 
-- relationship memory (facts, commitments, timelines)
-- a personal calendar (birthdays, reminders, scheduled automations)
-- an SMS inbox with AI triage (auto-reply or escalate — never fabricate)
-- an automation engine with a central minute-level scheduler
-- a complete audit history of everything the system does
+```
+Your Swedish number → 46elks → this app → relationship/context/policy → human or AI
+```
 
-**Core principle:** the AI knows when it does not know. Low-risk social
-messages can be answered automatically (only at the highest autonomy level);
-everything else escalates to you via SMS and the inbox.
+- **SMS pipeline** — inbound messages land in a chat-style inbox, are triaged
+  by AI (auto-reply or escalate — never fabricate) within a per-contact
+  confidence envelope
+- **Voice pipeline** — inbound calls are routed by call policy: ring through
+  to your real phone, voicemail, AI screening or reject; voicemails are
+  recorded, transcribed and summarized; missed calls notify you
+- **Relationship ontology** — each contact has a 0–100 relationship vector
+  (closeness, trust, humor tolerance, call-through priority, …) proposed by
+  AI from a plain-language description and tunable in Advanced relationship
+- **Communication profiles** — "Teach AI how we talk": upload up to 10
+  conversation screenshots; a multimodal model extracts style (not content),
+  kept separate from the stored provenance screenshots
+- **Assistant chat** — ask "Vem behöver uppmärksamhet?", "När pratade jag med
+  Johan senast?" — the assistant answers with tools over your real data
+- Plus: relationship memory, personal calendar, automation engine with a
+  central minute-level scheduler, and a complete audit history
+
+**Core principle:** the AI knows when it does not know. Reliability and
+restraint over autonomous cleverness. The Realtime Voice pipeline (a live AI
+voice agent) is deliberately not built yet — the architecture keeps that slot
+open without requiring a remodel.
 
 ## Stack
 
@@ -79,20 +93,32 @@ No model strings are hardcoded — switch vendors by changing the env vars.
 2. Set `ELKS46_USERNAME`, `ELKS46_PASSWORD`, `ELKS46_FROM_NUMBER`.
 3. Set `OWNER_PHONE_NUMBER` (your own phone, E.164) for escalation notifications.
 
-## Configure the incoming SMS webhook
+## Configure the 46elks number (SMS + voice)
 
-In the 46elks dashboard, set your number's SMS URL to:
+In the 46elks dashboard, configure your voice-enabled virtual number:
 
-```
-https://<your-app>/api/webhooks/46elks/sms?token=<WEBHOOK_TOKEN>
-```
+- **`sms_url`** → `https://<your-app>/api/webhooks/46elks/sms?token=<WEBHOOK_TOKEN>`
+- **`voice_start`** → `https://<your-app>/api/webhooks/46elks/voice?token=<WEBHOOK_TOKEN>`
 
 (`?token=` is only needed when `WEBHOOK_TOKEN` is set — recommended.)
 
-The webhook persists the message **before** any AI work, deduplicates on the
-provider message id (46elks retries until it gets a 2xx), and returns an empty
-200 quickly. Delivery reports are posted to
+The SMS webhook persists the message **before** any AI work, deduplicates on
+the provider message id (46elks retries until it gets a 2xx), and returns an
+empty 200 quickly. Delivery reports are posted to
 `/api/webhooks/46elks/delivery` automatically when `APP_URL` is set.
+
+The voice webhook answers with 46elks call actions decided by your call
+policy: `connect` (ring through to your real phone, with voicemail fallback
+via the after-connect webhook), `record` (voicemail/screening) or reject.
+Recordings are posted to `/api/webhooks/46elks/recording`, transcribed via
+the AI Gateway and summarized; call ends are tracked via
+`/api/webhooks/46elks/hangup`. Set `VOICE_GREETING_URL` (and optionally
+`SCREEN_GREETING_URL`) to an mp3/wav URL to play a greeting before recording.
+
+**Call policy:** configure the global rules in Settings (known contacts ring
+through, unknown callers are screened, night window goes to voicemail unless
+the contact's call-through priority is high enough) and override per contact
+(Always ring through / daytime only / voicemail / screening / block).
 
 ## Configure Vercel Cron
 

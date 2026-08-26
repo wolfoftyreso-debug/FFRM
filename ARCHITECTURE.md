@@ -2,24 +2,135 @@
 
 ## Overview
 
+The 46elks number is the system's primary communication identity. Three
+pipelines share one conversation/relationship core:
+
+```
+                    ┌── SMS pipeline        /api/webhooks/46elks/sms
+46ELKS NUMBER ──────┼── Voice pipeline      /api/webhooks/46elks/voice (+ after-connect, recording, hangup)
+                    └── Realtime Voice      (deliberately NOT built — slot reserved)
+                              ↓
+                     Conversation / Call core (persist FIRST, idempotent)
+                              ↓
+                     Relationship context (vector + communication profile + memory)
+                              ↓
+                        Policy engine (confidence envelope, call policy, autonomy)
+                              ↓
+                     Vercel AI Gateway (FAST / SMART / TRANSCRIBE models)
+                              ↓
+              human (ring through / escalate / draft)  or  AI (low-risk auto-reply)
+```
+
+The central scheduler is unchanged: one Vercel Cron per minute →
+`/api/cron/dispatcher` → due automations from the database, plus fallback
+reprocessing of unclaimed inbound SMS and unprocessed voicemail recordings.
+
+## Voice pipeline
+
+1. **voice_start** (`/api/webhooks/46elks/voice`): call persisted (unique
+   provider call id → webhook retries are idempotent), then the **call policy
+   engine** (`lib/voice/policy.ts`, pure and unit-tested) decides:
+   - `RING_THROUGH` → `{"connect": <owner phone>, "timeout": 25, next: after-connect}`
+   - `VOICEMAIL` / `SCREEN` → optional greeting `play`, then `record`
+   - `REJECT` → `{"hangup": "reject"}`
+2. **after-connect**: `result=success` → call CONNECTED, hang up;
+   `result=failed` (no answer/busy) → voicemail actions.
+3. **recording**: WAV URL persisted first; then (waitUntil + cron fallback)
+   the recording is fetched with API credentials, transcribed via
+   `gateway.transcription(AI_MODEL_TRANSCRIBE)`, summarized/classified by the
+   fast model, and the owner is notified by SMS. Transcription failure never
+   loses the voicemail — the owner is notified regardless.
+4. **hangup**: final state and duration; unanswered calls become MISSED and
+   notify the owner (their phone only shows the 46elks number, so the SMS
+   restores who actually called).
+
+Outbound calls: "Call" in the UI POSTs `/a1/calls` — 46elks rings the owner's
+real phone first, then connects to the contact. The contact always sees the
+system number.
+
+### Call policy
+
+Global policy (Settings → `users.callPolicy`): known contacts / unknown
+callers dispositions, night window with night action, and a
+`nightPriorityThreshold`. Per-contact `callPolicy` overrides (always ring
+through, daytime only, voicemail, screen, block), and `blocked_numbers`
+rejects before anything else. The relationship vector's
+`callThroughPriority` pierces the night rule for the inner circle — the
+relationship ontology drives the phone, not just message tone.
+
+## Relationship ontology
+
+Contacts carry a **relationship vector** (0–100): personalCloseness,
+professionalRelevance, formality, trust, humorTolerance, sensitiveTopicAccess,
+autonomousReplyFreedom, proactiveContactDesired, callThroughPriority,
+privacySensitivity. "Colleague" and "friend" can both be true at once.
+
+The user writes one sentence ("En av mina närmaste vänner, men vi jobbar
+också ihop ibland"); the AI proposes label + vector + confidence envelope
+(`lib/ai/relationship.ts`, structured output); everything is tunable under
+Advanced relationship. The vector feeds the AI context and the call policy.
+
+## Confidence envelope
+
+Per-contact rules per action category (SMALL_TALK, JOKES,
+GENERIC_LIFE_QUESTIONS, KNOWN_SHARED_TOPICS, SUGGEST_MEETING,
+AGREE_SPECIFIC_MEETING, MONEY_OR_PAYMENT, PRIVATE_INFORMATION,
+FACTUAL_COMMITMENT, WORK_DECISION, CONFLICT_OR_EMOTION), each AUTO /
+ESCALATE / BLOCK. Defaults derive from the autonomy level (social categories
+AUTO only at level 4; MONEY_OR_PAYMENT is BLOCK by default).
+
+Triage decisions include a `policyMatch` category ("pick the most restrictive
+that applies"); the code-level gate (`canAutoReply`) then enforces
+`envelope[policyMatch] === AUTO` **in addition to** the existing state/
+autonomy/risk/confidence checks. The model proposes, the envelope disposes.
+
+## Communication profiles ("Teach AI how we talk")
+
+Up to 10 conversation screenshots per contact are stored as provenance
+(`contact_media`) and run once through a multimodal Gateway model
+(`lib/ai/style.ts`) that extracts a structured `CommunicationProfile` —
+distinguishing **how the owner writes to this contact** (ownerStyle) from
+**how the contact writes back** (contactStyle), plus topics, recurring
+expressions and initiation patterns. Only the structured profile enters
+message-generation context; raw screenshots are never re-sent per message.
+
+Response context composition:
+
+```
+GLOBAL OWNER STYLE + RELATIONSHIP VECTOR + COMMUNICATION PROFILE
++ RECENT CONVERSATION + CURRENT SITUATION + AUTONOMY/ENVELOPE POLICY
+= RESPONSE CONTEXT   (lib/ai/context.ts)
+```
+
+## Assistant chat
+
+`/chat` is the owner's assistant: a tool loop (AI SDK `generateText` + tools,
+max 6 steps) over real data — contact search, who-needs-attention, upcoming
+events, recent calls, commitments, conversation history, reminder creation,
+system health. Non-streaming by design (simple, robust); history persists in
+`assistant_messages`.
+
+## Original overview (SMS core)
+
 ```
                         ┌──────────────────────────────┐
   Vercel Cron (1/min) ─▶│ /api/cron/dispatcher         │
                         │  · due automations (DB)      │
                         │  · idempotent executions     │
                         │  · stale inbound fallback    │
+                        │  · unprocessed voicemails    │
                         └──────────┬───────────────────┘
                                    │
  46elks ──POST──▶ /api/webhooks/46elks/sms                 Web UI (Next.js)
-   ▲              · persist FIRST (unique provider id)     · Today / Inbox /
+   ▲              · persist FIRST (unique provider id)     · Chat / Phone / Messages /
    │              · resolve contact (E.164)                  Calendar / People /
    │              · waitUntil → AI triage                    Automations / Activity
    │                                   │                     · server actions
    │                                   ▼
-   │              lib/inbound.ts  ── triage (AI Gateway) ── policy gate
+   │              lib/inbound.ts  ── triage (AI Gateway) ── policy gate + envelope
    │                    │                                       │
    └── lib/sms ◀── AUTO_REPLY (low risk, autonomy 4)            │
-        send-message    └────────── ESCALATE ──▶ owner SMS + inbox NEEDS YOU
+        send-message    └────────── ESCALATE ──▶ owner SMS + Messages NEEDS YOU
 ```
 
 ## Donor repository audit (benkaiser/mob-mcp-crm)
