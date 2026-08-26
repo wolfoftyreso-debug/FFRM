@@ -19,7 +19,6 @@ import {
   pollApolloWebhookResult,
   searchApolloPeople,
   type ApolloPerson,
-  type ApolloPhonePayload,
 } from "@/lib/apollo/client";
 import { describeApolloFilters, normalizeApolloFilters } from "@/lib/apollo/filters";
 import { getApolloPublicConfig } from "@/lib/apollo/config";
@@ -247,13 +246,8 @@ export async function fetchApolloPhones(input: {
   return { list, imported: 0, phoneCount: Number(ready?.count ?? 0) };
 }
 
-export async function applyApolloPhonePayload(
-  payload: ApolloPhonePayload | unknown,
-) {
-  const parsed =
-    payload && typeof payload === "object" && "people" in payload
-      ? (payload as ApolloPhonePayload)
-      : parseApolloPhonePayload(payload);
+export async function applyApolloPhonePayload(payload: unknown) {
+  const parsed = parseApolloPhonePayload(payload);
   const db = await getDb();
   let updated = 0;
   for (const person of parsed.people) {

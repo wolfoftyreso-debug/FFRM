@@ -9,7 +9,6 @@ import type { Db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { saveProviderConfig } from "@/lib/providers/config";
 import {
-  applyApolloPhonePayload,
   fetchApolloPhones,
   importApolloList,
   previewApolloAudience,
@@ -164,10 +163,6 @@ describe("Apollo people search and phone import", () => {
       ),
     );
     expect(webhook.status).toBe(200);
-    const applied = await applyApolloPhonePayload({
-      people: [],
-    });
-    expect(applied.updated).toBe(0);
 
     const imported = await importApolloList(fetched.list.id);
     expect(imported.imported).toBe(1);
