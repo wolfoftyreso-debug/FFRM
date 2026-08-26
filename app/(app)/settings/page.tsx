@@ -8,6 +8,7 @@ import {
 import { getSystemState } from "@/lib/system-state";
 import {
   logout,
+  removeProviderConfig,
   generateElevenLabsGreetings,
   saveElevenLabsSettings,
   saveElksSettings,
@@ -21,6 +22,7 @@ import { Card, PageHeader, PrimaryButton, inputClass, labelClass } from "@/compo
 import { fastModel, smartModel } from "@/lib/ai/config";
 import { DEFAULT_GLOBAL_CALL_POLICY } from "@/lib/voice/policy";
 import { getProviderStatus } from "@/lib/providers/config";
+import { ConfirmForm } from "@/components/confirm-form";
 
 const DISPOSITIONS = [
   { value: "RING_THROUGH", label: "Ring through to my phone" },
@@ -201,11 +203,18 @@ export default async function SettingsPage() {
             </div>
           </form>
           {elks ? (
-            <form action={testElksSettings} className="mt-2">
-              <button className="min-h-11 text-sm font-semibold text-[var(--system-blue)]">
-                Test 46elks connection
-              </button>
-            </form>
+            <div className="mt-2 flex flex-wrap gap-3">
+              <form action={testElksSettings}>
+                <button className="min-h-11 text-sm font-semibold text-[var(--system-blue)]">
+                  Test 46elks connection
+                </button>
+              </form>
+              <ConfirmForm
+                action={removeProviderConfig.bind(null, "46elks")}
+                label="Remove 46elks configuration"
+                confirmText="Remove the encrypted 46elks credentials?"
+              />
+            </div>
           ) : null}
           <ProviderTestDetail provider={elks} />
         </Card>
@@ -297,6 +306,11 @@ export default async function SettingsPage() {
                   Generate both greetings
                 </button>
               </form>
+              <ConfirmForm
+                action={removeProviderConfig.bind(null, "elevenlabs")}
+                label="Remove ElevenLabs configuration"
+                confirmText="Remove ElevenLabs credentials and generated greetings?"
+              />
             </div>
           ) : null}
           {eleven?.publicConfig.voicemailAudioId &&

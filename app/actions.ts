@@ -1287,6 +1287,27 @@ export async function generateElevenLabsGreetings(): Promise<void> {
   revalidatePath("/settings");
 }
 
+export async function removeProviderConfig(
+  provider: "46elks" | "elevenlabs",
+): Promise<void> {
+  const db = await getDb();
+  const { audioAssets, providerSettings } = await import("@/lib/db/schema");
+  await db.transaction(async (tx) => {
+    await tx
+      .delete(providerSettings)
+      .where(eq(providerSettings.provider, provider));
+    if (provider === "elevenlabs") {
+      await tx.delete(audioAssets).where(eq(audioAssets.provider, provider));
+    }
+  });
+  await logActivity({
+    actor: "USER",
+    action: "PROVIDER_REMOVED",
+    summary: `${provider} provider configuration removed`,
+  });
+  revalidatePath("/settings");
+}
+
 export async function logout(): Promise<void> {
   await destroySession();
   redirect("/login");
