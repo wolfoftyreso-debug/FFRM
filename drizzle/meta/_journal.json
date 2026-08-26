@@ -71,6 +71,13 @@
       "when": 1787750057554,
       "tag": "0009_curved_sentinel",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1787774246372,
+      "tag": "0010_legal_brother_voodoo",
+      "breakpoints": true
     }
   ]
 }

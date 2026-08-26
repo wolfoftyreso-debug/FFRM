@@ -405,7 +405,8 @@ export type ActionType =
   | "AI_EVALUATE"
   | "ESCALATE"
   | "UPDATE_CONTACT"
-  | "LOG_EVENT";
+  | "LOG_EVENT"
+  | "EXTRACT_INSIGHTS";
 
 export interface TriggerConfig {
   /** DATE / ANNIVERSARY: ISO date (YYYY-MM-DD). */
@@ -434,6 +435,9 @@ export interface ActionConfig {
   notifyBySms?: boolean;
   /** UPDATE_CONTACT: partial fields to set. */
   fields?: Record<string, unknown>;
+  /** EXTRACT_INSIGHTS: rolling source window and per-run contact cap. */
+  lookbackHours?: number;
+  contactLimit?: number;
 }
 
 export const automations = pgTable(
@@ -522,6 +526,52 @@ export const commitments = pgTable(
   (t) => [index("commitments_contact_idx").on(t.contactId)],
 );
 
+export type InsightKind = "DECISION" | "NOTE";
+export type InsightSourceType = "MESSAGE" | "CALL";
+export type InsightStatus =
+  | "PENDING"
+  | "HANDLED"
+  | "ACTIONED"
+  | "DISMISSED";
+
+/**
+ * Twice-daily, quote-grounded findings from message and call transcripts.
+ * Every item keeps immutable source provenance so the owner can inspect the
+ * original wording and surrounding conversation before acting.
+ */
+export const conversationInsights = pgTable(
+  "conversation_insights",
+  {
+    id: id(),
+    contactId: text("contact_id").references(() => contacts.id, {
+      onDelete: "set null",
+    }),
+    conversationId: text("conversation_id").references(() => conversations.id, {
+      onDelete: "set null",
+    }),
+    kind: text("kind").$type<InsightKind>().notNull(),
+    summary: text("summary").notNull(),
+    quote: text("quote").notNull(),
+    sourceType: text("source_type").$type<InsightSourceType>().notNull(),
+    sourceId: text("source_id").notNull(),
+    confidence: real("confidence"),
+    status: text("status").$type<InsightStatus>().notNull().default("PENDING"),
+    dedupeKey: text("dedupe_key").notNull(),
+    extractionExecutionId: text("extraction_execution_id"),
+    actionType: text("action_type"),
+    actionEntityId: text("action_entity_id"),
+    handledAt: timestamp("handled_at", { withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    uniqueIndex("conversation_insights_dedupe_unique").on(t.dedupeKey),
+    index("conversation_insights_status_idx").on(t.status, t.createdAt),
+    index("conversation_insights_contact_idx").on(t.contactId),
+    index("conversation_insights_source_idx").on(t.sourceType, t.sourceId),
+  ],
+);
+
 /** Reminders, tasks, drafts awaiting approval, and custom calendar events. */
 export const reminders = pgTable(
   "reminders",
@@ -537,6 +587,10 @@ export const reminders = pgTable(
     draftText: text("draft_text"),
     dueAt: timestamp("due_at", { withTimezone: true }),
     status: text("status").notNull().default("PENDING"), // PENDING | DONE | DISMISSED
+    /** TASK only: deliberately small ticket metadata. */
+    priority: text("priority").notNull().default("MEDIUM"), // LOW | MEDIUM | HIGH
+    assignee: text("assignee"),
+    sourceInsightId: text("source_insight_id"),
     automationId: text("automation_id"),
     automationExecutionId: text("automation_execution_id"),
     createdAt: createdAt(),
@@ -592,6 +646,11 @@ export const calls = pgTable(
     policyReason: text("policy_reason"),
     durationSeconds: integer("duration_seconds"),
     recordingUrl: text("recording_url"),
+    /** Permanent copy fetched within 46elks' 72-hour retention window. */
+    recordingDataBase64: text("recording_data_base64"),
+    recordingMimeType: text("recording_mime_type"),
+    recordingByteSize: integer("recording_byte_size"),
+    recordingKind: text("recording_kind"), // CALL | VOICEMAIL | SCREENING
     recordingDurationSeconds: integer("recording_duration_seconds"),
     transcript: text("transcript"),
     aiSummary: text("ai_summary"),
@@ -723,6 +782,7 @@ export type Automation = typeof automations.$inferSelect;
 export type NewAutomation = typeof automations.$inferInsert;
 export type AutomationExecution = typeof automationExecutions.$inferSelect;
 export type Commitment = typeof commitments.$inferSelect;
+export type ConversationInsight = typeof conversationInsights.$inferSelect;
 export type Reminder = typeof reminders.$inferSelect;
 export type ActivityEntry = typeof activityLog.$inferSelect;
 export type ProviderSetting = typeof providerSettings.$inferSelect;
