@@ -8,6 +8,13 @@
       "when": 1787725286721,
       "tag": "0000_mysterious_paper_doll",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1787726727715,
+      "tag": "0001_redundant_sabretooth",
+      "breakpoints": true
     }
   ]
 }

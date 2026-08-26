@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { format, formatDistanceToNow } from "date-fns";
-import { getContactDetail, displayName } from "@/lib/queries";
-import { addFact, addReminder, archiveContact, reviewFact, reviewCommitment } from "@/app/actions";
+import { getContactDetail, displayName, countStyleScreenshots } from "@/lib/queries";
+import { addFact, addReminder, archiveContact, callContact, reviewFact, reviewCommitment } from "@/app/actions";
 import { Badge, Card, PageHeader } from "@/components/ui";
 import { AUTONOMY_LABELS } from "@/lib/ai/policy";
+import { RelationshipSection } from "@/components/relationship-section";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,7 @@ export default async function ContactPage({
   if (!detail) notFound();
   const { contact, facts, commitments, automations, conversations, timeline } =
     detail;
+  const screenshotCount = await countStyleScreenshots(contact.id);
 
   return (
     <>
@@ -36,6 +38,13 @@ export default async function ContactPage({
           .join(" · ")}
         action={
           <div className="flex gap-2">
+            {contact.phoneNumber ? (
+              <form action={callContact.bind(null, contact.id)}>
+                <button className="rounded-md bg-stone-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-stone-700">
+                  Call
+                </button>
+              </form>
+            ) : null}
             <Link
               href={`/people/${contact.id}/edit`}
               className="rounded-md border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium text-stone-700 hover:bg-stone-50"
@@ -48,6 +57,10 @@ export default async function ContactPage({
 
       <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
         <div className="space-y-6">
+          <RelationshipSection
+            contact={contact}
+            screenshotCount={screenshotCount}
+          />
           <section>
             <h2 className="mb-2 text-sm font-semibold text-stone-700">
               Timeline
@@ -234,7 +247,7 @@ export default async function ContactPage({
                 {conversations.map((c) => (
                   <li key={c.id}>
                     <Link
-                      href={`/inbox/${c.id}`}
+                      href={`/messages/${c.id}`}
                       className="text-stone-700 hover:underline"
                     >
                       {c.lastMessageAt

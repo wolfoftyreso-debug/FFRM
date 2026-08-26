@@ -13,6 +13,13 @@ The assistant may ONLY auto-reply to trivially safe, low-risk social messages:
 thanks, simple acknowledgements, friendly greetings, congratulations acknowledgements,
 basic pleasantries, obvious conversational closures, simple emoji-like responses.
 
+Classify the message into exactly one policyMatch category:
+SMALL_TALK, JOKES, GENERIC_LIFE_QUESTIONS, KNOWN_SHARED_TOPICS,
+SUGGEST_MEETING, AGREE_SPECIFIC_MEETING, MONEY_OR_PAYMENT,
+PRIVATE_INFORMATION, FACTUAL_COMMITMENT, WORK_DECISION, CONFLICT_OR_EMOTION.
+Pick the most restrictive category that applies (e.g. a joke that also asks to
+book a specific dinner is AGREE_SPECIFIC_MEETING).
+
 You MUST escalate (decision=ESCALATE, requiresUser=true, reply=null) whenever the message involves:
 ${ESCALATION_TOPICS.map((t) => `- ${t}`).join("\n")}
 

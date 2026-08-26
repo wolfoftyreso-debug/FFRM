@@ -104,7 +104,14 @@ export function renderContext(ctx: ContactContext): string {
 
   lines.push(`## Contact`);
   lines.push(`Name: ${contactDisplayName(c)}`);
-  lines.push(`Relationship: ${c.relationshipType}, importance ${c.importance}`);
+  lines.push(`Relationship: ${c.relationshipLabel ?? c.relationshipType}, importance ${c.importance}`);
+  if (c.relationshipVector) {
+    const v = c.relationshipVector;
+    const dims = Object.entries(v)
+      .filter(([, value]) => typeof value === "number")
+      .map(([k, value]) => `${k}=${value}`);
+    if (dims.length > 0) lines.push(`Relationship vector (0-100): ${dims.join(", ")}`);
+  }
   if (c.birthday) lines.push(`Birthday: ${c.birthday}`);
   if (c.preferredLanguage) lines.push(`Language: ${c.preferredLanguage}`);
   if (c.communicationStyle)
@@ -114,6 +121,32 @@ export function renderContext(ctx: ContactContext): string {
   if (ctx.daysSinceLastInteraction !== null)
     lines.push(`Days since last interaction: ${ctx.daysSinceLastInteraction}`);
   if (c.notes) lines.push(`Notes: ${c.notes}`);
+
+  const cp = c.communicationProfile;
+  if (cp) {
+    lines.push(`## How the user writes to this contact (learned from real conversations)`);
+    if (cp.ownerStyle) {
+      const os = cp.ownerStyle;
+      const parts: string[] = [];
+      if (os.language) parts.push(`language ${os.language}`);
+      if (os.averageLength) parts.push(`${os.averageLength} messages`);
+      if (typeof os.formality === "number") parts.push(`formality ${os.formality}`);
+      if (typeof os.humor === "number") parts.push(`humor ${os.humor}`);
+      if (typeof os.sarcasm === "number") parts.push(`sarcasm ${os.sarcasm}`);
+      if (typeof os.emojiFrequency === "number") parts.push(`emoji frequency ${os.emojiFrequency}`);
+      if (os.emojiTypes?.length) parts.push(`emojis used: ${os.emojiTypes.join(" ")}`);
+      if (typeof os.swearing === "number") parts.push(`swearing ${os.swearing}`);
+      if (os.greetingStyle) parts.push(`greeting: ${os.greetingStyle}`);
+      if (os.signOffStyle) parts.push(`sign-off: ${os.signOffStyle}`);
+      lines.push(`Owner style: ${parts.join(", ")}`);
+    }
+    if (cp.recurringExpressions?.length)
+      lines.push(`Recurring expressions: ${cp.recurringExpressions.join(", ")}`);
+    if (cp.commonTopics?.length)
+      lines.push(`Common topics: ${cp.commonTopics.join(", ")}`);
+    if (cp.avoidedTopics?.length)
+      lines.push(`Avoided topics: ${cp.avoidedTopics.join(", ")}`);
+  }
 
   const profileEntries = Object.entries(profile).filter(
     ([, v]) => v && (!Array.isArray(v) || v.length > 0),

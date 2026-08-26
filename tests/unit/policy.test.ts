@@ -6,6 +6,7 @@ const okDecision: TriageDecision = {
   decision: "AUTO_REPLY",
   confidence: 0.95,
   risk: "LOW",
+  policyMatch: "SMALL_TALK",
   reason: "Simple social acknowledgement",
   reply: "Tack detsamma! 😊",
   requiresUser: false,

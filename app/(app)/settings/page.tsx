@@ -1,9 +1,17 @@
 import { format } from "date-fns";
 import { getOwner, getSystemHealth, listRecentAiCalls } from "@/lib/queries";
 import { getSystemState } from "@/lib/system-state";
-import { logout, updateOwnerSettings } from "@/app/actions";
+import { logout, updateGlobalCallPolicy, updateOwnerSettings } from "@/app/actions";
 import { Card, PageHeader, PrimaryButton, inputClass, labelClass } from "@/components/ui";
 import { fastModel, smartModel } from "@/lib/ai/config";
+import { DEFAULT_GLOBAL_CALL_POLICY } from "@/lib/voice/policy";
+
+const DISPOSITIONS = [
+  { value: "RING_THROUGH", label: "Ring through to my phone" },
+  { value: "VOICEMAIL", label: "Voicemail" },
+  { value: "SCREEN", label: "AI screening" },
+  { value: "REJECT", label: "Reject" },
+];
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Settings" };
@@ -95,6 +103,98 @@ export default async function SettingsPage() {
               No owner profile found — run the seed script (`pnpm db:seed`).
             </p>
           )}
+        </Card>
+
+        <Card>
+          <h2 className="mb-1 text-sm font-semibold text-stone-700">
+            Call policy
+          </h2>
+          <p className="mb-4 text-sm text-stone-500">
+            How incoming calls to your number are handled. Per-contact
+            settings override this.
+          </p>
+          {owner ? (
+            <form action={updateGlobalCallPolicy} className="grid gap-4 sm:grid-cols-2">
+              <label className={labelClass}>
+                Your real phone (ring-through target)
+                <input
+                  name="ownerPhone"
+                  placeholder="+46701234567"
+                  defaultValue={owner.phoneNumber ?? ""}
+                  className={inputClass}
+                />
+              </label>
+              <div />
+              <label className={labelClass}>
+                Known contacts
+                <select
+                  name="knownContacts"
+                  defaultValue={owner.callPolicy?.knownContacts ?? DEFAULT_GLOBAL_CALL_POLICY.knownContacts}
+                  className={inputClass}
+                >
+                  {DISPOSITIONS.map((d) => (
+                    <option key={d.value} value={d.value}>{d.label}</option>
+                  ))}
+                </select>
+              </label>
+              <label className={labelClass}>
+                Unknown callers
+                <select
+                  name="unknownCallers"
+                  defaultValue={owner.callPolicy?.unknownCallers ?? DEFAULT_GLOBAL_CALL_POLICY.unknownCallers}
+                  className={inputClass}
+                >
+                  {DISPOSITIONS.map((d) => (
+                    <option key={d.value} value={d.value}>{d.label}</option>
+                  ))}
+                </select>
+              </label>
+              <label className={labelClass}>
+                Night starts
+                <input
+                  name="nightStart"
+                  type="time"
+                  defaultValue={owner.callPolicy?.nightStart ?? DEFAULT_GLOBAL_CALL_POLICY.nightStart}
+                  className={inputClass}
+                />
+              </label>
+              <label className={labelClass}>
+                Night ends
+                <input
+                  name="nightEnd"
+                  type="time"
+                  defaultValue={owner.callPolicy?.nightEnd ?? DEFAULT_GLOBAL_CALL_POLICY.nightEnd}
+                  className={inputClass}
+                />
+              </label>
+              <label className={labelClass}>
+                At night
+                <select
+                  name="nightAction"
+                  defaultValue={owner.callPolicy?.nightAction ?? DEFAULT_GLOBAL_CALL_POLICY.nightAction}
+                  className={inputClass}
+                >
+                  {DISPOSITIONS.filter((d) => d.value !== "RING_THROUGH").map((d) => (
+                    <option key={d.value} value={d.value}>{d.label}</option>
+                  ))}
+                </select>
+              </label>
+              <label className={labelClass}>
+                Ring through at night when call-through priority ≥
+                <input
+                  name="nightPriorityThreshold"
+                  type="number"
+                  min={0}
+                  max={100}
+                  defaultValue={owner.callPolicy?.nightPriorityThreshold ?? DEFAULT_GLOBAL_CALL_POLICY.nightPriorityThreshold}
+                  className={inputClass}
+                />
+              </label>
+              <div className="sm:col-span-2">
+                <PrimaryButton>Save call policy</PrimaryButton>
+              </div>
+            </form>
+          ) : null}
         </Card>
 
         <Card>

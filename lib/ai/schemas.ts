@@ -1,10 +1,26 @@
 import { z } from "zod";
 
+export const envelopeCategorySchema = z.enum([
+  "SMALL_TALK",
+  "JOKES",
+  "GENERIC_LIFE_QUESTIONS",
+  "KNOWN_SHARED_TOPICS",
+  "SUGGEST_MEETING",
+  "AGREE_SPECIFIC_MEETING",
+  "MONEY_OR_PAYMENT",
+  "PRIVATE_INFORMATION",
+  "FACTUAL_COMMITMENT",
+  "WORK_DECISION",
+  "CONFLICT_OR_EMOTION",
+]);
+
 /** Structured triage decision for an inbound message. */
 export const triageDecisionSchema = z.object({
   decision: z.enum(["AUTO_REPLY", "ESCALATE", "IGNORE"]),
   confidence: z.number().min(0).max(1),
   risk: z.enum(["LOW", "MEDIUM", "HIGH"]),
+  /** Which confidence-envelope category the message falls into. */
+  policyMatch: envelopeCategorySchema,
   reason: z.string(),
   reply: z.string().nullable(),
   requiresUser: z.boolean(),

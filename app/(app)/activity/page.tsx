@@ -43,7 +43,7 @@ export default async function ActivityPage() {
                   <>
                     {" · "}
                     <Link
-                      href={`/inbox/${entry.conversationId}`}
+                      href={`/messages/${entry.conversationId}`}
                       className="hover:underline"
                     >
                       conversation

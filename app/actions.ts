@@ -150,7 +150,7 @@ export async function takeOverConversation(conversationId: string): Promise<void
     contactId: conv?.contactId,
     conversationId,
   });
-  revalidatePath(`/inbox/${conversationId}`);
+  revalidatePath(`/messages/${conversationId}`);
 }
 
 export async function returnConversationToAi(
@@ -173,7 +173,7 @@ export async function returnConversationToAi(
     contactId: conv?.contactId,
     conversationId,
   });
-  revalidatePath(`/inbox/${conversationId}`);
+  revalidatePath(`/messages/${conversationId}`);
 }
 
 export async function pauseConversation(conversationId: string): Promise<void> {
@@ -190,7 +190,7 @@ export async function pauseConversation(conversationId: string): Promise<void> {
     contactId: conv?.contactId,
     conversationId,
   });
-  revalidatePath(`/inbox/${conversationId}`);
+  revalidatePath(`/messages/${conversationId}`);
 }
 
 export async function closeConversation(conversationId: string): Promise<void> {
@@ -207,8 +207,8 @@ export async function closeConversation(conversationId: string): Promise<void> {
     contactId: conv?.contactId,
     conversationId,
   });
-  revalidatePath("/inbox");
-  redirect("/inbox");
+  revalidatePath("/messages");
+  redirect("/messages");
 }
 
 export async function sendManualReply(
@@ -251,7 +251,7 @@ export async function sendManualReply(
     contactId: conv.contactId,
     conversationId,
   });
-  revalidatePath(`/inbox/${conversationId}`);
+  revalidatePath(`/messages/${conversationId}`);
 }
 
 // -------------------------------------------------------------- automations
@@ -660,6 +660,257 @@ export async function addReminder(
   });
   revalidatePath("/");
   if (contactId) revalidatePath(`/people/${contactId}`);
+}
+
+// ------------------------------------------------- relationship ontology & style
+
+export async function proposeRelationshipFromDescription(
+  contactId: string,
+  formData: FormData,
+): Promise<void> {
+  const description = String(formData.get("description") ?? "").trim();
+  if (!description) return;
+  const contact = await getContact(contactId);
+  if (!contact) return;
+  const { proposeRelationship } = await import("@/lib/ai/relationship");
+  const { proposal } = await proposeRelationship({
+    contactName: displayName(contact),
+    description,
+    preferredLanguage: contact.preferredLanguage,
+  });
+  const db = await getDb();
+  await db
+    .update(contacts)
+    .set({
+      relationshipDescription: description,
+      relationshipLabel: proposal.label,
+      relationshipVector: proposal.vector,
+      confidenceEnvelope: proposal.suggestedEnvelope,
+      updatedAt: sql`now()`,
+    })
+    .where(eq(contacts.id, contactId));
+  await logActivity({
+    actor: "AI",
+    action: "RELATIONSHIP_PROPOSED",
+    summary: `Relationship ontology proposed for ${displayName(contact)}: ${proposal.label}`,
+    contactId,
+    detail: { vector: proposal.vector, reasoning: proposal.reasoning },
+  });
+  revalidatePath(`/people/${contactId}`);
+}
+
+const VECTOR_KEYS = [
+  "personalCloseness",
+  "professionalRelevance",
+  "formality",
+  "trust",
+  "humorTolerance",
+  "sensitiveTopicAccess",
+  "autonomousReplyFreedom",
+  "proactiveContactDesired",
+  "callThroughPriority",
+  "privacySensitivity",
+] as const;
+
+const ENVELOPE_KEYS = [
+  "SMALL_TALK",
+  "JOKES",
+  "GENERIC_LIFE_QUESTIONS",
+  "KNOWN_SHARED_TOPICS",
+  "SUGGEST_MEETING",
+  "AGREE_SPECIFIC_MEETING",
+  "MONEY_OR_PAYMENT",
+  "PRIVATE_INFORMATION",
+  "FACTUAL_COMMITMENT",
+  "WORK_DECISION",
+  "CONFLICT_OR_EMOTION",
+] as const;
+
+export async function updateAdvancedRelationship(
+  contactId: string,
+  formData: FormData,
+): Promise<void> {
+  const db = await getDb();
+  const vector: Record<string, number> = {};
+  for (const key of VECTOR_KEYS) {
+    const raw = formData.get(`vector_${key}`);
+    if (raw !== null && String(raw).trim() !== "") {
+      vector[key] = Math.min(100, Math.max(0, Number(raw) || 0));
+    }
+  }
+  const envelope: Record<string, string> = {};
+  for (const key of ENVELOPE_KEYS) {
+    const raw = String(formData.get(`envelope_${key}`) ?? "");
+    if (raw === "AUTO" || raw === "ESCALATE" || raw === "BLOCK") {
+      envelope[key] = raw;
+    }
+  }
+  const label = String(formData.get("relationshipLabel") ?? "").trim();
+  const callPolicy = String(formData.get("callPolicy") ?? "INHERIT");
+  await db
+    .update(contacts)
+    .set({
+      relationshipLabel: label || null,
+      relationshipVector: vector as typeof contacts.$inferInsert.relationshipVector,
+      confidenceEnvelope: envelope as typeof contacts.$inferInsert.confidenceEnvelope,
+      callPolicy: callPolicy as typeof contacts.$inferInsert.callPolicy,
+      updatedAt: sql`now()`,
+    })
+    .where(eq(contacts.id, contactId));
+  await logActivity({
+    actor: "USER",
+    action: "RELATIONSHIP_UPDATED",
+    summary: "Advanced relationship settings updated",
+    contactId,
+  });
+  revalidatePath(`/people/${contactId}`);
+}
+
+const MAX_SCREENSHOTS = 10;
+const MAX_SCREENSHOT_BYTES = 4 * 1024 * 1024;
+
+export async function uploadStyleScreenshots(
+  contactId: string,
+  formData: FormData,
+): Promise<void> {
+  const contact = await getContact(contactId);
+  if (!contact) return;
+  const db = await getDb();
+  const { contactMedia, users } = await import("@/lib/db/schema");
+
+  const files = formData
+    .getAll("screenshots")
+    .filter((f): f is File => f instanceof File && f.size > 0)
+    .slice(0, MAX_SCREENSHOTS);
+  if (files.length === 0) return;
+
+  const images: { mimeType: string; base64: string }[] = [];
+  for (const file of files) {
+    if (!file.type.startsWith("image/")) continue;
+    if (file.size > MAX_SCREENSHOT_BYTES) continue;
+    const base64 = Buffer.from(await file.arrayBuffer()).toString("base64");
+    // Provenance: keep the original screenshots.
+    await db.insert(contactMedia).values({
+      contactId,
+      kind: "STYLE_SCREENSHOT",
+      mimeType: file.type,
+      dataBase64: base64,
+    });
+    images.push({ mimeType: file.type, base64 });
+  }
+  if (images.length === 0) return;
+
+  const [owner] = await db.select().from(users).limit(1);
+  const { extractCommunicationProfile } = await import("@/lib/ai/style");
+  try {
+    const { profile } = await extractCommunicationProfile({
+      contactName: displayName(contact),
+      ownerName: owner?.name ?? "the owner",
+      images,
+    });
+    await db
+      .update(contacts)
+      .set({ communicationProfile: profile, updatedAt: sql`now()` })
+      .where(eq(contacts.id, contactId));
+    await logActivity({
+      actor: "AI",
+      action: "STYLE_EXTRACTED",
+      summary: `Communication profile extracted from ${images.length} screenshot(s) for ${displayName(contact)}`,
+      contactId,
+    });
+  } catch (err) {
+    await logActivity({
+      actor: "SYSTEM",
+      action: "STYLE_EXTRACTION_FAILED",
+      summary: `Style extraction failed: ${err instanceof Error ? err.message.slice(0, 150) : "unknown error"}`,
+      contactId,
+    });
+  }
+  revalidatePath(`/people/${contactId}`);
+}
+
+// ----------------------------------------------------------------- phone
+
+export async function callContact(contactId: string): Promise<void> {
+  const contact = await getContact(contactId);
+  if (!contact) return;
+  const { initiateCallback } = await import("@/lib/voice/service");
+  await initiateCallback(contact);
+  revalidatePath("/phone");
+}
+
+export async function blockNumber(phoneNumber: string): Promise<void> {
+  const db = await getDb();
+  const { blockedNumbers } = await import("@/lib/db/schema");
+  await db
+    .insert(blockedNumbers)
+    .values({ phoneNumber, reason: "Blocked from phone view" })
+    .onConflictDoNothing();
+  await logActivity({
+    actor: "USER",
+    action: "NUMBER_BLOCKED",
+    summary: `Blocked ${phoneNumber}`,
+  });
+  revalidatePath("/phone");
+}
+
+export async function unblockNumber(phoneNumber: string): Promise<void> {
+  const db = await getDb();
+  const { blockedNumbers } = await import("@/lib/db/schema");
+  await db.delete(blockedNumbers).where(eq(blockedNumbers.phoneNumber, phoneNumber));
+  await logActivity({
+    actor: "USER",
+    action: "NUMBER_UNBLOCKED",
+    summary: `Unblocked ${phoneNumber}`,
+  });
+  revalidatePath("/phone");
+}
+
+export async function updateGlobalCallPolicy(formData: FormData): Promise<void> {
+  const db = await getDb();
+  const [owner] = await db.select().from(users).limit(1);
+  if (!owner) return;
+  const disposition = (v: FormDataEntryValue | null, fallback: string) => {
+    const s = String(v ?? "");
+    return ["RING_THROUGH", "VOICEMAIL", "SCREEN", "REJECT"].includes(s)
+      ? s
+      : fallback;
+  };
+  await db
+    .update(users)
+    .set({
+      phoneNumber:
+        String(formData.get("ownerPhone") ?? "").trim() || owner.phoneNumber,
+      callPolicy: {
+        knownContacts: disposition(formData.get("knownContacts"), "RING_THROUGH"),
+        unknownCallers: disposition(formData.get("unknownCallers"), "SCREEN"),
+        nightStart: String(formData.get("nightStart") ?? "22:00"),
+        nightEnd: String(formData.get("nightEnd") ?? "07:00"),
+        nightAction: disposition(formData.get("nightAction"), "VOICEMAIL"),
+        nightPriorityThreshold: Math.min(
+          100,
+          Math.max(0, Number(formData.get("nightPriorityThreshold")) || 85),
+        ),
+      } as NonNullable<typeof owner.callPolicy>,
+      updatedAt: sql`now()`,
+    })
+    .where(eq(users.id, owner.id));
+  await logActivity({
+    actor: "USER",
+    action: "CALL_POLICY_UPDATED",
+    summary: "Global call policy updated",
+  });
+  revalidatePath("/settings");
+}
+
+// ----------------------------------------------------------------- assistant
+
+export async function sendAssistantMessage(formData: FormData): Promise<void> {
+  const text = String(formData.get("text") ?? "").trim();
+  if (!text) return;
+  const { runAssistantTurn } = await import("@/lib/ai/assistant");
+  await runAssistantTurn(text);
+  revalidatePath("/chat");
 }
 
 // ------------------------------------------------------------------ settings

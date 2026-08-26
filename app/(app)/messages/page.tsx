@@ -27,7 +27,7 @@ export default async function InboxPage() {
       ) : (
         <div className="space-y-2">
           {open.map((c) => (
-            <Link key={c.id} href={`/inbox/${c.id}`} className="block">
+            <Link key={c.id} href={`/messages/${c.id}`} className="block">
               <Card className="flex items-center justify-between gap-3 hover:border-stone-300">
                 <div className="min-w-0">
                   <p className="text-sm font-medium">{c.contactName}</p>
@@ -54,7 +54,7 @@ export default async function InboxPage() {
           </h2>
           <div className="space-y-2 opacity-70">
             {closed.map((c) => (
-              <Link key={c.id} href={`/inbox/${c.id}`} className="block">
+              <Link key={c.id} href={`/messages/${c.id}`} className="block">
                 <Card className="flex items-center justify-between gap-3">
                   <p className="text-sm">{c.contactName}</p>
                   <Badge label="CLOSED" />

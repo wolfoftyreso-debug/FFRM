@@ -65,6 +65,17 @@ export async function runDispatcher(now: Date = new Date()): Promise<DispatchSum
     }
   }
 
+  // Fallback processing of voicemail recordings whose post-webhook
+  // processing did not complete.
+  const { findUnprocessedRecordings } = await import("@/lib/voice/service");
+  const { processCallRecording } = await import("@/lib/voice/process-recording");
+  const staleRecordings = await findUnprocessedRecordings(
+    new Date(now.getTime() - 90 * 1000),
+  );
+  for (const r of staleRecordings) {
+    await processCallRecording(r.id);
+  }
+
   // Fallback processing of inbound messages whose post-webhook processing
   // did not complete (e.g. function terminated). Never lose communication.
   const staleCutoff = new Date(now.getTime() - 90 * 1000);

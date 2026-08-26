@@ -107,7 +107,7 @@ export async function processInboundMessage(messageId: string): Promise<void> {
     await logActivity({
       actor: "AI",
       action: "AI_TRIAGE",
-      summary: `AI classified message from ${contactDisplayName(contact)}: ${outcome.decision.decision} (risk ${outcome.decision.risk}, confidence ${outcome.decision.confidence.toFixed(2)})`,
+      summary: `AI classified message from ${contactDisplayName(contact)}: ${outcome.decision.decision} (${outcome.decision.policyMatch}, risk ${outcome.decision.risk}, confidence ${outcome.decision.confidence.toFixed(2)})`,
       contactId: contact.id,
       conversationId: message.conversationId,
       entityType: "message",
@@ -119,6 +119,7 @@ export async function processInboundMessage(messageId: string): Promise<void> {
       decision: outcome.decision,
       contactAutonomyLevel: contact.autonomyLevel,
       conversationState: controlState,
+      envelope: contact.confidenceEnvelope,
     });
 
     if (verdict.allowed && outcome.decision.reply) {
@@ -239,8 +240,8 @@ export async function escalateConversation(args: {
   if (!alreadyNotified) {
     const appUrl = optionalEnv("APP_URL") ?? "";
     const link = args.conversationId
-      ? `${appUrl}/inbox/${args.conversationId}`
-      : `${appUrl}/inbox`;
+      ? `${appUrl}/messages/${args.conversationId}`
+      : `${appUrl}/messages`;
     const preview =
       escalationPreviewEnabled() && args.messageText
         ? `\n"${args.messageText.slice(0, 120)}"`

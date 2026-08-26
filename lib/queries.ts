@@ -1,10 +1,13 @@
 import { getDb } from "@/lib/db";
 import {
   activityLog,
+  assistantMessages,
   automationExecutions,
   automations,
+  calls,
   commitments,
   contactFacts,
+  contactMedia,
   contacts,
   conversations,
   messages,
@@ -447,6 +450,66 @@ export async function getTodayData() {
     upcoming: upcoming.slice(0, 12),
     suggestedFacts,
     suggestedCommitments,
+  };
+}
+
+export async function listCalls(limit = 50) {
+  const db = await getDb();
+  return db
+    .select({ call: calls, contact: contacts })
+    .from(calls)
+    .leftJoin(contacts, eq(calls.contactId, contacts.id))
+    .orderBy(desc(calls.createdAt))
+    .limit(limit);
+}
+
+export async function getAssistantHistory(limit = 40) {
+  const db = await getDb();
+  const rows = await db
+    .select()
+    .from(assistantMessages)
+    .orderBy(desc(assistantMessages.createdAt))
+    .limit(limit);
+  return rows.reverse();
+}
+
+export async function countStyleScreenshots(contactId: string): Promise<number> {
+  const db = await getDb();
+  const rows = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(contactMedia)
+    .where(eq(contactMedia.contactId, contactId));
+  return Number(rows[0]?.count ?? 0);
+}
+
+export async function getAttentionSummary() {
+  const db = await getDb();
+  const escalated = (await listConversations()).filter(
+    (c) => c.aiControlState === "ESCALATED" && c.status === "OPEN",
+  );
+  const drafts = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(reminders)
+    .where(and(eq(reminders.kind, "DRAFT"), eq(reminders.status, "PENDING")));
+  const dueReminders = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(reminders)
+    .where(
+      and(
+        ne(reminders.kind, "DRAFT"),
+        eq(reminders.status, "PENDING"),
+        lte(reminders.dueAt, new Date()),
+      ),
+    );
+  const unheardVoicemail = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(calls)
+    .where(and(eq(calls.state, "VOICEMAIL"), eq(calls.aiRequiresUser, true)));
+  return {
+    escalated,
+    draftCount: Number(drafts[0]?.count ?? 0),
+    dueReminderCount: Number(dueReminders[0]?.count ?? 0),
+    voicemailNeedsYou: Number(unheardVoicemail[0]?.count ?? 0),
   };
 }
 

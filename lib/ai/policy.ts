@@ -1,4 +1,6 @@
 import type { TriageDecision } from "./schemas";
+import type { ConfidenceEnvelope } from "@/lib/db/schema";
+import { resolveEnvelope } from "./relationship";
 
 /**
  * Autonomy levels:
@@ -46,6 +48,8 @@ export interface AutoReplyPolicyInput {
   decision: TriageDecision;
   contactAutonomyLevel: number;
   conversationState: string; // AI | USER | PAUSED | ESCALATED
+  /** Contact-specific confidence envelope (defaults resolved from autonomy). */
+  envelope?: ConfidenceEnvelope | null;
 }
 
 export interface PolicyVerdict {
@@ -72,6 +76,17 @@ export function canAutoReply(input: AutoReplyPolicyInput): PolicyVerdict {
       reason: `Contact autonomy level ${contactAutonomyLevel} does not permit autonomous replies`,
     };
   }
+
+  // Confidence envelope: the relationship ontology's practical effect.
+  const envelope = resolveEnvelope(contactAutonomyLevel, input.envelope);
+  const rule = envelope[decision.policyMatch] ?? "ESCALATE";
+  if (rule !== "AUTO") {
+    return {
+      allowed: false,
+      reason: `Envelope rule for ${decision.policyMatch} is ${rule}`,
+    };
+  }
+
   if (decision.decision !== "AUTO_REPLY") {
     return { allowed: false, reason: `Decision is ${decision.decision}` };
   }

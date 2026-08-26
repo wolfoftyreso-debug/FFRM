@@ -31,9 +31,102 @@ export const users = pgTable("users", {
   timezone: text("timezone").notNull().default("Europe/Stockholm"),
   /** Communication profile: tone, emoji usage, common expressions, ... */
   voiceProfile: jsonb("voice_profile").$type<VoiceProfile>(),
+  /** Global inbound call policy; per-contact settings override. */
+  callPolicy: jsonb("call_policy").$type<GlobalCallPolicy>(),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });
+
+/** How inbound calls are handled by default. */
+export interface GlobalCallPolicy {
+  /** Disposition for known contacts (default RING_THROUGH). */
+  knownContacts?: CallDisposition;
+  /** Disposition for unknown callers (default SCREEN). */
+  unknownCallers?: CallDisposition;
+  /** Night window (local time HH:MM). */
+  nightStart?: string;
+  nightEnd?: string;
+  /** Disposition during the night window (default VOICEMAIL). */
+  nightAction?: CallDisposition;
+  /**
+   * Contacts whose relationship vector callThroughPriority is at or above
+   * this value ring through even at night (default 85).
+   */
+  nightPriorityThreshold?: number;
+}
+
+export type CallDisposition = "RING_THROUGH" | "VOICEMAIL" | "SCREEN" | "REJECT";
+
+/** Per-contact override for inbound call handling. */
+export type ContactCallPolicy =
+  | "INHERIT"
+  | "ALWAYS_RING_THROUGH"
+  | "RING_THROUGH_DAYTIME"
+  | "VOICEMAIL"
+  | "SCREEN"
+  | "BLOCK";
+
+/**
+ * Relationship ontology: 0–100 dimensions. Multiple things can be true at
+ * once ("close friend" AND "colleague"). Shown to the user as a simple label;
+ * editable in Advanced relationship.
+ */
+export interface RelationshipVector {
+  personalCloseness?: number;
+  professionalRelevance?: number;
+  formality?: number;
+  trust?: number;
+  humorTolerance?: number;
+  sensitiveTopicAccess?: number;
+  autonomousReplyFreedom?: number;
+  proactiveContactDesired?: number;
+  callThroughPriority?: number;
+  privacySensitivity?: number;
+}
+
+/** Style extracted from uploaded conversation screenshots (+ manual edits). */
+export interface CommunicationProfile {
+  /** How the OWNER writes to this contact. */
+  ownerStyle?: StyleProfile;
+  /** How the CONTACT writes to the owner. */
+  contactStyle?: StyleProfile;
+  commonTopics?: string[];
+  avoidedTopics?: string[];
+  recurringExpressions?: string[];
+  whoUsuallyInitiates?: "OWNER" | "CONTACT" | "BALANCED";
+  notes?: string;
+}
+
+export interface StyleProfile {
+  language?: string;
+  formality?: number; // 0–1
+  averageLength?: "very_short" | "short" | "medium" | "long";
+  humor?: number;
+  sarcasm?: number;
+  emojiFrequency?: number;
+  emojiTypes?: string[];
+  swearing?: number;
+  questionStyle?: string;
+  greetingStyle?: string;
+  signOffStyle?: string;
+  usesNames?: boolean;
+}
+
+/** Confidence envelope: what the AI may do per action category. */
+export type EnvelopeRule = "AUTO" | "ESCALATE" | "BLOCK";
+export type EnvelopeCategory =
+  | "SMALL_TALK"
+  | "JOKES"
+  | "GENERIC_LIFE_QUESTIONS"
+  | "KNOWN_SHARED_TOPICS"
+  | "SUGGEST_MEETING"
+  | "AGREE_SPECIFIC_MEETING"
+  | "MONEY_OR_PAYMENT"
+  | "PRIVATE_INFORMATION"
+  | "FACTUAL_COMMITMENT"
+  | "WORK_DECISION"
+  | "CONFLICT_OR_EMOTION";
+export type ConfidenceEnvelope = Partial<Record<EnvelopeCategory, EnvelopeRule>>;
 
 export interface VoiceProfile {
   defaultTone?: string;
@@ -93,6 +186,14 @@ export const contacts = pgTable(
     automaticBirthdayGreeting: boolean("automatic_birthday_greeting")
       .notNull()
       .default(false),
+    // Relationship ontology
+    relationshipLabel: text("relationship_label"),
+    relationshipDescription: text("relationship_description"),
+    relationshipVector: jsonb("relationship_vector").$type<RelationshipVector>(),
+    communicationProfile: jsonb("communication_profile").$type<CommunicationProfile>(),
+    confidenceEnvelope: jsonb("confidence_envelope").$type<ConfidenceEnvelope>(),
+    /** Inbound call handling override; INHERIT uses the global policy. */
+    callPolicy: text("call_policy").$type<ContactCallPolicy>().notNull().default("INHERIT"),
     lastInteractionAt: timestamp("last_interaction_at", { withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
@@ -379,6 +480,76 @@ export const activityLog = pgTable(
   ],
 );
 
+/** Phone calls on the system's 46elks number. */
+export const calls = pgTable(
+  "calls",
+  {
+    id: id(),
+    provider: text("provider").notNull().default("46elks"),
+    providerCallId: text("provider_call_id").notNull(),
+    contactId: text("contact_id").references(() => contacts.id, {
+      onDelete: "set null",
+    }),
+    direction: text("direction").notNull(), // INBOUND | OUTBOUND
+    fromNumber: text("from_number").notNull(),
+    toNumber: text("to_number").notNull(),
+    /** RINGING → CONNECTED | VOICEMAIL | MISSED | REJECTED | FAILED | COMPLETED */
+    state: text("state").notNull().default("RINGING"),
+    /** What the policy engine decided: CONNECT | VOICEMAIL | SCREEN | REJECT. */
+    disposition: text("disposition"),
+    policyReason: text("policy_reason"),
+    durationSeconds: integer("duration_seconds"),
+    recordingUrl: text("recording_url"),
+    recordingDurationSeconds: integer("recording_duration_seconds"),
+    transcript: text("transcript"),
+    aiSummary: text("ai_summary"),
+    aiTopic: text("ai_topic"),
+    aiRequiresUser: boolean("ai_requires_user"),
+    /** Set when recording post-processing has been claimed. */
+    processedAt: timestamp("processed_at", { withTimezone: true }),
+    error: text("error"),
+    createdAt: createdAt(),
+    answeredAt: timestamp("answered_at", { withTimezone: true }),
+    endedAt: timestamp("ended_at", { withTimezone: true }),
+  },
+  (t) => [
+    uniqueIndex("calls_provider_call_unique").on(t.provider, t.providerCallId),
+    index("calls_contact_idx").on(t.contactId),
+    index("calls_created_idx").on(t.createdAt),
+  ],
+);
+
+/** Numbers explicitly blocked by the owner (rejected before any policy). */
+export const blockedNumbers = pgTable("blocked_numbers", {
+  phoneNumber: text("phone_number").primaryKey(), // E.164
+  reason: text("reason"),
+  createdAt: createdAt(),
+});
+
+/** Uploaded conversation screenshots — provenance for communication profiles. */
+export const contactMedia = pgTable(
+  "contact_media",
+  {
+    id: id(),
+    contactId: text("contact_id")
+      .notNull()
+      .references(() => contacts.id, { onDelete: "cascade" }),
+    kind: text("kind").notNull().default("STYLE_SCREENSHOT"),
+    mimeType: text("mime_type").notNull(),
+    dataBase64: text("data_base64").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index("contact_media_contact_idx").on(t.contactId)],
+);
+
+/** The owner's assistant chat (single thread). */
+export const assistantMessages = pgTable("assistant_messages", {
+  id: id(),
+  role: text("role").notNull(), // user | assistant
+  content: text("content").notNull(),
+  createdAt: createdAt(),
+});
+
 /** AI cost/usage tracking. */
 export const aiCalls = pgTable("ai_calls", {
   id: id(),
@@ -400,6 +571,9 @@ export const systemState = pgTable("system_state", {
 });
 
 export type User = typeof users.$inferSelect;
+export type Call = typeof calls.$inferSelect;
+export type ContactMediaItem = typeof contactMedia.$inferSelect;
+export type AssistantMessage = typeof assistantMessages.$inferSelect;
 export type Contact = typeof contacts.$inferSelect;
 export type NewContact = typeof contacts.$inferInsert;
 export type ContactFact = typeof contactFacts.$inferSelect;

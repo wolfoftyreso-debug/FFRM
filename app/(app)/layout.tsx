@@ -1,10 +1,11 @@
 import Link from "next/link";
 import {
   CalendarDays,
-  Inbox,
   ListChecks,
+  MessageCircle,
+  MessagesSquare,
+  Phone,
   Settings,
-  Sun,
   Users,
   Zap,
 } from "lucide-react";
@@ -13,8 +14,9 @@ import { getPendingEscalationCount } from "@/lib/queries";
 export const dynamic = "force-dynamic";
 
 const nav = [
-  { href: "/", label: "Today", icon: Sun },
-  { href: "/inbox", label: "Inbox", icon: Inbox },
+  { href: "/chat", label: "Chat", icon: MessageCircle },
+  { href: "/phone", label: "Phone", icon: Phone },
+  { href: "/messages", label: "Messages", icon: MessagesSquare },
   { href: "/calendar", label: "Calendar", icon: CalendarDays },
   { href: "/people", label: "People", icon: Users },
   { href: "/automations", label: "Automations", icon: Zap },
@@ -50,7 +52,7 @@ export default async function AppLayout({
               >
                 <item.icon className="h-4 w-4" />
                 {item.label}
-                {item.href === "/inbox" && escalations > 0 ? (
+                {item.href === "/messages" && escalations > 0 ? (
                   <span className="ml-auto rounded-full bg-red-100 px-1.5 text-[11px] font-semibold text-red-700">
                     {escalations}
                   </span>
@@ -67,7 +69,7 @@ export default async function AppLayout({
 
       {/* Mobile bottom navigation */}
       <nav className="fixed inset-x-0 bottom-0 z-10 flex justify-around border-t border-stone-200 bg-white py-1.5 md:hidden">
-        {nav.slice(0, 5).map((item) => (
+        {nav.slice(0, 6).map((item) => (
           <Link
             key={item.href}
             href={item.href}
@@ -75,7 +77,7 @@ export default async function AppLayout({
           >
             <item.icon className="h-5 w-5" />
             {item.label}
-            {item.href === "/inbox" && escalations > 0 ? (
+            {item.href === "/messages" && escalations > 0 ? (
               <span className="absolute -top-0.5 right-0 h-2 w-2 rounded-full bg-red-500" />
             ) : null}
           </Link>
