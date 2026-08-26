@@ -327,6 +327,8 @@ export const mediaAssets = pgTable(
     mimeType: text("mime_type").notNull(),
     providerMediaId: text("provider_media_id"),
     providerUrl: text("provider_url"),
+    /** Stable authenticated application URL; may later point to private Blob. */
+    storageUrl: text("storage_url"),
     /** Sanitized image bytes. Private API route serves this to authenticated UI. */
     dataBase64: text("data_base64"),
     byteSize: integer("byte_size"),
@@ -538,6 +540,9 @@ export const calls = pgTable(
     id: id(),
     provider: text("provider").notNull().default("46elks"),
     providerCallId: text("provider_call_id").notNull(),
+    conversationId: text("conversation_id").references(() => conversations.id, {
+      onDelete: "set null",
+    }),
     contactId: text("contact_id").references(() => contacts.id, {
       onDelete: "set null",
     }),
@@ -565,6 +570,7 @@ export const calls = pgTable(
   },
   (t) => [
     uniqueIndex("calls_provider_call_unique").on(t.provider, t.providerCallId),
+    index("calls_conversation_idx").on(t.conversationId),
     index("calls_contact_idx").on(t.contactId),
     index("calls_created_idx").on(t.createdAt),
   ],

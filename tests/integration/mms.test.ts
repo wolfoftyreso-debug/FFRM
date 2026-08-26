@@ -135,6 +135,7 @@ describe("MMS pipeline", () => {
 
     const [asset] = await db.select().from(schema.mediaAssets);
     expect(asset.analysisStatus).toBe("COMPLETED");
+    expect(asset.storageUrl).toBe(`/api/media/${asset.id}`);
     expect(asset.mimeType).toBe("image/jpeg");
     expect(asset.width).toBe(320);
     expect(asset.analysis?.caption).toContain("red car");
@@ -225,6 +226,7 @@ describe("MMS pipeline", () => {
     ).toBeLessThan(320 * 1024);
     const [asset] = await db.select().from(schema.mediaAssets);
     expect(asset.dataBase64).toBeTruthy();
+    expect(asset.storageUrl).toBe(`/api/media/${asset.id}`);
     expect(asset.messageId).toBe(result.message.id);
   });
 

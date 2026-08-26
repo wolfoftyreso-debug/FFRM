@@ -8,6 +8,7 @@ import { optionalEnv, requireEnv } from "@/lib/env";
 import { logActivity } from "@/lib/activity";
 import { notifyOwner } from "@/lib/sms/send-message";
 import { contactDisplayName } from "@/lib/ai/context";
+import { appendConversationEvent } from "@/lib/conversation-events";
 
 const voicemailAnalysisSchema = z.object({
   summary: z.string(),
@@ -94,6 +95,16 @@ Voicemail transcript:
       entityType: "call",
       entityId: call.id,
     });
+    await appendConversationEvent({
+      conversationId: call.conversationId,
+      contactId: call.contactId,
+      channel: "VOICEMAIL",
+      eventKey: `${call.providerCallId}:transcript`,
+      text: `Voicemail${analysis ? ` · ${analysis.summary}` : ""}${
+        analysis?.requiresUser ? " · NEEDS YOU" : ""
+      }`,
+      sender: "AI",
+    });
 
     await notifyOwner(
       `Röstmeddelande från ${who}${analysis ? `:\n${analysis.summary}` : "."}${
@@ -113,6 +124,13 @@ Voicemail transcript:
       contactId: call.contactId,
       entityType: "call",
       entityId: call.id,
+    });
+    await appendConversationEvent({
+      conversationId: call.conversationId,
+      contactId: call.contactId,
+      channel: "VOICEMAIL",
+      eventKey: `${call.providerCallId}:transcript`,
+      text: "Voicemail received · transcription failed · NEEDS YOU",
     });
     // Never lose communication: the owner still learns about the voicemail.
     await notifyOwner(

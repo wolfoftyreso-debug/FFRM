@@ -18,8 +18,10 @@ import {
 } from "./actions";
 import { logActivity } from "@/lib/activity";
 import { notifyOwner } from "@/lib/sms/send-message";
+import { getOrCreateConversation } from "@/lib/sms/send-message";
 import { requireEnv, optionalEnv } from "@/lib/env";
 import { contactDisplayName } from "@/lib/ai/context";
+import { appendConversationEvent } from "@/lib/conversation-events";
 
 export interface IncomingCallInput {
   callid: string;
@@ -66,6 +68,10 @@ export async function handleIncomingCall(
   });
 
   const target = await ownerPhone();
+  const conversationId = await getOrCreateConversation(
+    contact?.id ?? null,
+    from,
+  );
   // Without a reachable owner phone, ring-through is impossible.
   const disposition =
     decision.disposition === "RING_THROUGH" && !target
@@ -76,6 +82,7 @@ export async function handleIncomingCall(
     .insert(calls)
     .values({
       providerCallId: input.callid,
+      conversationId,
       contactId: contact?.id ?? null,
       direction: "INBOUND",
       fromNumber: from,
@@ -88,6 +95,13 @@ export async function handleIncomingCall(
     .returning({ id: calls.id });
 
   if (inserted.length > 0) {
+    await appendConversationEvent({
+      conversationId,
+      contactId: contact?.id ?? null,
+      channel: "VOICE_CALL",
+      eventKey: `${input.callid}:started`,
+      text: `Incoming call · ${disposition} · ${decision.reason}`,
+    });
     if (contact) {
       await db
         .update(contacts)
@@ -136,6 +150,13 @@ export async function handleAfterConnect(
         .update(calls)
         .set({ state: "CONNECTED", answeredAt: new Date() })
         .where(eq(calls.id, call.id));
+      await appendConversationEvent({
+        conversationId: call.conversationId,
+        contactId: call.contactId,
+        channel: "VOICE_CALL",
+        eventKey: `${callid}:answered`,
+        text: "Call answered",
+      });
     }
     return { hangup: "" };
   }
@@ -147,6 +168,13 @@ export async function handleAfterConnect(
       .update(calls)
       .set({ state: "VOICEMAIL" })
       .where(eq(calls.id, call.id));
+    await appendConversationEvent({
+      conversationId: call.conversationId,
+      contactId: call.contactId,
+      channel: "VOICE_CALL",
+      eventKey: `${callid}:voicemail`,
+      text: "No answer · caller sent to voicemail",
+    });
   }
   return voicemailAction("VOICEMAIL");
 }
@@ -200,6 +228,15 @@ export async function handleHangup(input: HangupInput): Promise<void> {
     entityType: "call",
     entityId: call.id,
   });
+  await appendConversationEvent({
+    conversationId: call.conversationId,
+    contactId: call.contactId,
+    channel: finalState === "VOICEMAIL" ? "VOICEMAIL" : "VOICE_CALL",
+    eventKey: `${input.id}:ended`,
+    text: `${call.direction === "INBOUND" ? "Incoming" : "Outgoing"} call · ${finalState.toLowerCase()}${
+      input.duration ? ` · ${input.duration}s` : ""
+    }`,
+  });
 
   // Missed inbound calls notify the owner (their phone shows the 46elks
   // number, not the actual caller — this SMS restores that information).
@@ -223,6 +260,10 @@ export async function initiateCallback(contact: Contact): Promise<Call> {
   const username = requireEnv("ELKS46_USERNAME");
   const password = requireEnv("ELKS46_PASSWORD");
   const from = requireEnv("ELKS46_FROM_NUMBER");
+  const conversationId = await getOrCreateConversation(
+    contact.id,
+    contact.phoneNumber,
+  );
 
   const body = new URLSearchParams({
     from,
@@ -253,6 +294,7 @@ export async function initiateCallback(contact: Contact): Promise<Call> {
     .insert(calls)
     .values({
       providerCallId: data.id ?? `local-${Date.now()}`,
+      conversationId,
       contactId: contact.id,
       direction: "OUTBOUND",
       fromNumber: from,
@@ -270,6 +312,13 @@ export async function initiateCallback(contact: Contact): Promise<Call> {
     contactId: contact.id,
     entityType: "call",
     entityId: record.id,
+  });
+  await appendConversationEvent({
+    conversationId,
+    contactId: contact.id,
+    channel: "VOICE_CALL",
+    eventKey: `${record.providerCallId}:started`,
+    text: "Outgoing callback initiated",
   });
 
   return record;

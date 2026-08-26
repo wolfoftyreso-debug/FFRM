@@ -19,7 +19,9 @@ Your Swedish number → 46elks → this app → relationship/context/policy → 
   confidence envelope
 - **Voice pipeline** — inbound calls are routed by call policy: ring through
   to your real phone, voicemail, AI screening or reject; voicemails are
-  recorded, transcribed and summarized; missed calls notify you
+  recorded, transcribed and summarized; missed calls notify you. Call and
+  voicemail events are also persisted in the same contact conversation as
+  SMS/MMS, so Johan has one chronological communication thread.
 - **Relationship ontology** — each contact has a 0–100 relationship vector
   (closeness, trust, humor tolerance, call-through priority, …) proposed by
   AI from a plain-language description and tunable in Advanced relationship

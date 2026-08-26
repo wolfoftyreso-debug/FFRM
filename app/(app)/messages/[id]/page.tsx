@@ -83,7 +83,7 @@ export default async function ConversationPage({
                         {/* Authenticated same-origin media route. */}
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
-                          src={`/api/media/${asset.id}`}
+                          src={asset.storageUrl ?? `/api/media/${asset.id}`}
                           alt={asset.analysis?.caption ?? "MMS image"}
                           width={asset.width ?? 640}
                           height={asset.height ?? 480}

@@ -66,6 +66,11 @@ export async function sendMediaMessage(input: {
       analysisStatus: "NOT_REQUESTED",
     })
     .returning();
+  await db
+    .update(mediaAssets)
+    .set({ storageUrl: `/api/media/${asset.id}` })
+    .where(eq(mediaAssets.id, asset.id));
+  asset.storageUrl = `/api/media/${asset.id}`;
 
   try {
     const provider = await getMessagingProvider();

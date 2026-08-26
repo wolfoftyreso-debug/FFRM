@@ -94,8 +94,15 @@ describe("voice pipeline", () => {
 
     const [call] = await db.select().from(schema.calls);
     expect(call.contactId).toBe(contact.id);
+    expect(call.conversationId).toBeTruthy();
     expect(call.disposition).toBe("RING_THROUGH");
     expect(call.state).toBe("RINGING");
+    const events = (await db.select().from(schema.messages)).filter(
+      (m) => m.channel === "VOICE_CALL",
+    );
+    expect(events).toHaveLength(1);
+    expect(events[0].conversationId).toBe(call.conversationId);
+    expect(events[0].text).toContain("Incoming call");
   });
 
   it("is idempotent for retried voice_start webhooks", async () => {
@@ -211,6 +218,12 @@ describe("voice pipeline", () => {
     expect(call.transcript).toContain("Anna");
     expect(call.aiSummary).toContain("torsdagens möte");
     expect(call.aiRequiresUser).toBe(true);
+    const voicemailEvents = (await db.select().from(schema.messages)).filter(
+      (m) => m.channel === "VOICEMAIL",
+    );
+    expect(voicemailEvents.some((m) => m.text.includes("torsdagens möte"))).toBe(
+      true,
+    );
 
     const ownerSms = provider.sent.filter((s) => s.to === "+46700000099");
     expect(ownerSms).toHaveLength(1);

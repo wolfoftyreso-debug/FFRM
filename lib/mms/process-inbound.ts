@@ -50,6 +50,7 @@ export async function processInboundMms(messageId: string): Promise<void> {
         .update(mediaAssets)
         .set({
           dataBase64: clean.data.toString("base64"),
+          storageUrl: `/api/media/${asset.id}`,
           mimeType: clean.mimeType,
           byteSize: clean.data.byteLength,
           width: clean.width,

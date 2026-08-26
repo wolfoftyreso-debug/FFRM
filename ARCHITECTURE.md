@@ -30,13 +30,16 @@ reprocessing of unclaimed inbound SMS/MMS and unprocessed voicemail recordings.
 
 `Conversation` is contact-centric. One thread contains `Message` rows from
 SMS, MMS and internal system/AI events; voice calls and voicemails are call
-records surfaced alongside the same contact history.
+records linked to the same `conversationId` **and** emit idempotent
+`VOICE_CALL` / `VOICEMAIL` system Messages into that exact thread.
 
 ```
 CONTACT → CONVERSATION
           ├── Message(channel=SMS,    contentType=TEXT)
           ├── Message(channel=MMS,    contentType=IMAGE|TEXT_AND_IMAGE)
           │      └── MediaAsset(s)
+          ├── Message(channel=VOICE_CALL, contentType=SYSTEM)
+          ├── Message(channel=VOICEMAIL,  contentType=SYSTEM)
           └── Message(channel=SYSTEM, contentType=SYSTEM)
 ```
 
@@ -71,7 +74,8 @@ blocked by the schema, but has no specialized V1 UI.
    failed image understanding escalates. The thread gets an inspectable
    SYSTEM event with decision + `policyMatch`.
 5. The Messages UI serves sanitized media through the authenticated
-   `/api/media/:id` route and exposes a collapsed **AI saw this** panel:
+   stable `MediaAsset.storageUrl` through the authenticated `/api/media/:id`
+   route and exposes a collapsed **AI saw this** panel:
    direct observation, visible text, contextual interpretation, confidence
    and model — auditability without clutter.
 6. Outbound composer: text-only sends SMS; image sends MMS. Images are
@@ -233,7 +237,8 @@ MIT after two years per release) must be documented at that point.
   providerMessageId)` is the inbound idempotency key; `processedAt` claims
   triage processing exactly once
 - `media_assets` — sanitized bytes + dimensions + provider provenance +
-  structured observation/interpretation, model, confidence, status/error
+  stable private `storageUrl` + structured observation/interpretation, model,
+  confidence, status/error
 - `automations` — trigger (type + config JSON) → action (type + config JSON),
   `nextRunAt`, autonomy level
 - `automation_executions` — permanent execution log; **unique
