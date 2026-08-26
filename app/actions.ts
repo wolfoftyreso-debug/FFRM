@@ -14,7 +14,7 @@ import {
   type ActionType,
   type TriggerType,
 } from "@/lib/db/schema";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 import { normalizePhoneNumber } from "@/lib/phone";
 import { logActivity } from "@/lib/activity";
@@ -114,13 +114,36 @@ function parseContactForm(formData: FormData) {
 
 export async function createContact(formData: FormData): Promise<void> {
   const db = await getDb();
-  const values = parseContactForm(formData);
+  let values: ReturnType<typeof parseContactForm>;
+  try {
+    values = parseContactForm(formData);
+  } catch {
+    redirect("/people/new?error=invalid");
+  }
   const [owner] = await db.select().from(users).limit(1);
   if (!owner) throw new Error("No owner user exists; run the seed script");
-  const [created] = await db
-    .insert(contacts)
-    .values({ ...values, userId: owner.id })
-    .returning();
+  if (values.phoneNumber) {
+    const [duplicate] = await db
+      .select({ id: contacts.id })
+      .from(contacts)
+      .where(
+        and(
+          eq(contacts.userId, owner.id),
+          eq(contacts.phoneNumber, values.phoneNumber),
+        ),
+      )
+      .limit(1);
+    if (duplicate) redirect("/people/new?error=phone-exists");
+  }
+  let created: typeof contacts.$inferSelect;
+  try {
+    [created] = await db
+      .insert(contacts)
+      .values({ ...values, userId: owner.id })
+      .returning();
+  } catch {
+    redirect("/people/new?error=save");
+  }
   await logActivity({
     actor: "USER",
     action: "CONTACT_CREATED",
@@ -136,11 +159,35 @@ export async function updateContact(
   formData: FormData,
 ): Promise<void> {
   const db = await getDb();
-  const values = parseContactForm(formData);
-  await db
-    .update(contacts)
-    .set({ ...values, updatedAt: sql`now()` })
-    .where(eq(contacts.id, contactId));
+  let values: ReturnType<typeof parseContactForm>;
+  try {
+    values = parseContactForm(formData);
+  } catch {
+    redirect(`/people/${contactId}/edit?error=invalid`);
+  }
+  if (values.phoneNumber) {
+    const [duplicate] = await db
+      .select({ id: contacts.id })
+      .from(contacts)
+      .where(
+        and(
+          eq(contacts.phoneNumber, values.phoneNumber),
+          ne(contacts.id, contactId),
+        ),
+      )
+      .limit(1);
+    if (duplicate) {
+      redirect(`/people/${contactId}/edit?error=phone-exists`);
+    }
+  }
+  try {
+    await db
+      .update(contacts)
+      .set({ ...values, updatedAt: sql`now()` })
+      .where(eq(contacts.id, contactId));
+  } catch {
+    redirect(`/people/${contactId}/edit?error=save`);
+  }
   await logActivity({
     actor: "USER",
     action: "CONTACT_UPDATED",

@@ -236,6 +236,14 @@ test.describe.serial("Personal Phone complete UI", () => {
       fullPage: true,
       caret: "initial",
     });
+
+    await page.goto("/people/new");
+    await page.locator('input[name="firstName"]').fill("Duplicate Phone");
+    await page.locator('input[name="phoneNumber"]').fill("+46700000001");
+    await page.getByRole("button", { name: "Create contact" }).click();
+    await expect(
+      page.getByText("A contact with this phone number already exists."),
+    ).toBeVisible();
   });
 
   test("Phone, Calendar, Automations, Activity and Settings are operational", async ({

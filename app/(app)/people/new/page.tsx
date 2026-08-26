@@ -8,7 +8,7 @@ export const metadata = { title: "New contact" };
 export default async function NewContactPage({
   searchParams,
 }: {
-  searchParams: Promise<{ phone?: string }>;
+  searchParams: Promise<{ phone?: string; error?: string }>;
 }) {
   const params = await searchParams;
   const prefill = params.phone
@@ -17,6 +17,7 @@ export default async function NewContactPage({
   return (
     <>
       <PageHeader title="New contact" />
+      {params.error ? <ContactSaveError code={params.error} /> : null}
       <Card>
         <form action={createContact}>
           <ContactFormFields contact={prefill} />
@@ -26,5 +27,19 @@ export default async function NewContactPage({
         </form>
       </Card>
     </>
+  );
+}
+
+function ContactSaveError({ code }: { code: string }) {
+  const message =
+    code === "phone-exists"
+      ? "A contact with this phone number already exists."
+      : code === "invalid"
+        ? "Check the phone number and required fields."
+        : "The contact could not be saved. Try again.";
+  return (
+    <p className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+      {message}
+    </p>
   );
 }
