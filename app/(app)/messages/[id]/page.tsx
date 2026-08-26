@@ -6,11 +6,11 @@ import {
   closeConversation,
   pauseConversation,
   returnConversationToAi,
-  sendManualReply,
   takeOverConversation,
 } from "@/app/actions";
 import { Badge, Card } from "@/components/ui";
 import { AUTONOMY_LABELS } from "@/lib/ai/policy";
+import { MessageComposer } from "@/components/message-composer";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +22,7 @@ export default async function ConversationPage({
   const { id } = await params;
   const detail = await getConversationDetail(id);
   if (!detail) notFound();
-  const { conversation, contact, messages, facts } = detail;
+  const { conversation, contact, messages, facts, mediaByMessage } = detail;
   const stateLabel = conversationStateLabel(
     conversation.aiControlState,
     conversation.status,
@@ -52,7 +52,18 @@ export default async function ConversationPage({
               No messages yet.
             </p>
           ) : (
-            messages.map((m) => (
+            messages.map((m) => {
+              const assets = mediaByMessage[m.id] ?? [];
+              if (m.contentType === "SYSTEM" || m.direction === "SYSTEM") {
+                return (
+                  <div key={m.id} className="py-1 text-center">
+                    <span className="inline-block rounded-full bg-stone-100 px-3 py-1 text-[11px] text-stone-500">
+                      {m.text} · {format(m.createdAt, "HH:mm")}
+                    </span>
+                  </div>
+                );
+              }
+              return (
               <div
                 key={m.id}
                 className={`flex ${m.direction === "OUTBOUND" ? "justify-end" : "justify-start"}`}
@@ -66,6 +77,78 @@ export default async function ConversationPage({
                       : "bg-stone-100 text-stone-900"
                   }`}
                 >
+                  {assets.map((asset) =>
+                    asset.dataBase64 ? (
+                      <div key={asset.id} className="mb-2">
+                        {/* Authenticated same-origin media route. */}
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={`/api/media/${asset.id}`}
+                          alt={asset.analysis?.caption ?? "MMS image"}
+                          width={asset.width ?? 640}
+                          height={asset.height ?? 480}
+                          className="max-h-80 w-auto max-w-full rounded-lg object-contain"
+                        />
+                        {asset.analysisStatus === "COMPLETED" &&
+                        asset.analysis ? (
+                          <details className="mt-1 text-left">
+                            <summary
+                              className={`cursor-pointer text-[10px] ${
+                                m.direction === "OUTBOUND"
+                                  ? "text-white/70"
+                                  : "text-stone-400"
+                              }`}
+                            >
+                              AI saw this · confidence{" "}
+                              {Math.round((asset.analysisConfidence ?? 0) * 100)}%
+                            </summary>
+                            <div
+                              className={`mt-1 rounded-md p-2 text-xs ${
+                                m.direction === "OUTBOUND"
+                                  ? "bg-white/10 text-white/90"
+                                  : "bg-white text-stone-600"
+                              }`}
+                            >
+                              <p>
+                                <span className="font-medium">
+                                  Direct observation:
+                                </span>{" "}
+                                {asset.analysis.caption}
+                              </p>
+                              {asset.analysis.visibleText?.length ? (
+                                <p className="mt-1">
+                                  Visible text:{" "}
+                                  {asset.analysis.visibleText.join(", ")}
+                                </p>
+                              ) : null}
+                              {asset.analysis.contextualInterpretation ? (
+                                <p className="mt-1">
+                                  <span className="font-medium">
+                                    Contextual interpretation:
+                                  </span>{" "}
+                                  {asset.analysis.contextualInterpretation}
+                                </p>
+                              ) : null}
+                              <p className="mt-1 opacity-70">
+                                Model: {asset.analysisModel}
+                              </p>
+                            </div>
+                          </details>
+                        ) : asset.analysisStatus === "FAILED" ? (
+                          <p className="mt-1 text-[10px] text-red-400">
+                            AI could not safely understand this image.
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <div
+                        key={asset.id}
+                        className="mb-2 rounded-md border border-dashed border-current/20 p-4 text-center text-xs opacity-70"
+                      >
+                        Processing image…
+                      </div>
+                    ),
+                  )}
                   <p className="whitespace-pre-wrap">{m.text}</p>
                   <p
                     className={`mt-1 text-[10px] ${m.direction === "OUTBOUND" ? "text-white/70" : "text-stone-400"}`}
@@ -77,7 +160,8 @@ export default async function ConversationPage({
                   </p>
                 </div>
               </div>
-            ))
+              );
+            })
           )}
         </Card>
 
@@ -112,23 +196,10 @@ export default async function ConversationPage({
           )}
         </div>
 
-        <form
-          action={sendManualReply.bind(null, conversation.id)}
-          className="mt-4"
-        >
-          <textarea
-            name="text"
-            rows={3}
-            required
-            placeholder="Write a reply… (sending takes over the conversation)"
-            className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-stone-500 focus:outline-none"
-          />
-          <div className="mt-2 flex justify-end">
-            <button className="rounded-md bg-stone-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-stone-700">
-              Send SMS
-            </button>
-          </div>
-        </form>
+        <MessageComposer
+          conversationId={conversation.id}
+          contactId={contact?.id ?? null}
+        />
       </div>
 
       <aside className="space-y-4">

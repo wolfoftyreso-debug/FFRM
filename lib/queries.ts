@@ -10,6 +10,7 @@ import {
   contactMedia,
   contacts,
   conversations,
+  mediaAssets,
   messages,
   reminders,
   users,
@@ -80,7 +81,7 @@ export async function listConversations(): Promise<ConversationListItem[]> {
   const result: ConversationListItem[] = [];
   for (const row of rows) {
     const lastMessage = await db
-      .select({ text: messages.text })
+      .select({ text: messages.text, contentType: messages.contentType })
       .from(messages)
       .where(eq(messages.conversationId, row.conversation.id))
       .orderBy(desc(messages.createdAt))
@@ -95,7 +96,12 @@ export async function listConversations(): Promise<ConversationListItem[]> {
       aiControlState: row.conversation.aiControlState,
       status: row.conversation.status,
       lastMessageAt: row.conversation.lastMessageAt,
-      lastMessageText: lastMessage[0]?.text ?? null,
+      lastMessageText:
+        lastMessage[0]?.text ||
+        (lastMessage[0]?.contentType === "IMAGE" ||
+        lastMessage[0]?.contentType === "TEXT_AND_IMAGE"
+          ? "📷 Photo"
+          : null),
       escalationReason: row.conversation.escalationReason,
     });
   }
@@ -117,6 +123,11 @@ export async function getConversationDetail(id: string) {
     .from(messages)
     .where(eq(messages.conversationId, id))
     .orderBy(asc(messages.createdAt));
+  const assetRows = await db
+    .select()
+    .from(mediaAssets)
+    .where(eq(mediaAssets.conversationId, id))
+    .orderBy(asc(mediaAssets.receivedAt));
   const facts = contact
     ? await db
         .select()
@@ -130,7 +141,13 @@ export async function getConversationDetail(id: string) {
         .orderBy(desc(contactFacts.createdAt))
         .limit(10)
     : [];
-  return { conversation, contact, messages: messageRows, facts };
+  return {
+    conversation,
+    contact,
+    messages: messageRows,
+    facts,
+    mediaByMessage: Object.groupBy(assetRows, (a) => a.messageId),
+  };
 }
 
 export function displayName(contact: Contact): string {

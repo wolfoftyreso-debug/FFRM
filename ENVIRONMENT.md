@@ -11,12 +11,13 @@ production. Never commit real values. See `.env.example` for a template.
 | `AI_GATEWAY_API_KEY` | yes* | Vercel AI Gateway key. *On Vercel you may instead rely on OIDC (`VERCEL_OIDC_TOKEN`), which the AI SDK picks up automatically. |
 | `AI_MODEL_FAST` | no | Gateway model ID for classification/extraction/simple generation. Default `openai/gpt-5.4-mini`. |
 | `AI_MODEL_SMART` | no | Gateway model ID for ambiguous conversations/escalation analysis, style extraction and the assistant chat. Default `openai/gpt-5.4`. |
+| `AI_MODEL_VISION` | no | Vision-capable Gateway model for MMS image understanding and image-message drafts. Default `google/gemini-3.7-flash`. |
 | `AI_MODEL_TRANSCRIBE` | no | Gateway transcription model for voicemail. Default `openai/whisper-1`. |
 | `VOICE_GREETING_URL` | no | mp3/wav URL played before voicemail recording starts. Without it, recording starts immediately. |
 | `SCREEN_GREETING_URL` | no | Separate greeting for AI screening of unknown callers (falls back to `VOICE_GREETING_URL`). |
 | `ELKS46_USERNAME` | yes | 46elks API username. |
 | `ELKS46_PASSWORD` | yes | 46elks API password. |
-| `ELKS46_FROM_NUMBER` | yes | Your 46elks number (E.164) used as SMS sender. |
+| `ELKS46_FROM_NUMBER` | yes | Your SMS/MMS/voice-enabled 46elks number (E.164), the system's communication identity. |
 | `OWNER_PHONE_NUMBER` | recommended | Your own phone (E.164). Escalation/missed-call/voicemail notifications go here, and it is the default ring-through target for incoming calls (can be overridden in Settings). |
 | `CRON_SECRET` | yes | Shared secret for `/api/cron/dispatcher`. Vercel Cron sends it as `Authorization: Bearer <value>` automatically when set in project env. |
 | `WEBHOOK_TOKEN` | recommended | When set, 46elks webhook URLs must include `?token=<value>`. |

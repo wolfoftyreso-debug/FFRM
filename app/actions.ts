@@ -254,6 +254,58 @@ export async function sendManualReply(
   revalidatePath(`/messages/${conversationId}`);
 }
 
+/** Unified composer action: text-only → SMS; image attached → MMS. */
+export async function sendConversationMessage(
+  conversationId: string,
+  formData: FormData,
+): Promise<void> {
+  const text = String(formData.get("text") ?? "").trim();
+  const image = formData.get("image");
+  const hasImage = image instanceof File && image.size > 0;
+  if (!text && !hasImage) return;
+
+  if (!hasImage) {
+    await sendManualReply(conversationId, formData);
+    return;
+  }
+
+  const db = await getDb();
+  const [conv] = await db
+    .select()
+    .from(conversations)
+    .where(eq(conversations.id, conversationId));
+  if (!conv) throw new Error("Conversation not found");
+  const contact = conv.contactId ? await getContact(conv.contactId) : null;
+  const to = contact?.phoneNumber ?? conv.peerNumber;
+  if (!to) throw new Error("Conversation has no recipient number");
+
+  // Sending anything manually transfers control to the user first.
+  if (conv.aiControlState !== "USER") {
+    await db
+      .update(conversations)
+      .set({ aiControlState: "USER" })
+      .where(eq(conversations.id, conversationId));
+    await logActivity({
+      actor: "USER",
+      action: "TAKEOVER",
+      summary: "User took over by sending an MMS",
+      contactId: conv.contactId,
+      conversationId,
+    });
+  }
+
+  const { sendMediaMessage } = await import("@/lib/mms/send-message");
+  await sendMediaMessage({
+    to,
+    text,
+    image: new Uint8Array(await image.arrayBuffer()),
+    sender: "USER",
+    contactId: conv.contactId,
+    conversationId,
+  });
+  revalidatePath(`/messages/${conversationId}`);
+}
+
 // -------------------------------------------------------------- automations
 
 const automationSchema = z.object({

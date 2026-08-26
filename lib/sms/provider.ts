@@ -9,9 +9,15 @@ export interface SendSmsResult {
   status: string;
 }
 
+export interface SendMmsInput extends SendSmsInput {
+  /** Sanitized PNG/JPEG as a data URL. */
+  imageDataUrl: string;
+}
+
 export interface MessagingProvider {
   readonly name: string;
   sendSms(input: SendSmsInput): Promise<SendSmsResult>;
+  sendMms?(input: SendMmsInput): Promise<SendSmsResult>;
 }
 
 let providerOverride: MessagingProvider | null = null;

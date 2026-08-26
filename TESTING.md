@@ -18,6 +18,8 @@ pnpm build       # next build
 - `policy.test.ts` — the auto-reply policy gate (autonomy levels,
   conversation states, risk, confidence, requiresUser)
 - `schemas.test.ts` — structured AI output validation (valid + invalid)
+- `image.test.ts` — byte-level decode/type validation, metadata stripping,
+  arbitrary-byte/oversize rejection, outbound compression below MMS limit
 
 ### Integration tests (`tests/integration/`, real SQL via in-memory PGlite)
 - `webhook.test.ts` — inbound 46elks webhook: persistence before AI,
@@ -45,6 +47,11 @@ pnpm build       # next build
   rejection, voicemail fallback on no answer, recording → transcription →
   AI summary → owner SMS, missed-call detection + notification, completed
   calls with duration
+- `mms.test.ts` (integration) — inbound MMS persist-first + provider-id
+  deduplication, media metadata provenance, safe decode/re-encode, multimodal
+  observation/interpretation, low-risk image auto-reply, purchase-context
+  escalation, fail-closed image handling, outbound MMS persistence/provider
+  id/320 kB envelope, provider-failure recovery
 
 External providers (46elks, AI Gateway) are mocked in all automated tests via
 the injection hooks in `lib/sms/provider.ts` and `lib/ai/client.ts`.
@@ -53,7 +60,7 @@ the injection hooks in `lib/sms/provider.ts` and `lib/ai/client.ts`.
 
 Prerequisites: deployed app (or `pnpm dev` with a public tunnel), real
 `AI_GATEWAY_API_KEY`, real 46elks credentials, `OWNER_PHONE_NUMBER`, and the
-46elks SMS webhook pointed at `/api/webhooks/46elks/sms?token=<WEBHOOK_TOKEN>`.
+46elks number configured with `sms_url`, `mms_url` and `voice_start`.
 
 1. **Outbound + AI**: create a contact with your test phone; open the seeded
    *"Johan test"* automation → **Run now**. Expect an AI-written SMS on the
@@ -87,3 +94,15 @@ Prerequisites: deployed app (or `pnpm dev` with a public tunnel), real
     "Create contact" / "Block" actions.
 11. **Callback**: press "Call" on a contact — your phone rings first, then
     the contact is connected; the contact sees the system number.
+12. **Inbound MMS — social**: send a harmless photo with text such as
+    "Kolla vilken ful soffa jag hittade 😂". Verify one Message (no duplicate
+    after webhook retry), image visible in the thread, the collapsed
+    **AI saw this** panel separates direct observation from interpretation,
+    and a low-risk reply is allowed only if the contact envelope permits.
+13. **Inbound MMS — decision**: send a car/product photo with "Tycker du jag
+    ska slå till?". Verify no answer is fabricated, the thread gets a SYSTEM
+    policy event, state becomes NEEDS YOU and the owner is notified.
+14. **Outbound MMS**: in the same thread attach a large JPEG/PNG, press
+    **AI write text**, edit if desired and Send MMS. Verify the image is
+    compressed/sanitized, provider id stored, and contact receives it from
+    the same 46elks number. (MMS has no delivery reports.)

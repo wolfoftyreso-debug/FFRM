@@ -3,11 +3,11 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "Relationship Agent",
-    template: "%s · Relationship Agent",
+    default: "Personal Phone",
+    template: "%s · Personal Phone",
   },
   description:
-    "Private personal relationship agent: memory, calendar, SMS and AI triage.",
+    "AI-native personal phone: SMS, MMS, calls and relationship-aware AI.",
 };
 
 export default function RootLayout({

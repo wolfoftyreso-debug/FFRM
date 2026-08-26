@@ -15,7 +15,7 @@ export default async function LoginPage({
         className="w-full max-w-sm rounded-xl border border-stone-200 bg-white p-8 shadow-sm"
       >
         <h1 className="text-lg font-semibold text-stone-900">
-          Relationship Agent
+          Personal Phone
         </h1>
         <p className="mt-1 text-sm text-stone-500">
           Sign in to your private workspace.

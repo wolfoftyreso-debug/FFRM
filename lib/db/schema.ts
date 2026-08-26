@@ -267,7 +267,10 @@ export const messages = pgTable(
       onDelete: "set null",
     }),
     direction: text("direction").notNull(), // INBOUND | OUTBOUND
+    /** Transport. V1: SMS | MMS. Future: VOICE | EMAIL | ... */
     channel: text("channel").notNull().default("SMS"),
+    /** TEXT | IMAGE | TEXT_AND_IMAGE | SYSTEM (future: VIDEO/FILE/LOCATION/AUDIO). */
+    contentType: text("content_type").notNull().default("TEXT"),
     provider: text("provider").notNull().default("46elks"),
     /** Idempotency key for inbound webhooks and provider correlation for outbound. */
     providerMessageId: text("provider_message_id"),
@@ -294,6 +297,54 @@ export const messages = pgTable(
     ),
     index("messages_conversation_idx").on(t.conversationId),
     index("messages_contact_idx").on(t.contactId),
+  ],
+);
+
+export interface MediaAnalysis {
+  /** Direct observations only — no inferred make/model/price/etc. */
+  caption?: string;
+  objects?: string[];
+  visibleText?: string[];
+  peopleDescription?: string[];
+  sceneDescription?: string;
+  safetyClassification?: "SAFE" | "SENSITIVE" | "UNSAFE";
+  /** Interpretation grounded in message + conversation; kept separate. */
+  contextualInterpretation?: string;
+}
+
+/** Media attached to a Message. Stored sanitized; provider URL is provenance. */
+export const mediaAssets = pgTable(
+  "media_assets",
+  {
+    id: id(),
+    conversationId: text("conversation_id")
+      .notNull()
+      .references(() => conversations.id, { onDelete: "cascade" }),
+    messageId: text("message_id")
+      .notNull()
+      .references(() => messages.id, { onDelete: "cascade" }),
+    type: text("type").notNull().default("IMAGE"),
+    mimeType: text("mime_type").notNull(),
+    providerMediaId: text("provider_media_id"),
+    providerUrl: text("provider_url"),
+    /** Sanitized image bytes. Private API route serves this to authenticated UI. */
+    dataBase64: text("data_base64"),
+    byteSize: integer("byte_size"),
+    width: integer("width"),
+    height: integer("height"),
+    receivedAt: timestamp("received_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    analysisStatus: text("analysis_status").notNull().default("PENDING"),
+    analysisModel: text("analysis_model"),
+    analysisConfidence: real("analysis_confidence"),
+    analysis: jsonb("analysis").$type<MediaAnalysis>(),
+    analysisError: text("analysis_error"),
+    analyzedAt: timestamp("analyzed_at", { withTimezone: true }),
+  },
+  (t) => [
+    index("media_assets_message_idx").on(t.messageId),
+    index("media_assets_conversation_idx").on(t.conversationId),
   ],
 );
 
@@ -579,6 +630,7 @@ export type NewContact = typeof contacts.$inferInsert;
 export type ContactFact = typeof contactFacts.$inferSelect;
 export type Conversation = typeof conversations.$inferSelect;
 export type Message = typeof messages.$inferSelect;
+export type MediaAsset = typeof mediaAssets.$inferSelect;
 export type Automation = typeof automations.$inferSelect;
 export type NewAutomation = typeof automations.$inferInsert;
 export type AutomationExecution = typeof automationExecutions.$inferSelect;

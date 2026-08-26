@@ -2,11 +2,13 @@ import "server-only";
 import { requireEnv } from "@/lib/env";
 import type {
   MessagingProvider,
+  SendMmsInput,
   SendSmsInput,
   SendSmsResult,
 } from "./provider";
 
 const API_URL = "https://api.46elks.com/a1/sms";
+const MMS_API_URL = "https://api.46elks.com/a1/mms";
 
 /**
  * 46elks SMS adapter. Credentials never leave the server.
@@ -57,5 +59,36 @@ export class Elks46MessagingProvider implements MessagingProvider {
       throw new Error("46elks send returned no message id");
     }
     return { providerMessageId: data.id, status: data.status ?? "created" };
+  }
+
+  async sendMms(input: SendMmsInput): Promise<SendSmsResult> {
+    const username = requireEnv("ELKS46_USERNAME");
+    const password = requireEnv("ELKS46_PASSWORD");
+    const from = input.from ?? requireEnv("ELKS46_FROM_NUMBER");
+    const body = new URLSearchParams({
+      from,
+      to: input.to,
+      image: input.imageDataUrl,
+    });
+    if (input.text.trim()) body.set("message", input.text.trim());
+
+    const res = await fetch(MMS_API_URL, {
+      method: "POST",
+      headers: {
+        Authorization:
+          "Basic " + Buffer.from(`${username}:${password}`).toString("base64"),
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: body.toString(),
+    });
+    if (!res.ok) {
+      const detail = await res.text().catch(() => "");
+      throw new Error(
+        `46elks MMS send failed (${res.status}): ${detail.slice(0, 300)}`,
+      );
+    }
+    const data = (await res.json()) as { id?: string };
+    if (!data.id) throw new Error("46elks MMS send returned no message id");
+    return { providerMessageId: data.id, status: "created" };
   }
 }

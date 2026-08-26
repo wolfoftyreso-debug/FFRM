@@ -66,6 +66,7 @@ export async function seedContact(
 
 export interface SentSms extends SendSmsInput {
   id: string;
+  imageDataUrl?: string;
 }
 
 export class MockMessagingProvider implements MessagingProvider {
@@ -80,6 +81,16 @@ export class MockMessagingProvider implements MessagingProvider {
       throw new Error("simulated provider failure");
     }
     const id = `sTEST${++this.counter}`;
+    this.sent.push({ ...input, id });
+    return { providerMessageId: id, status: "created" };
+  }
+
+  async sendMms(input: SendSmsInput & { imageDataUrl: string }) {
+    if (this.failNext) {
+      this.failNext = false;
+      throw new Error("simulated provider failure");
+    }
+    const id = `mTEST${++this.counter}`;
     this.sent.push({ ...input, id });
     return { providerMessageId: id, status: "created" };
   }
@@ -104,6 +115,8 @@ export function installMockAi(options: {
   extraction?: Extraction;
   generatedText?: string;
   failStructured?: boolean;
+  imageUnderstanding?: unknown;
+  imageCaption?: string;
 }): { structuredCalls: string[]; textCalls: string[] } {
   const structuredCalls: string[] = [];
   const textCalls: string[] = [];
@@ -142,6 +155,40 @@ export function installMockAi(options: {
           durationMs: 5,
         },
       };
+    },
+    {
+      multimodal: async <T,>(args: {
+        purpose: string;
+        model: string;
+        schema: { parse: (v: unknown) => T };
+      }) => {
+        structuredCalls.push(args.purpose);
+        const value =
+          args.purpose === "image-message-draft"
+            ? { message: options.imageCaption ?? "Kolla den här 😄" }
+            : (options.imageUnderstanding ?? {
+                observation: {
+                  caption: "A red car parked outside a workshop",
+                  objects: ["car", "workshop"],
+                  visibleText: [],
+                  peopleDescription: [],
+                  sceneDescription: "Outdoor parking area",
+                  safetyClassification: "SAFE",
+                },
+                contextualInterpretation:
+                  "Likely a car the contact is showing the owner",
+                confidence: 0.91,
+              });
+        return {
+          output: args.schema.parse(value),
+          usage: {
+            model: args.model,
+            inputTokens: 200,
+            outputTokens: 80,
+            durationMs: 8,
+          },
+        };
+      },
     },
   );
 

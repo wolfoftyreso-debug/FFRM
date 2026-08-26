@@ -41,7 +41,7 @@ export default async function AppLayout({
       <aside className="hidden w-52 shrink-0 border-r border-stone-200 bg-white md:block">
         <div className="sticky top-0 p-4">
           <Link href="/" className="block px-2 py-1 text-sm font-semibold">
-            Relationship Agent
+            Personal Phone
           </Link>
           <nav className="mt-4 space-y-1">
             {nav.map((item) => (

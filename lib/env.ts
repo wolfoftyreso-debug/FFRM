@@ -13,6 +13,7 @@ const envSchema = z.object({
   AI_GATEWAY_API_KEY: z.string().optional(),
   AI_MODEL_FAST: z.string().default("openai/gpt-5.4-mini"),
   AI_MODEL_SMART: z.string().default("openai/gpt-5.4"),
+  AI_MODEL_VISION: z.string().default("google/gemini-3.7-flash"),
   AI_MODEL_TRANSCRIBE: z.string().default("openai/whisper-1"),
   VOICE_GREETING_URL: z.string().optional(),
   SCREEN_GREETING_URL: z.string().optional(),

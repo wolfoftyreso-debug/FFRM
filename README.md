@@ -1,4 +1,4 @@
-# Personal Relationship Agent
+# AI-native Personal Phone
 
 **An AI-native personal phone**, where every person in the contact book has
 their own relationship, communication style, autonomy level and policy.
@@ -9,7 +9,12 @@ Your 46elks number is the system's **primary communication identity**:
 Your Swedish number → 46elks → this app → relationship/context/policy → human or AI
 ```
 
-- **SMS pipeline** — inbound messages land in a chat-style inbox, are triaged
+- **Messages pipeline** — SMS and MMS land in one chat-style thread. Images
+  are retrieved, decoded/sanitized, understood by a multimodal model, shown
+  with inspectable "AI saw this" context, then run through the same
+  auto-reply/escalation envelope. The composer sends text SMS or image MMS
+  and can draft contact-specific image text with AI.
+- **SMS pipeline** — inbound messages are triaged
   by AI (auto-reply or escalate — never fabricate) within a per-contact
   confidence envelope
 - **Voice pipeline** — inbound calls are routed by call policy: ring through
@@ -36,7 +41,7 @@ open without requiring a remodel.
 - [Next.js](https://nextjs.org) (App Router) + TypeScript + Tailwind CSS on **Vercel**
 - **PostgreSQL** via [Drizzle ORM](https://orm.drizzle.team) (PGlite for local dev/tests)
 - **[Vercel AI SDK](https://ai-sdk.dev) + [AI Gateway](https://vercel.com/docs/ai-gateway)** — models are env-configured `provider/model` IDs
-- **[46elks](https://46elks.com)** for outbound SMS and inbound SMS webhooks
+- **[46elks](https://46elks.com)** for the phone number: SMS, MMS and voice
 - **Vercel Cron** — one dispatcher every minute; the database decides what is due
 
 ## Origin
@@ -83,6 +88,8 @@ pnpm db:seed
 ```
 AI_MODEL_FAST=openai/gpt-5.4-mini    # classification, extraction, simple messages
 AI_MODEL_SMART=openai/gpt-5.4        # ambiguous conversations, escalation analysis
+AI_MODEL_VISION=google/gemini-3.7-flash # MMS image understanding
+AI_MODEL_TRANSCRIBE=openai/whisper-1 # voicemail transcription
 ```
 
 No model strings are hardcoded — switch vendors by changing the env vars.
@@ -93,11 +100,12 @@ No model strings are hardcoded — switch vendors by changing the env vars.
 2. Set `ELKS46_USERNAME`, `ELKS46_PASSWORD`, `ELKS46_FROM_NUMBER`.
 3. Set `OWNER_PHONE_NUMBER` (your own phone, E.164) for escalation notifications.
 
-## Configure the 46elks number (SMS + voice)
+## Configure the 46elks number (SMS + MMS + voice)
 
 In the 46elks dashboard, configure your voice-enabled virtual number:
 
 - **`sms_url`** → `https://<your-app>/api/webhooks/46elks/sms?token=<WEBHOOK_TOKEN>`
+- **`mms_url`** → `https://<your-app>/api/webhooks/46elks/mms?token=<WEBHOOK_TOKEN>`
 - **`voice_start`** → `https://<your-app>/api/webhooks/46elks/voice?token=<WEBHOOK_TOKEN>`
 
 (`?token=` is only needed when `WEBHOOK_TOKEN` is set — recommended.)
@@ -106,6 +114,17 @@ The SMS webhook persists the message **before** any AI work, deduplicates on
 the provider message id (46elks retries until it gets a 2xx), and returns an
 empty 200 quickly. Delivery reports are posted to
 `/api/webhooks/46elks/delivery` automatically when `APP_URL` is set.
+
+The MMS webhook has the same persist-first/idempotency contract. It stores
+message and provider media metadata, fetches up to four images, validates the
+actual decoded type/size/pixel count, re-encodes to strip metadata and
+non-image payload, and stores only sanitized bytes. A vision model receives
+the image **with** relationship/recent-conversation context and returns
+structured direct observations separately from cautious contextual
+interpretation. Failed image understanding always escalates; it never replies
+blindly. Outbound MMS accepts PNG/JPEG/GIF/WebP in the composer, safely
+normalizes to JPEG and compresses below 46elks' 320 kB total payload limit.
+46elks MMS has no delivery reports.
 
 The voice webhook answers with 46elks call actions decided by your call
 policy: `connect` (ring through to your real phone, with voicemail fallback
@@ -152,6 +171,15 @@ curl -X POST http://localhost:3000/api/webhooks/46elks/sms \
   -d "id=sTEST123&from=%2B46700000001&to=%2B46766861234&message=Tack!"
 ```
 
+Simulate MMS metadata (the image URL must be public HTTPS):
+
+```bash
+curl -X POST http://localhost:3000/api/webhooks/46elks/mms \
+  -d "id=mTEST123&from=%2B46700000001&to=%2B46766861234" \
+  -d "message=Vad tror du om den här?" \
+  --data-urlencode "image=https://example.com/photo.jpg"
+```
+
 Trigger the dispatcher locally:
 
 ```bash
@@ -164,7 +192,7 @@ curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/disp
 2. Add all environment variables from `.env.example` (see `ENVIRONMENT.md`).
 3. Deploy. Run migrations against the production database:
    `DATABASE_URL=<prod> pnpm db:migrate && DATABASE_URL=<prod> pnpm db:seed`
-4. Point the 46elks SMS webhook at the production URL.
+4. Point the 46elks `sms_url`, `mms_url` and `voice_start` at production.
 5. Verify Settings → System health after the first minute (cron heartbeat).
 
 ## The Johan test (end-to-end verification)

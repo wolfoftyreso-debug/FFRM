@@ -2,6 +2,7 @@ import { getDb } from "@/lib/db";
 import {
   contactFacts,
   commitments,
+  mediaAssets,
   messages,
   users,
   type Contact,
@@ -65,6 +66,30 @@ export async function buildContactContext(
     .orderBy(desc(messages.createdAt))
     .limit(options.messageLimit ?? 12);
 
+  const recentWithMedia: { direction: string; text: string; at: string }[] = [];
+  for (const m of recent.reverse()) {
+    let text = m.text;
+    if (m.contentType === "IMAGE" || m.contentType === "TEXT_AND_IMAGE") {
+      const assets = await db
+        .select()
+        .from(mediaAssets)
+        .where(eq(mediaAssets.messageId, m.id));
+      const captions = assets
+        .filter((a) => a.analysisStatus === "COMPLETED" && a.analysis?.caption)
+        .map((a) => `[Image observed: ${a.analysis!.caption}${
+          a.analysis!.contextualInterpretation
+            ? `; interpretation: ${a.analysis!.contextualInterpretation}`
+            : ""
+        }]`);
+      if (captions.length) text = `${text}${text ? "\n" : ""}${captions.join("\n")}`;
+    }
+    recentWithMedia.push({
+      direction: m.direction,
+      text,
+      at: format(m.createdAt, "yyyy-MM-dd HH:mm"),
+    });
+  }
+
   return {
     user: user ?? null,
     contact,
@@ -75,13 +100,7 @@ export async function buildContactContext(
       (c) =>
         `${c.madeBy === "USER" ? "User promised" : "Contact promised"}: ${c.description}${c.dueAt ? ` (due ${format(c.dueAt, "yyyy-MM-dd")})` : ""}`,
     ),
-    recentMessages: recent
-      .reverse()
-      .map((m) => ({
-        direction: m.direction,
-        text: m.text,
-        at: format(m.createdAt, "yyyy-MM-dd HH:mm"),
-      })),
+    recentMessages: recentWithMedia,
     daysSinceLastInteraction: contact.lastInteractionAt
       ? differenceInCalendarDays(new Date(), contact.lastInteractionAt)
       : null,
@@ -171,7 +190,12 @@ export function renderContext(ctx: ContactContext): string {
   if (ctx.recentMessages.length > 0) {
     lines.push(`## Recent conversation (oldest first)`);
     for (const m of ctx.recentMessages) {
-      const who = m.direction === "INBOUND" ? "Contact" : "User";
+      const who =
+        m.direction === "INBOUND"
+          ? "Contact"
+          : m.direction === "SYSTEM"
+            ? "System"
+            : "User";
       lines.push(`[${m.at}] ${who}: ${m.text}`);
     }
   }

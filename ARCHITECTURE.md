@@ -2,12 +2,13 @@
 
 ## Overview
 
-The 46elks number is the system's primary communication identity. Three
+The 46elks number is the system's primary communication identity. Four
 pipelines share one conversation/relationship core:
 
 ```
                     ┌── SMS pipeline        /api/webhooks/46elks/sms
-46ELKS NUMBER ──────┼── Voice pipeline      /api/webhooks/46elks/voice (+ after-connect, recording, hangup)
+46ELKS NUMBER ──────┼── MMS/media pipeline  /api/webhooks/46elks/mms
+                    ├── Voice pipeline      /api/webhooks/46elks/voice (+ after-connect, recording, hangup)
                     └── Realtime Voice      (deliberately NOT built — slot reserved)
                               ↓
                      Conversation / Call core (persist FIRST, idempotent)
@@ -16,14 +17,69 @@ pipelines share one conversation/relationship core:
                               ↓
                         Policy engine (confidence envelope, call policy, autonomy)
                               ↓
-                     Vercel AI Gateway (FAST / SMART / TRANSCRIBE models)
+                     Vercel AI Gateway (FAST / SMART / VISION / TRANSCRIBE)
                               ↓
               human (ring through / escalate / draft)  or  AI (low-risk auto-reply)
 ```
 
 The central scheduler is unchanged: one Vercel Cron per minute →
 `/api/cron/dispatcher` → due automations from the database, plus fallback
-reprocessing of unclaimed inbound SMS and unprocessed voicemail recordings.
+reprocessing of unclaimed inbound SMS/MMS and unprocessed voicemail recordings.
+
+## Unified conversation/message model
+
+`Conversation` is contact-centric. One thread contains `Message` rows from
+SMS, MMS and internal system/AI events; voice calls and voicemails are call
+records surfaced alongside the same contact history.
+
+```
+CONTACT → CONVERSATION
+          ├── Message(channel=SMS,    contentType=TEXT)
+          ├── Message(channel=MMS,    contentType=IMAGE|TEXT_AND_IMAGE)
+          │      └── MediaAsset(s)
+          └── Message(channel=SYSTEM, contentType=SYSTEM)
+```
+
+`channel` and `contentType` are open strings so future VOICE/VIDEO/FILE/
+LOCATION/AUDIO require no table redesign. GPS-location MMS is therefore not
+blocked by the schema, but has no specialized V1 UI.
+
+## MMS/media pipeline
+
+1. **`mms_url`** (`/api/webhooks/46elks/mms`) receives form-urlencoded
+   `id/from/to/message/image…image4`. The `Message` and all provider-media
+   metadata are persisted first. The same unique
+   `(provider,direction,providerMessageId)` key as SMS makes webhook retries
+   harmless. The route returns empty 200 immediately.
+2. Each image URL is retrieved only over HTTPS (46elks URLs use Basic auth),
+   bounded at 10 MB, decoded with Sharp with a 40 MP pixel limit, then
+   re-encoded as PNG/JPEG. This verifies actual bytes, rejects malformed/
+   unsupported media, strips metadata and embedded non-image payload. It is
+   honest deterministic sanitization rather than a fictional "virus scan".
+3. `IMAGE_UNDERSTANDING` uses `AI_MODEL_VISION` through Gateway with the
+   image + contact + relationship vector + communication profile + recent
+   conversation + MMS text. Structured output strictly separates:
+   - **observation:** caption, generic objects, exact visible text,
+     non-identifying people description, scene, safety;
+   - **contextual interpretation:** cautious relationship/conversation-based
+     interpretation, explicitly not a fact.
+   Prompts forbid guessing model/engine/mileage/value, identity, location,
+   contractual meaning or other unsupported facts.
+4. The stored observation is appended to the current message for ordinary
+   triage. The **same confidence envelope** decides AUTO_REPLY/ESCALATE.
+   A meme/small talk may auto-reply; purchase advice, contracts, money or
+   failed image understanding escalates. The thread gets an inspectable
+   SYSTEM event with decision + `policyMatch`.
+5. The Messages UI serves sanitized media through the authenticated
+   `/api/media/:id` route and exposes a collapsed **AI saw this** panel:
+   direct observation, visible text, contextual interpretation, confidence
+   and model — auditability without clutter.
+6. Outbound composer: text-only sends SMS; image sends MMS. Images are
+   re-encoded/compressed so the base64 data URL + text stays below 46elks'
+   320 kB total limit. Message + media are persisted before the provider
+   call; failure remains visible. **AI write text** runs the selected image
+   and contact context through the vision model and fills the editable
+   composer draft before send.
 
 ## Voice pipeline
 
@@ -110,7 +166,7 @@ events, recent calls, commitments, conversation history, reminder creation,
 system health. Non-streaming by design (simple, robust); history persists in
 `assistant_messages`.
 
-## Original overview (SMS core)
+## Messaging overview
 
 ```
                         ┌──────────────────────────────┐
@@ -121,10 +177,11 @@ system health. Non-streaming by design (simple, robust); history persists in
                         │  · unprocessed voicemails    │
                         └──────────┬───────────────────┘
                                    │
- 46elks ──POST──▶ /api/webhooks/46elks/sms                 Web UI (Next.js)
+ 46elks ──POST──▶ /api/webhooks/46elks/{sms,mms}           Web UI (Next.js)
    ▲              · persist FIRST (unique provider id)     · Chat / Phone / Messages /
    │              · resolve contact (E.164)                  Calendar / People /
-   │              · waitUntil → AI triage                    Automations / Activity
+   │              · sanitize/understand image (MMS)          Automations / Activity
+   │              · waitUntil → AI triage
    │                                   │                     · server actions
    │                                   ▼
    │              lib/inbound.ts  ── triage (AI Gateway) ── policy gate + envelope
@@ -172,9 +229,11 @@ MIT after two years per release) must be documented at that point.
   (`sourceMessageId`, confidence, SUGGESTED → CONFIRMED/DISMISSED)
 - `conversations` — per-contact channel state:
   `aiControlState ∈ {AI, USER, PAUSED, ESCALATED}`, escalation dedupe
-- `messages` — every SMS in/out; unique `(provider, direction,
+- `messages` — every SMS/MMS/system event; channel + contentType; unique `(provider, direction,
   providerMessageId)` is the inbound idempotency key; `processedAt` claims
   triage processing exactly once
+- `media_assets` — sanitized bytes + dimensions + provider provenance +
+  structured observation/interpretation, model, confidence, status/error
 - `automations` — trigger (type + config JSON) → action (type + config JSON),
   `nextRunAt`, autonomy level
 - `automation_executions` — permanent execution log; **unique

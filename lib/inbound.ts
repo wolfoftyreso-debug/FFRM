@@ -2,6 +2,7 @@ import { getDb } from "@/lib/db";
 import {
   contacts,
   conversations,
+  mediaAssets,
   messages,
 } from "@/lib/db/schema";
 import { and, eq, isNull, sql } from "drizzle-orm";
@@ -80,9 +81,51 @@ export async function processInboundMessage(messageId: string): Promise<void> {
       conversationId: message.conversationId,
     });
 
+    let incomingForTriage = message.text;
+    if (
+      message.contentType === "IMAGE" ||
+      message.contentType === "TEXT_AND_IMAGE"
+    ) {
+      const assets = await db
+        .select()
+        .from(mediaAssets)
+        .where(eq(mediaAssets.messageId, message.id));
+      const understood = assets.filter(
+        (a) => a.analysisStatus === "COMPLETED" && a.analysis,
+      );
+      if (assets.length === 0 || understood.length !== assets.length) {
+        // Never answer a photo we failed to understand.
+        await escalateConversation({
+          conversationId: message.conversationId,
+          contactId: contact.id,
+          contactName: contactDisplayName(contact),
+          reason: "MMS image could not be safely understood",
+          messageText: message.text,
+        });
+        return;
+      }
+      const mediaContext = understood
+        .map((asset, i) => {
+          const a = asset.analysis!;
+          return [
+            `Image ${i + 1} direct observation: ${a.caption ?? "image"}`,
+            a.visibleText?.length
+              ? `Visible text: ${a.visibleText.join(", ")}`
+              : null,
+            a.contextualInterpretation
+              ? `Cautious contextual interpretation: ${a.contextualInterpretation}`
+              : null,
+          ]
+            .filter(Boolean)
+            .join("\n");
+        })
+        .join("\n\n");
+      incomingForTriage = `${message.text || "(image without text)"}\n\n${mediaContext}`;
+    }
+
     let outcome;
     try {
-      outcome = await triageInboundMessage(ctx, message.text);
+      outcome = await triageInboundMessage(ctx, incomingForTriage);
     } catch (err) {
       // AI failure: never lose communication — escalate to the user.
       await logActivity({
@@ -114,6 +157,21 @@ export async function processInboundMessage(messageId: string): Promise<void> {
       entityId: message.id,
       detail: { decision: outcome.decision, model: outcome.model },
     });
+    if (message.conversationId) {
+      await db.insert(messages).values({
+        conversationId: message.conversationId,
+        contactId: contact.id,
+        direction: "SYSTEM",
+        channel: "SYSTEM",
+        contentType: "SYSTEM",
+        provider: "internal",
+        fromNumber: "system",
+        toNumber: "system",
+        text: `AI: ${outcome.decision.decision} · ${outcome.decision.policyMatch} · ${outcome.decision.reason}`,
+        status: "COMPLETED",
+        sender: "AI",
+      });
+    }
 
     const verdict = canAutoReply({
       decision: outcome.decision,

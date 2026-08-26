@@ -2,7 +2,7 @@
   "name": "ffrm",
   "version": "0.1.0",
   "private": true,
-  "description": "Personal Relationship Agent — relationship memory, calendar, SMS automation and AI triage on Vercel",
+  "description": "AI-native personal phone — SMS, MMS, voice, relationship context and policy on Vercel",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -27,6 +27,7 @@
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "server-only": "^0.0.1",
+    "sharp": "^0.35.3",
     "zod": "^4.4.3"
   },
   "devDependencies": {

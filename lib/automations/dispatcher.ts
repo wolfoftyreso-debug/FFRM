@@ -80,7 +80,7 @@ export async function runDispatcher(now: Date = new Date()): Promise<DispatchSum
   // did not complete (e.g. function terminated). Never lose communication.
   const staleCutoff = new Date(now.getTime() - 90 * 1000);
   const unprocessed = await db
-    .select({ id: messages.id })
+    .select({ id: messages.id, channel: messages.channel })
     .from(messages)
     .where(
       and(
@@ -91,7 +91,12 @@ export async function runDispatcher(now: Date = new Date()): Promise<DispatchSum
     )
     .limit(20);
   for (const m of unprocessed) {
-    await processInboundMessage(m.id);
+    if (m.channel === "MMS") {
+      const { processInboundMms } = await import("@/lib/mms/process-inbound");
+      await processInboundMms(m.id);
+    } else {
+      await processInboundMessage(m.id);
+    }
     summary.inboundProcessed++;
   }
 
