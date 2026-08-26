@@ -1,6 +1,8 @@
 import type { TriageDecision } from "./schemas";
 import type { ConfidenceEnvelope } from "@/lib/db/schema";
 import { resolveEnvelope } from "./relationship";
+import { AUTONOMY } from "@/lib/autonomy";
+export { AUTONOMY, AUTONOMY_LABELS } from "@/lib/autonomy";
 
 /**
  * Autonomy levels:
@@ -10,22 +12,6 @@ import { resolveEnvelope } from "./relationship";
  * 3 = APPROVAL              — AI drafts and queues; user approves sending.
  * 4 = AUTONOMOUS_LOW_RISK   — AI may send predefined low-risk messages itself.
  */
-export const AUTONOMY = {
-  MEMORY_ONLY: 0,
-  REMIND: 1,
-  DRAFT: 2,
-  APPROVAL: 3,
-  AUTONOMOUS_LOW_RISK: 4,
-} as const;
-
-export const AUTONOMY_LABELS: Record<number, string> = {
-  0: "Memory only",
-  1: "Remind me",
-  2: "Draft for me",
-  3: "Send after my approval",
-  4: "Send low-risk automatically",
-};
-
 /** Topics that must always escalate, enforced in the triage prompt AND here. */
 export const ESCALATION_TOPICS = [
   "money, loans, payments, investments",

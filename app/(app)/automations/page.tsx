@@ -2,6 +2,7 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { listAutomations, displayName } from "@/lib/queries";
 import { Badge, EmptyState, LinkButton, PageHeader } from "@/components/ui";
+import { AppleRow, InsetSection } from "@/components/apple-ui";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Automations" };
@@ -19,6 +20,29 @@ export default async function AutomationsPage() {
       {rows.length === 0 ? (
         <EmptyState text="No automations yet. Create one to get started." />
       ) : (
+        <>
+        <div className="md:hidden">
+          <InsetSection>
+            {rows.map(({ automation, contact }) => (
+              <AppleRow
+                key={automation.id}
+                href={`/automations/${automation.id}`}
+                title={<span className="font-semibold">{automation.name}</span>}
+                subtitle={`${contact ? displayName(contact) : "All contacts"} · ${automation.triggerType.replaceAll("_", " ")} → ${automation.actionType.replaceAll("_", " ")}`}
+                trailing={
+                  <span
+                    className={`h-2.5 w-2.5 rounded-full ${
+                      automation.enabled
+                        ? "bg-[var(--system-green)]"
+                        : "bg-[var(--system-gray)]"
+                    }`}
+                  />
+                }
+              />
+            ))}
+          </InsetSection>
+        </div>
+        <div className="hidden md:block">
         <div className="overflow-x-auto rounded-xl border border-stone-200 bg-white shadow-sm">
           <table className="w-full text-sm">
             <thead>
@@ -70,6 +94,8 @@ export default async function AutomationsPage() {
             </tbody>
           </table>
         </div>
+        </div>
+        </>
       )}
     </>
   );

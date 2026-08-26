@@ -117,6 +117,7 @@ export function installMockAi(options: {
   failStructured?: boolean;
   imageUnderstanding?: unknown;
   imageCaption?: string;
+  styleProfile?: unknown;
 }): { structuredCalls: string[]; textCalls: string[] } {
   const structuredCalls: string[] = [];
   const textCalls: string[] = [];
@@ -166,6 +167,42 @@ export function installMockAi(options: {
         const value =
           args.purpose === "image-message-draft"
             ? { message: options.imageCaption ?? "Kolla den här 😄" }
+            : args.purpose === "style-extraction"
+              ? (options.styleProfile ?? {
+                  ownerStyle: {
+                    language: "sv",
+                    formality: 0.1,
+                    averageLength: "short",
+                    humor: 0.9,
+                    sarcasm: 0.5,
+                    emojiFrequency: 0.3,
+                    emojiTypes: ["😂"],
+                    swearing: 0.2,
+                    questionStyle: "direct",
+                    greetingStyle: "usually_none",
+                    signOffStyle: "none",
+                    usesNames: false,
+                  },
+                  contactStyle: {
+                    language: "sv",
+                    formality: 0.1,
+                    averageLength: "short",
+                    humor: 0.8,
+                    sarcasm: 0.4,
+                    emojiFrequency: 0.2,
+                    emojiTypes: ["😄"],
+                    swearing: 0.1,
+                    questionStyle: "direct",
+                    greetingStyle: "usually_none",
+                    signOffStyle: "none",
+                    usesNames: false,
+                  },
+                  commonTopics: ["cars"],
+                  avoidedTopics: [],
+                  recurringExpressions: ["haha"],
+                  whoUsuallyInitiates: "BALANCED",
+                  notes: "Informal and playful",
+                })
             : (options.imageUnderstanding ?? {
                 observation: {
                   caption: "A red car parked outside a workshop",

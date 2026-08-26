@@ -5,7 +5,7 @@ import {
   mediaAssets,
   messages,
 } from "@/lib/db/schema";
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, isNull, lt, or, sql } from "drizzle-orm";
 import { buildContactContext, contactDisplayName } from "@/lib/ai/context";
 import { triageInboundMessage } from "@/lib/ai/triage";
 import { extractMemory } from "@/lib/ai/extract";
@@ -17,20 +17,41 @@ import { escalationPreviewEnabled, optionalEnv } from "@/lib/env";
 /**
  * Process one persisted inbound message: triage → auto-reply or escalate.
  *
- * Idempotent: processing is claimed via an atomic UPDATE on processedAt, so
- * webhook retries, waitUntil and the cron fallback can all call this safely.
+ * Idempotent: an expiring DB lease claims work; processedAt is written only
+ * after the whole flow succeeds. Crashes/transient failures are reclaimable.
  */
 export async function processInboundMessage(messageId: string): Promise<void> {
   const db = await getDb();
 
-  // Claim the message — exactly one processor wins.
+  const now = new Date();
+  const staleLease = new Date(now.getTime() - 5 * 60 * 1000);
+  // Claim the message — exactly one processor wins; stale leases are retried.
   const claimed = await db
     .update(messages)
-    .set({ processedAt: new Date() })
-    .where(and(eq(messages.id, messageId), isNull(messages.processedAt)))
+    .set({
+      processingStartedAt: now,
+      processingAttemptCount: sql`${messages.processingAttemptCount} + 1`,
+    })
+    .where(
+      and(
+        eq(messages.id, messageId),
+        isNull(messages.processedAt),
+        lt(messages.processingAttemptCount, 3),
+        or(
+          isNull(messages.processingStartedAt),
+          lt(messages.processingStartedAt, staleLease),
+        ),
+      ),
+    )
     .returning();
   if (claimed.length === 0) return;
   const message = claimed[0];
+  const complete = async () => {
+    await db
+      .update(messages)
+      .set({ processedAt: new Date(), processingStartedAt: null })
+      .where(eq(messages.id, message.id));
+  };
 
   try {
     if (!message.contactId) {
@@ -41,6 +62,7 @@ export async function processInboundMessage(messageId: string): Promise<void> {
         reason: "Message from unknown sender",
         messageText: message.text,
       });
+      await complete();
       return;
     }
 
@@ -48,7 +70,10 @@ export async function processInboundMessage(messageId: string): Promise<void> {
       .select()
       .from(contacts)
       .where(eq(contacts.id, message.contactId));
-    if (!contact) return;
+    if (!contact) {
+      await complete();
+      return;
+    }
 
     const conversation = message.conversationId
       ? (
@@ -74,6 +99,7 @@ export async function processInboundMessage(messageId: string): Promise<void> {
         entityId: message.id,
       });
       await runExtraction(contact, message.id, message.conversationId);
+      await complete();
       return;
     }
 
@@ -102,6 +128,7 @@ export async function processInboundMessage(messageId: string): Promise<void> {
           reason: "MMS image could not be safely understood",
           messageText: message.text,
         });
+        await complete();
         return;
       }
       const mediaContext = understood
@@ -144,6 +171,7 @@ export async function processInboundMessage(messageId: string): Promise<void> {
         reason: "AI triage failed",
         messageText: message.text,
       });
+      await complete();
       return;
     }
 
@@ -181,13 +209,22 @@ export async function processInboundMessage(messageId: string): Promise<void> {
     });
 
     if (verdict.allowed && outcome.decision.reply) {
-      await sendMessage({
+      const sent = await sendMessage({
         to: message.fromNumber,
         text: outcome.decision.reply,
         sender: "AI",
         contactId: contact.id,
         conversationId: message.conversationId,
       });
+      if (!sent.ok) {
+        await escalateConversation({
+          conversationId: message.conversationId,
+          contactId: contact.id,
+          contactName: contactDisplayName(contact),
+          reason: "Automatic reply failed to send; user intervention required",
+          messageText: message.text,
+        });
+      }
       if (message.conversationId) {
         await db
           .update(conversations)
@@ -215,9 +252,35 @@ export async function processInboundMessage(messageId: string): Promise<void> {
     }
 
     await runExtraction(contact, message.id, message.conversationId);
+    await complete();
   } catch (err) {
-    // Leave a trace; the message stays processed to avoid loops, but the
-    // failure is visible in the activity log.
+    // Release transient claims so cron can retry. On the final attempt,
+    // escalate instead of silently losing the communication.
+    if (message.processingAttemptCount >= 3) {
+      try {
+        const [contact] = message.contactId
+          ? await db
+              .select()
+              .from(contacts)
+              .where(eq(contacts.id, message.contactId))
+          : [];
+        await escalateConversation({
+          conversationId: message.conversationId,
+          contactId: message.contactId,
+          contactName: contact ? contactDisplayName(contact) : message.fromNumber,
+          reason: "Inbound processing failed repeatedly",
+          messageText: message.text,
+        });
+        await complete();
+      } catch {
+        // The activity record below is the final fallback.
+      }
+    } else {
+      await db
+        .update(messages)
+        .set({ processingStartedAt: null })
+        .where(eq(messages.id, message.id));
+    }
     await logActivity({
       actor: "SYSTEM",
       action: "INBOUND_PROCESSING_FAILED",

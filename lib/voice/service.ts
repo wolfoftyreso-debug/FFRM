@@ -22,6 +22,7 @@ import { getOrCreateConversation } from "@/lib/sms/send-message";
 import { requireEnv, optionalEnv } from "@/lib/env";
 import { contactDisplayName } from "@/lib/ai/context";
 import { appendConversationEvent } from "@/lib/conversation-events";
+import { createId } from "@/lib/id";
 
 export interface IncomingCallInput {
   callid: string;
@@ -46,6 +47,14 @@ export async function handleIncomingCall(
 ): Promise<ElksCallAction> {
   const db = await getDb();
   const from = normalizePhoneNumber(input.from) ?? input.from;
+  const [existingCall] = await db
+    .select()
+    .from(calls)
+    .where(eq(calls.providerCallId, input.callid))
+    .limit(1);
+  if (existingCall) {
+    return actionForStoredCall(existingCall);
+  }
 
   const [contact] = await db
     .select()
@@ -87,6 +96,7 @@ export async function handleIncomingCall(
       direction: "INBOUND",
       fromNumber: from,
       toNumber: input.to,
+      routedToNumber: disposition === "RING_THROUGH" ? target : null,
       state: "RINGING",
       disposition,
       policyReason: decision.reason,
@@ -94,7 +104,13 @@ export async function handleIncomingCall(
     .onConflictDoNothing()
     .returning({ id: calls.id });
 
-  if (inserted.length > 0) {
+  if (inserted.length === 0) {
+    const [winner] = await db
+      .select()
+      .from(calls)
+      .where(eq(calls.providerCallId, input.callid));
+    if (winner) return actionForStoredCall(winner);
+  } else {
     await appendConversationEvent({
       conversationId,
       contactId: contact?.id ?? null,
@@ -130,6 +146,21 @@ export async function handleIncomingCall(
   }
 }
 
+function actionForStoredCall(call: Call): ElksCallAction {
+  switch (call.disposition) {
+    case "RING_THROUGH":
+      return call.routedToNumber
+        ? connectAction(call.routedToNumber)
+        : voicemailAction("VOICEMAIL");
+    case "SCREEN":
+      return voicemailAction("SCREEN");
+    case "REJECT":
+      return rejectAction();
+    default:
+      return voicemailAction("VOICEMAIL");
+  }
+}
+
 /**
  * Called by 46elks when the connect action completes: success means the call
  * was answered and is over; failed means no answer/busy → voicemail.
@@ -143,6 +174,10 @@ export async function handleAfterConnect(
     .select()
     .from(calls)
     .where(eq(calls.providerCallId, callid));
+
+  if (call && call.state !== "RINGING") {
+    return { hangup: "" };
+  }
 
   if (result === "success") {
     if (call && call.state === "RINGING") {
@@ -241,6 +276,12 @@ export async function handleHangup(input: HangupInput): Promise<void> {
   // Missed inbound calls notify the owner (their phone shows the 46elks
   // number, not the actual caller — this SMS restores that information).
   if (finalState === "MISSED" && call.direction === "INBOUND") {
+    const claimedNotification = await db
+      .update(calls)
+      .set({ missedNotifiedAt: new Date() })
+      .where(and(eq(calls.id, call.id), isNull(calls.missedNotifiedAt)))
+      .returning({ id: calls.id });
+    if (claimedNotification.length === 0) return;
     const appUrl = optionalEnv("APP_URL") ?? "";
     await notifyOwner(`Missat samtal från ${who}.\n\n${appUrl}/phone`);
   }
@@ -275,34 +316,61 @@ export async function initiateCallback(contact: Contact): Promise<Call> {
     ).toString(),
   });
 
-  const res = await fetch("https://api.46elks.com/a1/calls", {
-    method: "POST",
-    headers: {
-      Authorization:
-        "Basic " + Buffer.from(`${username}:${password}`).toString("base64"),
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: body.toString(),
-  });
-  if (!res.ok) {
-    const detail = await res.text().catch(() => "");
-    throw new Error(`46elks call failed (${res.status}): ${detail.slice(0, 200)}`);
-  }
-  const data = (await res.json()) as { id?: string; state?: string };
-
   const [record] = await db
     .insert(calls)
     .values({
-      providerCallId: data.id ?? `local-${Date.now()}`,
+      providerCallId: `initiating:${createId()}`,
       conversationId,
       contactId: contact.id,
       direction: "OUTBOUND",
       fromNumber: from,
       toNumber: contact.phoneNumber,
-      state: "RINGING",
+      state: "INITIATING",
       disposition: "CONNECT_BACK",
       policyReason: "Owner-initiated callback",
     })
+    .returning();
+
+  let data: { id?: string; state?: string };
+  try {
+    const res = await fetch("https://api.46elks.com/a1/calls", {
+      method: "POST",
+      headers: {
+        Authorization:
+          "Basic " + Buffer.from(`${username}:${password}`).toString("base64"),
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: body.toString(),
+    });
+    if (!res.ok) {
+      const detail = await res.text().catch(() => "");
+      throw new Error(
+        `46elks call failed (${res.status}): ${detail.slice(0, 200)}`,
+      );
+    }
+    data = (await res.json()) as { id?: string; state?: string };
+    if (!data.id) throw new Error("46elks call returned no call id");
+  } catch (err) {
+    const error = err instanceof Error ? err.message : String(err);
+    await db
+      .update(calls)
+      .set({ state: "FAILED", error, endedAt: new Date() })
+      .where(eq(calls.id, record.id));
+    await logActivity({
+      actor: "USER",
+      action: "CALL_FAILED",
+      summary: `Callback to ${contactDisplayName(contact)} failed: ${error.slice(0, 160)}`,
+      contactId: contact.id,
+      entityType: "call",
+      entityId: record.id,
+    });
+    throw err;
+  }
+
+  const [started] = await db
+    .update(calls)
+    .set({ providerCallId: data.id, state: "RINGING" })
+    .where(eq(calls.id, record.id))
     .returning();
 
   await logActivity({
@@ -311,17 +379,17 @@ export async function initiateCallback(contact: Contact): Promise<Call> {
     summary: `Callback started to ${contactDisplayName(contact)}`,
     contactId: contact.id,
     entityType: "call",
-    entityId: record.id,
+    entityId: started.id,
   });
   await appendConversationEvent({
     conversationId,
     contactId: contact.id,
     channel: "VOICE_CALL",
-    eventKey: `${record.providerCallId}:started`,
+    eventKey: `${started.providerCallId}:started`,
     text: "Outgoing callback initiated",
   });
 
-  return record;
+  return started;
 }
 
 /** Recordings not yet processed (cron fallback). */

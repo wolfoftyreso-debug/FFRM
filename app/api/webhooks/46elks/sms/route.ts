@@ -6,7 +6,7 @@ import { contacts, conversations, messages } from "@/lib/db/schema";
 import { and, eq, sql } from "drizzle-orm";
 import { normalizePhoneNumber } from "@/lib/phone";
 import { getOrCreateConversation } from "@/lib/sms/send-message";
-import { processInboundMessage } from "@/lib/inbound";
+import { processInboundSmsEvent } from "@/lib/automations/events";
 import { logActivity } from "@/lib/activity";
 import { touchSystemState } from "@/lib/system-state";
 import { optionalEnv } from "@/lib/env";
@@ -115,7 +115,7 @@ export async function POST(req: NextRequest) {
 
   // AI triage happens after the response is returned; the cron dispatcher
   // re-processes any message whose processing did not complete.
-  waitUntil(processInboundMessage(messageId));
+  waitUntil(processInboundSmsEvent(messageId));
 
   return new NextResponse(null, { status: 200 });
 }

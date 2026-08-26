@@ -8,7 +8,7 @@ import {
   type Automation,
   type Contact,
 } from "@/lib/db/schema";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, isNull, lte, or, sql } from "drizzle-orm";
 import { buildContactContext, contactDisplayName } from "@/lib/ai/context";
 import { generateOutboundMessage, evaluateRelationship } from "@/lib/ai/generate";
 import { canSendAutomatically, shouldDraft } from "@/lib/ai/policy";
@@ -21,7 +21,6 @@ export interface ExecuteResult {
   executionId?: string;
   detail?: string;
 }
-
 /**
  * Execute one occurrence of an automation.
  *
@@ -35,11 +34,13 @@ export async function executeAutomation(args: {
   occurrenceKey: string;
   scheduledFor: Date;
   triggerPayload?: unknown;
+  now?: Date;
 }): Promise<ExecuteResult> {
   const db = await getDb();
   const { automation } = args;
+  const now = args.now ?? new Date();
 
-  const inserted = await db
+  let claimed = await db
     .insert(automationExecutions)
     .values({
       automationId: automation.id,
@@ -47,16 +48,48 @@ export async function executeAutomation(args: {
       occurrenceKey: args.occurrenceKey,
       scheduledFor: args.scheduledFor,
       status: "RUNNING",
-      startedAt: new Date(),
+      startedAt: now,
       triggerPayload: args.triggerPayload ?? null,
     })
     .onConflictDoNothing()
-    .returning({ id: automationExecutions.id });
+    .returning({
+      id: automationExecutions.id,
+      retryCount: automationExecutions.retryCount,
+    });
 
-  if (inserted.length === 0) {
-    return { executed: false, status: "DUPLICATE" };
+  if (claimed.length === 0) {
+    // Explicit failures are safe to retry with the same occurrence key.
+    // RUNNING/COMPLETED rows are never reclaimed here (ambiguous side effect).
+    claimed = await db
+      .update(automationExecutions)
+      .set({
+        status: "RUNNING",
+        startedAt: now,
+        completedAt: null,
+        nextRetryAt: null,
+      })
+      .where(
+        and(
+          eq(automationExecutions.automationId, automation.id),
+          eq(automationExecutions.occurrenceKey, args.occurrenceKey),
+          eq(automationExecutions.status, "FAILED"),
+          lte(automationExecutions.retryCount, 2),
+          or(
+            isNull(automationExecutions.nextRetryAt),
+            lte(automationExecutions.nextRetryAt, now),
+          ),
+        ),
+      )
+      .returning({
+        id: automationExecutions.id,
+        retryCount: automationExecutions.retryCount,
+      });
+    if (claimed.length === 0) {
+      return { executed: false, status: "DUPLICATE" };
+    }
   }
-  const executionId = inserted[0].id;
+  const executionId = claimed[0].id;
+  const priorRetryCount = claimed[0].retryCount;
 
   let contact: Contact | null = null;
   if (automation.contactId) {
@@ -74,6 +107,8 @@ export async function executeAutomation(args: {
       executionId,
     });
 
+    const failed = outcome.status === "FAILED";
+    const nextRetryCount = failed ? priorRetryCount + 1 : priorRetryCount;
     await db
       .update(automationExecutions)
       .set({
@@ -85,6 +120,12 @@ export async function executeAutomation(args: {
         aiModel: outcome.aiModel ?? null,
         aiInputTokens: outcome.aiInputTokens ?? null,
         aiOutputTokens: outcome.aiOutputTokens ?? null,
+        error: failed ? (outcome.summary ?? "Automation action failed") : null,
+        retryCount: nextRetryCount,
+        nextRetryAt:
+          failed && nextRetryCount < 3
+            ? retryAt(nextRetryCount)
+            : null,
       })
       .where(eq(automationExecutions.id, executionId));
 
@@ -110,12 +151,16 @@ export async function executeAutomation(args: {
     };
   } catch (err) {
     const errorText = err instanceof Error ? err.message : String(err);
+    const nextRetryCount = priorRetryCount + 1;
     await db
       .update(automationExecutions)
       .set({
         status: "FAILED",
         completedAt: new Date(),
         error: errorText,
+        retryCount: nextRetryCount,
+        nextRetryAt:
+          nextRetryCount < 3 ? retryAt(nextRetryCount) : null,
       })
       .where(eq(automationExecutions.id, executionId));
     await logActivity({
@@ -128,6 +173,12 @@ export async function executeAutomation(args: {
     });
     return { executed: true, status: "FAILED", executionId, detail: errorText };
   }
+}
+
+function retryAt(retryCount: number): Date {
+  // 1m, 2m, then exhausted. Kept short for personal communications while
+  // preventing a tight loop during provider outages.
+  return new Date(Date.now() + 2 ** Math.max(0, retryCount - 1) * 60_000);
 }
 
 interface ActionOutcome {
@@ -398,23 +449,4 @@ async function queueDraft(args: {
     summary: args.summary,
     result: { draft: args.text },
   };
-}
-
-/** Has this occurrence already been executed? (used by tests/UI) */
-export async function hasExecution(
-  automationId: string,
-  occurrenceKey: string,
-): Promise<boolean> {
-  const db = await getDb();
-  const rows = await db
-    .select({ id: automationExecutions.id })
-    .from(automationExecutions)
-    .where(
-      and(
-        eq(automationExecutions.automationId, automationId),
-        eq(automationExecutions.occurrenceKey, occurrenceKey),
-      ),
-    )
-    .limit(1);
-  return rows.length > 0;
 }

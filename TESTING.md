@@ -4,10 +4,18 @@
 
 ```bash
 pnpm test        # unit + integration (vitest, in-memory PGlite)
+pnpm test:e2e    # Playwright: browser → actions/routes → Postgres → UI
 pnpm typecheck   # tsc --noEmit
 pnpm lint        # eslint
 pnpm build       # next build
 ```
+
+`pnpm build` currently pins Next's supported `--webpack` production path.
+Next 16.3.3 Turbopack reproducibly panics during source-map emission in this
+repository (`GenerateSourceMap was canceled`, same internal task id) despite
+clean lint/typecheck/tests; the Webpack build compiles every route successfully.
+Development still uses Turbopack. Remove the fallback after the upstream panic
+is fixed and a default `next build` is verified.
 
 ## What is covered
 
@@ -52,6 +60,29 @@ pnpm build       # next build
   observation/interpretation, low-risk image auto-reply, purchase-context
   escalation, fail-closed image handling, outbound MMS persistence/provider
   id/320 kB envelope, provider-failure recovery
+- `reliability.test.ts` — failed AI send escalates; concurrent conversation
+  creation; monotonic delivery state; cron auth/lease; automation backoff
+  retry; stale ambiguous RUNNING recovery; private media headers; persisted
+  screenshot → communication profile
+- `endpoints.test.ts` — image-caption API, event-driven INCOMING_SMS automation
+  dedupe and authenticated voicemail-audio proxy
+
+### Browser E2E (`tests/e2e/`)
+
+`personal-phone.spec.ts` runs serially against the real Next.js app and local
+PGlite database:
+
+- desktop + mobile Apple-native navigation and active states
+- Messages search/filters, unified SMS/MMS/call thread, AI state controls,
+  attachment composer hydration
+- Contacts A–Z/sort/filter, hero actions, all typed history filters, facts,
+  reminders, work/profile save + reload, real screenshot upload and retry state
+- Phone Recents/Missed/Voicemail, thread links, audio UI, handled state
+- Calendar save, automation conditional form + incoming-SMS rule + toggle/run,
+  Activity audit, owner/call-policy Settings persistence
+
+The suite also caught and now guards a Next development-origin bug that had
+left client components unhydrated while server forms still appeared to work.
 
 External providers (46elks, AI Gateway) are mocked in all automated tests via
 the injection hooks in `lib/sms/provider.ts` and `lib/ai/client.ts`.

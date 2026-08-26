@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { waitUntil } from "@vercel/functions";
 import { z } from "zod";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { contacts, conversations, mediaAssets, messages } from "@/lib/db/schema";
 import { normalizePhoneNumber } from "@/lib/phone";
@@ -58,64 +58,86 @@ export async function POST(req: NextRequest) {
     parsed.image4,
   ].filter((u): u is string => !!u);
 
-  // Persist the Message first. The same provider-id unique constraint as SMS
-  // deduplicates 46elks retries before any side effect or model call.
-  const inserted = await db
-    .insert(messages)
-    .values({
-      conversationId,
-      contactId: contact?.id ?? null,
-      direction: "INBOUND",
-      channel: "MMS",
-      contentType:
-        imageUrls.length > 0
-          ? parsed.message.trim()
-            ? "TEXT_AND_IMAGE"
-            : "IMAGE"
-          : "TEXT",
-      provider: "46elks",
-      providerMessageId: parsed.id,
-      fromNumber: from,
-      toNumber: to,
-      text: parsed.message,
-      status: "RECEIVED",
-    })
-    .onConflictDoNothing()
-    .returning({ id: messages.id });
+  let messageId = "";
+  let created = false;
+  // Message + media metadata + interaction timestamps commit atomically.
+  // On a retry, missing media metadata from any legacy partial write is
+  // repaired using providerMediaId upserts.
+  await db.transaction(async (tx) => {
+    const inserted = await tx
+      .insert(messages)
+      .values({
+        conversationId,
+        contactId: contact?.id ?? null,
+        direction: "INBOUND",
+        channel: "MMS",
+        contentType:
+          imageUrls.length > 0
+            ? parsed.message.trim()
+              ? "TEXT_AND_IMAGE"
+              : "IMAGE"
+            : "TEXT",
+        provider: "46elks",
+        providerMessageId: parsed.id,
+        fromNumber: from,
+        toNumber: to,
+        text: parsed.message,
+        status: "RECEIVED",
+      })
+      .onConflictDoNothing()
+      .returning({ id: messages.id });
+    created = inserted.length > 0;
+    if (inserted[0]) {
+      messageId = inserted[0].id;
+    } else {
+      const [existing] = await tx
+        .select({ id: messages.id })
+        .from(messages)
+        .where(
+          and(
+            eq(messages.provider, "46elks"),
+            eq(messages.direction, "INBOUND"),
+            eq(messages.providerMessageId, parsed.id),
+          ),
+        );
+      if (!existing) throw new Error("MMS deduplication record missing");
+      messageId = existing.id;
+    }
+
+    if (imageUrls.length > 0) {
+      await tx
+        .insert(mediaAssets)
+        .values(
+          imageUrls.map((url, index) => ({
+            conversationId,
+            messageId,
+            type: "IMAGE",
+            mimeType: "application/octet-stream",
+            providerMediaId: `${parsed.id}:${index + 1}`,
+            providerUrl: url,
+            dataBase64: null,
+            byteSize: null,
+            analysisStatus: "PENDING",
+          })),
+        )
+        .onConflictDoNothing();
+    }
+
+    const now = new Date();
+    await tx
+      .update(conversations)
+      .set({ lastMessageAt: now, lastContactMessageAt: now })
+      .where(eq(conversations.id, conversationId));
+    if (contact) {
+      await tx
+        .update(contacts)
+        .set({ lastInteractionAt: now, updatedAt: sql`now()` })
+        .where(eq(contacts.id, contact.id));
+    }
+  });
 
   await touchSystemState("lastWebhookAt");
-  if (inserted.length === 0) return new NextResponse(null, { status: 200 });
-  const messageId = inserted[0].id;
-
-  // Media metadata (provider URL provenance) is persisted before retrieval.
-  if (imageUrls.length > 0) {
-    await db.insert(mediaAssets).values(
-      imageUrls.map((url, index) => ({
-        conversationId,
-        messageId,
-        type: "IMAGE",
-        mimeType: "application/octet-stream", // replaced after byte inspection
-        providerMediaId: `${parsed.id}:${index + 1}`,
-        providerUrl: url,
-        dataBase64: null,
-        byteSize: null,
-        analysisStatus: "PENDING",
-      })),
-    );
-  }
-
-  const now = new Date();
-  await db
-    .update(conversations)
-    .set({ lastMessageAt: now, lastContactMessageAt: now })
-    .where(eq(conversations.id, conversationId));
-  if (contact) {
-    await db
-      .update(contacts)
-      .set({ lastInteractionAt: now, updatedAt: sql`now()` })
-      .where(eq(contacts.id, contact.id));
-  }
-  await logActivity({
+  if (created) await logActivity({
     actor: "46ELKS",
     action: "MMS_RECEIVED",
     summary: `MMS received from ${contact?.firstName ?? from} (${imageUrls.length} image${imageUrls.length === 1 ? "" : "s"})`,

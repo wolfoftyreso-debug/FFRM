@@ -1,6 +1,6 @@
 import { getDb } from "@/lib/db";
 import { calls, contacts } from "@/lib/db/schema";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, lt, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { transcribeAudio, generateStructured } from "@/lib/ai/client";
 import { fastModel } from "@/lib/ai/config";
@@ -20,16 +20,30 @@ const voicemailAnalysisSchema = z.object({
 /**
  * Voicemail post-processing: fetch the WAV from 46elks (basic auth),
  * transcribe through the AI Gateway, summarize/classify with the fast model,
- * then notify the owner. Idempotent via an atomic claim on processedAt.
- * Failures never lose the voicemail — the owner is notified regardless.
+ * then notify the owner. An expiring lease makes crashes retryable; processedAt
+ * means fully persisted + notification handled, not merely "claimed".
  */
 export async function processCallRecording(callId: string): Promise<void> {
   const db = await getDb();
 
+  const staleLease = new Date(Date.now() - 5 * 60 * 1000);
   const claimed = await db
     .update(calls)
-    .set({ processedAt: new Date() })
-    .where(and(eq(calls.id, callId), isNull(calls.processedAt)))
+    .set({
+      recordingProcessingStartedAt: new Date(),
+      recordingAttemptCount: sql`${calls.recordingAttemptCount} + 1`,
+    })
+    .where(
+      and(
+        eq(calls.id, callId),
+        isNull(calls.processedAt),
+        lt(calls.recordingAttemptCount, 5),
+        or(
+          isNull(calls.recordingProcessingStartedAt),
+          lt(calls.recordingProcessingStartedAt, staleLease),
+        ),
+      ),
+    )
     .returning();
   if (claimed.length === 0) return;
   const call = claimed[0];
@@ -106,16 +120,31 @@ Voicemail transcript:
       sender: "AI",
     });
 
-    await notifyOwner(
+    const notified = await notifyOwner(
       `Röstmeddelande från ${who}${analysis ? `:\n${analysis.summary}` : "."}${
         analysis?.requiresUser ? "\nKräver dig." : ""
       }\n\n${appUrl}/phone`,
     );
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
+    if (!notified) throw new Error("Owner voicemail notification failed");
     await db
       .update(calls)
-      .set({ state: "VOICEMAIL", error: message })
+      .set({
+        processedAt: new Date(),
+        recordingProcessingStartedAt: null,
+        voicemailNotifiedAt: new Date(),
+        error: null,
+      })
+      .where(eq(calls.id, call.id));
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    const finalAiAttempt = call.recordingAttemptCount >= 3;
+    await db
+      .update(calls)
+      .set({
+        state: "VOICEMAIL",
+        error: message,
+        recordingProcessingStartedAt: null,
+      })
       .where(eq(calls.id, call.id));
     await logActivity({
       actor: "SYSTEM",
@@ -125,16 +154,28 @@ Voicemail transcript:
       entityType: "call",
       entityId: call.id,
     });
-    await appendConversationEvent({
-      conversationId: call.conversationId,
-      contactId: call.contactId,
-      channel: "VOICEMAIL",
-      eventKey: `${call.providerCallId}:transcript`,
-      text: "Voicemail received · transcription failed · NEEDS YOU",
-    });
-    // Never lose communication: the owner still learns about the voicemail.
-    await notifyOwner(
-      `Nytt röstmeddelande från ${who} (kunde inte transkriberas).\n\n${appUrl}/phone`,
-    );
+    if (finalAiAttempt) {
+      await appendConversationEvent({
+        conversationId: call.conversationId,
+        contactId: call.contactId,
+        channel: "VOICEMAIL",
+        eventKey: `${call.providerCallId}:transcript`,
+        text: "Voicemail received · transcription failed · NEEDS YOU",
+      });
+      // After AI retries are exhausted, notify without a transcript.
+      const notified = await notifyOwner(
+        `Nytt röstmeddelande från ${who} (kunde inte transkriberas).\n\n${appUrl}/phone`,
+      );
+      if (notified || call.recordingAttemptCount >= 5) {
+        await db
+          .update(calls)
+          .set({
+            processedAt: new Date(),
+            recordingProcessingStartedAt: null,
+            voicemailNotifiedAt: notified ? new Date() : null,
+          })
+          .where(eq(calls.id, call.id));
+      }
+    }
   }
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useTransition } from "react";
 import { ImagePlus, Sparkles } from "lucide-react";
 import { sendConversationMessage } from "@/app/actions";
 
@@ -16,13 +16,20 @@ export function MessageComposer({
   const [preview, setPreview] = useState<string | null>(null);
   const [drafting, setDrafting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sending, startSending] = useTransition();
   const fileRef = useRef<HTMLInputElement>(null);
 
   function onFile(file: File | null) {
     setImage(file);
     setError(null);
-    if (preview) URL.revokeObjectURL(preview);
-    setPreview(file ? URL.createObjectURL(file) : null);
+    if (!file) {
+      setPreview(null);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setPreview(String(reader.result));
+    reader.onerror = () => setError("Could not preview this image");
+    reader.readAsDataURL(file);
   }
 
   async function draftWithAi() {
@@ -47,11 +54,24 @@ export function MessageComposer({
     }
   }
 
+  function submit(formData: FormData) {
+    startSending(async () => {
+      setError(null);
+      try {
+        await sendConversationMessage(conversationId, formData);
+        setText("");
+        onFile(null);
+        if (fileRef.current) fileRef.current.value = "";
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Could not send");
+      }
+    });
+  }
+
   return (
     <form
-      action={sendConversationMessage.bind(null, conversationId)}
-      className="mt-4"
-      onSubmit={() => setError(null)}
+      action={submit}
+      className="ios-safe-bottom sticky bottom-16 z-20 -mx-1 mt-3 rounded-2xl border border-black/10 bg-white/90 p-2 shadow-lg backdrop-blur-xl md:bottom-2"
     >
       {preview ? (
         <div className="mb-2 flex items-start gap-2">
@@ -80,28 +100,28 @@ export function MessageComposer({
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder="Message… (sending takes over the conversation)"
-        className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-stone-500 focus:outline-none"
+        className="w-full resize-none rounded-xl border-0 bg-black/[0.045] px-3 py-2 text-[16px] focus:outline-none"
       />
       <input
         ref={fileRef}
         type="file"
         name="image"
         accept="image/png,image/jpeg,image/gif,image/webp"
-        className="hidden"
+        className="sr-only"
+        id={`image-${conversationId}`}
         onChange={(e) => onFile(e.target.files?.[0] ?? null)}
       />
       {error ? <p className="mt-1 text-xs text-red-600">{error}</p> : null}
       <div className="mt-2 flex items-center justify-between gap-2">
         <div className="flex gap-1">
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            className="rounded-md border border-stone-300 p-2 text-stone-600 hover:bg-stone-50"
+          <label
+            htmlFor={`image-${conversationId}`}
+            className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-full text-[var(--system-blue)] hover:bg-black/[0.04]"
             aria-label="Attach image"
             title="Attach image"
           >
             <ImagePlus className="h-4 w-4" />
-          </button>
+          </label>
           {image && contactId ? (
             <button
               type="button"
@@ -115,10 +135,10 @@ export function MessageComposer({
           ) : null}
         </div>
         <button
-          disabled={!text.trim() && !image}
-          className="rounded-md bg-stone-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-stone-700 disabled:cursor-not-allowed disabled:opacity-40"
+          disabled={sending || (!text.trim() && !image)}
+          className="rounded-full bg-[var(--system-blue)] px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
         >
-          Send {image ? "MMS" : "SMS"}
+          {sending ? "Sending…" : `Send ${image ? "MMS" : "SMS"}`}
         </button>
       </div>
       {image ? (

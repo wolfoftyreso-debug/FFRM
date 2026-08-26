@@ -45,6 +45,10 @@ const contactSchema = z.object({
   humorAllowed: z.string().optional(),
   autonomyLevel: z.string().default("1"),
   automaticBirthdayGreeting: z.string().optional(),
+  company: z.string().optional(),
+  jobTitle: z.string().optional(),
+  interests: z.string().optional(),
+  hobbies: z.string().optional(),
 });
 
 function parseContactForm(formData: FormData) {
@@ -76,6 +80,26 @@ function parseContactForm(formData: FormData) {
     humorAllowed: data.humorAllowed === "on",
     autonomyLevel: Math.min(4, Math.max(0, Number(data.autonomyLevel) || 0)),
     automaticBirthdayGreeting: data.automaticBirthdayGreeting === "on",
+    profile: {
+      ...(data.company?.trim() ? { company: data.company.trim() } : {}),
+      ...(data.jobTitle?.trim() ? { jobTitle: data.jobTitle.trim() } : {}),
+      ...(data.interests?.trim()
+        ? {
+            interests: data.interests
+              .split(",")
+              .map((v) => v.trim())
+              .filter(Boolean),
+          }
+        : {}),
+      ...(data.hobbies?.trim()
+        ? {
+            hobbies: data.hobbies
+              .split(",")
+              .map((v) => v.trim())
+              .filter(Boolean),
+          }
+        : {}),
+    },
   };
 }
 
@@ -211,7 +235,52 @@ export async function closeConversation(conversationId: string): Promise<void> {
   redirect("/messages");
 }
 
-export async function sendManualReply(
+export async function reopenConversation(conversationId: string): Promise<void> {
+  const db = await getDb();
+  const [conversation] = await db
+    .select()
+    .from(conversations)
+    .where(eq(conversations.id, conversationId));
+  if (!conversation) return;
+  // Close any other OPEN thread for this contact/peer before reopening, so
+  // the partial unique index remains valid.
+  await db
+    .update(conversations)
+    .set({ status: "CLOSED" })
+    .where(
+      and(
+        conversation.contactId
+          ? eq(conversations.contactId, conversation.contactId)
+          : eq(conversations.peerNumber, conversation.peerNumber!),
+        eq(conversations.status, "OPEN"),
+      ),
+    );
+  await db
+    .update(conversations)
+    .set({ status: "OPEN", aiControlState: "USER" })
+    .where(eq(conversations.id, conversationId));
+  await logActivity({
+    actor: "USER",
+    action: "CONVERSATION_REOPENED",
+    summary: "Conversation reopened",
+    contactId: conversation.contactId,
+    conversationId,
+  });
+  revalidatePath(`/messages/${conversationId}`);
+}
+
+export async function messageContact(contactId: string): Promise<void> {
+  const contact = await getContact(contactId);
+  if (!contact?.phoneNumber) throw new Error("Contact has no phone number");
+  const { getOrCreateConversation } = await import("@/lib/sms/send-message");
+  const conversationId = await getOrCreateConversation(
+    contact.id,
+    contact.phoneNumber,
+  );
+  redirect(`/messages/${conversationId}`);
+}
+
+async function sendManualReply(
   conversationId: string,
   formData: FormData,
 ): Promise<void> {
@@ -261,13 +330,14 @@ export async function sendConversationMessage(
 ): Promise<void> {
   const text = String(formData.get("text") ?? "").trim();
   const image = formData.get("image");
-  const hasImage = image instanceof File && image.size > 0;
+  const hasImage = image !== null && typeof image !== "string" && image.size > 0;
   if (!text && !hasImage) return;
 
   if (!hasImage) {
     await sendManualReply(conversationId, formData);
     return;
   }
+  if (image === null || typeof image === "string") return;
 
   const db = await getDb();
   const [conv] = await db
@@ -320,8 +390,6 @@ const automationSchema = z.object({
     "NO_CONTACT_FOR",
     "INCOMING_SMS",
     "MANUAL",
-    "FOLLOW_UP_DUE",
-    "CUSTOM_EVENT",
   ]),
   actionType: z.enum([
     "SEND_SMS",
@@ -345,6 +413,8 @@ const automationSchema = z.object({
   actionInstruction: z.string().optional(),
   actionTitle: z.string().optional(),
   actionDescription: z.string().optional(),
+  actionField: z.enum(["notes", "importance", "relationshipType"]).optional(),
+  actionValue: z.string().optional(),
 });
 
 function parseAutomationForm(formData: FormData) {
@@ -371,6 +441,9 @@ function parseAutomationForm(formData: FormData) {
       ...(data.actionTitle?.trim() ? { title: data.actionTitle.trim() } : {}),
       ...(data.actionDescription?.trim()
         ? { description: data.actionDescription.trim() }
+        : {}),
+      ...(data.actionField && data.actionValue?.trim()
+        ? { fields: { [data.actionField]: data.actionValue.trim() } }
         : {}),
     },
     contactId: data.contactId?.trim() || null,
@@ -828,56 +901,52 @@ export async function uploadStyleScreenshots(
   const contact = await getContact(contactId);
   if (!contact) return;
   const db = await getDb();
-  const { contactMedia, users } = await import("@/lib/db/schema");
+  const { contactMedia } = await import("@/lib/db/schema");
+  const { sanitizeImage } = await import("@/lib/media/image");
 
   const files = formData
     .getAll("screenshots")
-    .filter((f): f is File => f instanceof File && f.size > 0)
+    .filter((f): f is File => typeof f !== "string" && f.size > 0)
     .slice(0, MAX_SCREENSHOTS);
   if (files.length === 0) return;
 
-  const images: { mimeType: string; base64: string }[] = [];
+  let stored = 0;
   for (const file of files) {
-    if (!file.type.startsWith("image/")) continue;
-    if (file.size > MAX_SCREENSHOT_BYTES) continue;
-    const base64 = Buffer.from(await file.arrayBuffer()).toString("base64");
-    // Provenance: keep the original screenshots.
+    if (!file.type.startsWith("image/")) {
+      throw new Error(`${file.name} is not an image`);
+    }
+    if (file.size > MAX_SCREENSHOT_BYTES) {
+      throw new Error(`${file.name} exceeds the 4MB screenshot limit`);
+    }
+    const clean = await sanitizeImage(
+      new Uint8Array(await file.arrayBuffer()),
+      MAX_SCREENSHOT_BYTES,
+    );
+    // Provenance is sanitized to safe image bytes before persistence.
     await db.insert(contactMedia).values({
       contactId,
       kind: "STYLE_SCREENSHOT",
-      mimeType: file.type,
-      dataBase64: base64,
+      mimeType: clean.mimeType,
+      dataBase64: clean.data.toString("base64"),
+      analysisStatus: "PENDING",
     });
-    images.push({ mimeType: file.type, base64 });
+    stored++;
   }
-  if (images.length === 0) return;
+  if (stored === 0) throw new Error("No valid screenshots were uploaded");
+  const { processContactStyle } = await import("@/lib/ai/process-style");
+  await processContactStyle(contactId);
+  revalidatePath(`/people/${contactId}`);
+}
 
-  const [owner] = await db.select().from(users).limit(1);
-  const { extractCommunicationProfile } = await import("@/lib/ai/style");
-  try {
-    const { profile } = await extractCommunicationProfile({
-      contactName: displayName(contact),
-      ownerName: owner?.name ?? "the owner",
-      images,
-    });
-    await db
-      .update(contacts)
-      .set({ communicationProfile: profile, updatedAt: sql`now()` })
-      .where(eq(contacts.id, contactId));
-    await logActivity({
-      actor: "AI",
-      action: "STYLE_EXTRACTED",
-      summary: `Communication profile extracted from ${images.length} screenshot(s) for ${displayName(contact)}`,
-      contactId,
-    });
-  } catch (err) {
-    await logActivity({
-      actor: "SYSTEM",
-      action: "STYLE_EXTRACTION_FAILED",
-      summary: `Style extraction failed: ${err instanceof Error ? err.message.slice(0, 150) : "unknown error"}`,
-      contactId,
-    });
-  }
+export async function retryStyleExtraction(contactId: string): Promise<void> {
+  const db = await getDb();
+  const { contactMedia } = await import("@/lib/db/schema");
+  await db
+    .update(contactMedia)
+    .set({ analysisStatus: "PENDING", retryCount: 0, analysisError: null })
+    .where(eq(contactMedia.contactId, contactId));
+  const { processContactStyle } = await import("@/lib/ai/process-style");
+  await processContactStyle(contactId);
   revalidatePath(`/people/${contactId}`);
 }
 
@@ -904,6 +973,7 @@ export async function blockNumber(phoneNumber: string): Promise<void> {
     summary: `Blocked ${phoneNumber}`,
   });
   revalidatePath("/phone");
+  revalidatePath("/settings");
 }
 
 export async function unblockNumber(phoneNumber: string): Promise<void> {
@@ -915,6 +985,28 @@ export async function unblockNumber(phoneNumber: string): Promise<void> {
     action: "NUMBER_UNBLOCKED",
     summary: `Unblocked ${phoneNumber}`,
   });
+  revalidatePath("/phone");
+  revalidatePath("/settings");
+}
+
+export async function markCallHandled(callId: string): Promise<void> {
+  const db = await getDb();
+  const { calls } = await import("@/lib/db/schema");
+  const [call] = await db
+    .update(calls)
+    .set({ aiRequiresUser: false })
+    .where(eq(calls.id, callId))
+    .returning();
+  if (call) {
+    await logActivity({
+      actor: "USER",
+      action: "CALL_HANDLED",
+      summary: "Call/voicemail marked handled",
+      contactId: call.contactId,
+      entityType: "call",
+      entityId: call.id,
+    });
+  }
   revalidatePath("/phone");
 }
 

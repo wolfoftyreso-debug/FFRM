@@ -3,6 +3,7 @@ import {
   contacts,
   conversations,
   messages,
+  users,
   type Message,
 } from "@/lib/db/schema";
 import { getMessagingProvider } from "./provider";
@@ -34,24 +35,35 @@ export async function getOrCreateConversation(
   peerNumber: string,
 ): Promise<string> {
   const db = await getDb();
+  const openMatch = and(
+    contactId
+      ? eq(conversations.contactId, contactId)
+      : and(
+          eq(conversations.peerNumber, peerNumber),
+          sql`${conversations.contactId} is null`,
+        ),
+    eq(conversations.status, "OPEN"),
+  );
   const existing = await db
     .select({ id: conversations.id })
     .from(conversations)
-    .where(
-      and(
-        contactId
-          ? eq(conversations.contactId, contactId)
-          : eq(conversations.peerNumber, peerNumber),
-        eq(conversations.status, "OPEN"),
-      ),
-    )
+    .where(openMatch)
     .limit(1);
   if (existing[0]) return existing[0].id;
   const inserted = await db
     .insert(conversations)
     .values({ contactId, peerNumber })
+    .onConflictDoNothing()
     .returning({ id: conversations.id });
-  return inserted[0].id;
+  if (inserted[0]) return inserted[0].id;
+  // Another concurrent webhook won the partial unique-index race.
+  const [winner] = await db
+    .select({ id: conversations.id })
+    .from(conversations)
+    .where(openMatch)
+    .limit(1);
+  if (!winner) throw new Error("Could not create or resolve conversation");
+  return winner.id;
 }
 
 /**
@@ -98,9 +110,11 @@ export async function sendMessage(
     })
     .returning();
 
+  let acceptedProviderId: string | null = null;
   try {
     const provider = await getMessagingProvider();
     const result = await provider.sendSms({ to: input.to, text });
+    acceptedProviderId = result.providerMessageId;
 
     const [updated] = await db
       .update(messages)
@@ -143,16 +157,24 @@ export async function sendMessage(
     return { message: updated, ok: true };
   } catch (err) {
     const errorText = err instanceof Error ? err.message : String(err);
+    const ambiguous = acceptedProviderId !== null;
     const [failed] = await db
       .update(messages)
-      .set({ status: "FAILED", error: errorText, failedAt: new Date() })
+      .set({
+        status: ambiguous ? "SENT_UNKNOWN" : "FAILED",
+        providerMessageId: acceptedProviderId,
+        error: errorText,
+        failedAt: ambiguous ? null : new Date(),
+      })
       .where(eq(messages.id, record.id))
       .returning();
 
     await logActivity({
       actor: input.sender,
-      action: "SMS_FAILED",
-      summary: `SMS to ${input.to} failed: ${errorText.slice(0, 200)}`,
+      action: ambiguous ? "SMS_STATUS_UNKNOWN" : "SMS_FAILED",
+      summary: ambiguous
+        ? `46elks accepted SMS ${acceptedProviderId}, but local confirmation failed; automatic resend blocked`
+        : `SMS to ${input.to} failed: ${errorText.slice(0, 200)}`,
       contactId: input.contactId,
       conversationId,
       entityType: "message",
@@ -165,14 +187,18 @@ export async function sendMessage(
 
 /** Notify the system owner (escalations, reminders). Not part of any contact conversation. */
 export async function notifyOwner(text: string): Promise<boolean> {
-  const owner = process.env.OWNER_PHONE_NUMBER;
+  const db = await getDb();
+  const [ownerRecord] = await db.select().from(users).limit(1);
+  const owner = ownerRecord?.phoneNumber ?? process.env.OWNER_PHONE_NUMBER;
   if (!owner || !isE164(owner)) {
     await logActivity({
       actor: "SYSTEM",
       action: "OWNER_NOTIFICATION_SKIPPED",
       summary: "OWNER_PHONE_NUMBER not configured; owner notification skipped",
     });
-    return false;
+    // Nothing can be retried until configured; the persisted activity/UI is
+    // the notification channel and the skip is explicitly logged.
+    return true;
   }
   const result = await sendMessage({
     to: owner,

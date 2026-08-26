@@ -1,20 +1,24 @@
 import { getDb } from "@/lib/db";
 import {
   automations,
+  automationExecutions,
   contacts,
   messages,
+  systemState,
   type Automation,
   type Contact,
 } from "@/lib/db/schema";
 import { and, eq, isNull, isNotNull, lte, lt, sql } from "drizzle-orm";
 import { computeNextRun, occurrenceKeyFor } from "./recurrence";
 import { executeAutomation } from "./engine";
-import { processInboundMessage } from "@/lib/inbound";
 import { touchSystemState } from "@/lib/system-state";
 
 export interface DispatchSummary {
+  locked: boolean;
   due: number;
   executed: number;
+  retried: number;
+  staleRecovered: number;
   skipped: number;
   failed: number;
   inboundProcessed: number;
@@ -30,17 +34,116 @@ export interface DispatchSummary {
  */
 export async function runDispatcher(now: Date = new Date()): Promise<DispatchSummary> {
   const db = await getDb();
-  await touchSystemState("lastCronAt");
 
   const summary: DispatchSummary = {
+    locked: false,
     due: 0,
     executed: 0,
+    retried: 0,
+    staleRecovered: 0,
     skipped: 0,
     failed: 0,
     inboundProcessed: 0,
   };
 
-  const due = await db
+  const leaseToken = new Date(now.getTime() + 55_000).toISOString();
+  const insertedLease = await db
+    .insert(systemState)
+    .values({ key: "cronLease", value: leaseToken })
+    .onConflictDoNothing()
+    .returning({ key: systemState.key });
+  const acquired =
+    insertedLease.length > 0
+      ? insertedLease
+      : await db
+          .update(systemState)
+          .set({ value: leaseToken, updatedAt: sql`now()` })
+          .where(
+            and(
+              eq(systemState.key, "cronLease"),
+              lte(systemState.value, now.toISOString()),
+            ),
+          )
+          .returning({ key: systemState.key });
+  if (acquired.length === 0) {
+    summary.locked = true;
+    return summary;
+  }
+
+  try {
+    await touchSystemState("lastCronAt");
+
+    // A crashed RUNNING execution is ambiguous: an external side effect may
+    // already have happened. Mark it terminal and visible; never blindly resend.
+    const staleRunning = await db
+      .update(automationExecutions)
+      .set({
+        status: "FAILED",
+        completedAt: now,
+        retryCount: 3,
+        nextRetryAt: null,
+        error:
+          "Execution lease expired; side-effect outcome is ambiguous. Manual review required.",
+      })
+      .where(
+        and(
+          eq(automationExecutions.status, "RUNNING"),
+          lt(
+            automationExecutions.startedAt,
+            new Date(now.getTime() - 10 * 60 * 1000),
+          ),
+        ),
+      )
+      .returning({ id: automationExecutions.id });
+    summary.staleRecovered = staleRunning.length;
+
+    const ambiguousOutbound = await db
+      .update(messages)
+      .set({
+        status: "SENT_UNKNOWN",
+        error:
+          "Outbound provider outcome is unknown after process interruption; automatic resend blocked.",
+      })
+      .where(
+        and(
+          eq(messages.direction, "OUTBOUND"),
+          eq(messages.status, "PENDING"),
+          lt(messages.createdAt, new Date(now.getTime() - 10 * 60 * 1000)),
+        ),
+      )
+      .returning({ id: messages.id });
+    summary.staleRecovered += ambiguousOutbound.length;
+
+    // Retry explicit failures with 1m/2m backoff. executeAutomation reclaims
+    // the same occurrence row, so there is still one permanent audit record.
+    const retries = await db
+      .select({ execution: automationExecutions, automation: automations })
+      .from(automationExecutions)
+      .innerJoin(
+        automations,
+        eq(automationExecutions.automationId, automations.id),
+      )
+      .where(
+        and(
+          eq(automationExecutions.status, "FAILED"),
+          eq(automations.enabled, true),
+          lt(automationExecutions.retryCount, 3),
+          lte(automationExecutions.nextRetryAt, now),
+        ),
+      )
+      .limit(20);
+    for (const row of retries) {
+      const result = await executeAutomation({
+        automation: row.automation,
+        occurrenceKey: row.execution.occurrenceKey,
+        scheduledFor: row.execution.scheduledFor,
+        triggerPayload: row.execution.triggerPayload,
+        now,
+      });
+      if (result.executed) summary.retried++;
+    }
+
+    const due = await db
     .select()
     .from(automations)
     .where(
@@ -52,9 +155,9 @@ export async function runDispatcher(now: Date = new Date()): Promise<DispatchSum
     )
     .limit(50);
 
-  summary.due = due.length;
+    summary.due = due.length;
 
-  for (const automation of due) {
+    for (const automation of due) {
     try {
       const result = await dispatchOne(automation, now);
       if (result === "executed") summary.executed++;
@@ -63,23 +166,30 @@ export async function runDispatcher(now: Date = new Date()): Promise<DispatchSum
     } catch {
       summary.failed++;
     }
-  }
+    }
 
   // Fallback processing of voicemail recordings whose post-webhook
   // processing did not complete.
-  const { findUnprocessedRecordings } = await import("@/lib/voice/service");
+    const { findUnprocessedRecordings } = await import("@/lib/voice/service");
   const { processCallRecording } = await import("@/lib/voice/process-recording");
-  const staleRecordings = await findUnprocessedRecordings(
+    const staleRecordings = await findUnprocessedRecordings(
     new Date(now.getTime() - 90 * 1000),
   );
-  for (const r of staleRecordings) {
+    for (const r of staleRecordings) {
     await processCallRecording(r.id);
   }
 
+    const { findStylesNeedingRetry, processContactStyle } = await import(
+      "@/lib/ai/process-style"
+    );
+    for (const contactId of await findStylesNeedingRetry()) {
+      await processContactStyle(contactId);
+    }
+
   // Fallback processing of inbound messages whose post-webhook processing
   // did not complete (e.g. function terminated). Never lose communication.
-  const staleCutoff = new Date(now.getTime() - 90 * 1000);
-  const unprocessed = await db
+    const staleCutoff = new Date(now.getTime() - 90 * 1000);
+    const unprocessed = await db
     .select({ id: messages.id, channel: messages.channel })
     .from(messages)
     .where(
@@ -90,17 +200,31 @@ export async function runDispatcher(now: Date = new Date()): Promise<DispatchSum
       ),
     )
     .limit(20);
-  for (const m of unprocessed) {
+    for (const m of unprocessed) {
     if (m.channel === "MMS") {
       const { processInboundMms } = await import("@/lib/mms/process-inbound");
       await processInboundMms(m.id);
     } else {
-      await processInboundMessage(m.id);
+      const { processInboundSmsEvent } = await import(
+        "@/lib/automations/events"
+      );
+      await processInboundSmsEvent(m.id);
     }
     summary.inboundProcessed++;
-  }
+    }
 
-  return summary;
+    return summary;
+  } finally {
+    await db
+      .update(systemState)
+      .set({ value: new Date(0).toISOString(), updatedAt: sql`now()` })
+      .where(
+        and(
+          eq(systemState.key, "cronLease"),
+          eq(systemState.value, leaseToken),
+        ),
+      );
+  }
 }
 
 async function dispatchOne(

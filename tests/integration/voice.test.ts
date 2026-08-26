@@ -108,14 +108,24 @@ describe("voice pipeline", () => {
   it("is idempotent for retried voice_start webhooks", async () => {
     const owner = await seedOwner(db);
     await setOwnerPhone(db, owner.id);
-    await seedContact(db, owner.id);
+    const contact = await seedContact(db, owner.id);
     const body = {
       callid: "cRETRY1",
       from: "+46700000001",
       to: "+46766861234",
     };
-    await voiceWebhook(formRequest("/api/webhooks/46elks/voice", body));
-    await voiceWebhook(formRequest("/api/webhooks/46elks/voice", body));
+    const first = await voiceWebhook(
+      formRequest("/api/webhooks/46elks/voice", body),
+    );
+    const firstAction = await first.json();
+    await db
+      .update(schema.contacts)
+      .set({ callPolicy: "BLOCK" })
+      .where(eq(schema.contacts.id, contact.id));
+    const retry = await voiceWebhook(
+      formRequest("/api/webhooks/46elks/voice", body),
+    );
+    expect(await retry.json()).toEqual(firstAction);
     const calls = await db.select().from(schema.calls);
     expect(calls).toHaveLength(1);
   });
@@ -255,6 +265,14 @@ describe("voice pipeline", () => {
     const ownerSms = provider.sent.filter((s) => s.to === "+46700000099");
     expect(ownerSms).toHaveLength(1);
     expect(ownerSms[0].text).toContain("Missat samtal från Johan");
+    await hangupWebhook(
+      formRequest("/api/webhooks/46elks/hangup", {
+        id: "cMISS1",
+        state: "failed",
+        duration: "0",
+      }),
+    );
+    expect(provider.sent.filter((s) => s.to === "+46700000099")).toHaveLength(1);
   });
 
   it("marks answered calls as completed with duration", async () => {

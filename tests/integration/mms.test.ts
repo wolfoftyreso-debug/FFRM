@@ -17,6 +17,7 @@ import * as schema from "@/lib/db/schema";
 import type { Db } from "@/lib/db";
 import { POST as mmsWebhook } from "@/app/api/webhooks/46elks/mms/route";
 import { sendMediaMessage } from "@/lib/mms/send-message";
+import { processInboundMms } from "@/lib/mms/process-inbound";
 
 function formRequest(body: Record<string, string>): NextRequest {
   return new NextRequest("http://localhost/api/webhooks/46elks/mms", {
@@ -47,6 +48,9 @@ async function waitForMms(messageId: string) {
       )
     ) {
       return;
+    }
+    if (assets.some((a) => a.analysisStatus === "PENDING")) {
+      await processInboundMms(messageId);
     }
     await new Promise((r) => setTimeout(r, 20));
   }

@@ -53,9 +53,9 @@ export function PageHeader({
   return (
     <div className="mb-6 flex items-start justify-between gap-4">
       <div>
-        <h1 className="text-xl font-semibold text-stone-900">{title}</h1>
+        <h1 className="text-[34px] font-bold tracking-tight text-black">{title}</h1>
         {subtitle ? (
-          <p className="mt-1 text-sm text-stone-500">{subtitle}</p>
+          <p className="mt-1 text-[15px] text-[var(--secondary-label)]">{subtitle}</p>
         ) : null}
       </div>
       {action}
@@ -72,7 +72,7 @@ export function Card({
 }) {
   return (
     <div
-      className={`rounded-xl border border-stone-200 bg-white p-4 shadow-sm ${className}`}
+      className={`rounded-[14px] border border-black/10 bg-white/95 p-4 shadow-[0_0.5px_1px_rgba(0,0,0,0.04)] ${className}`}
     >
       {children}
     </div>
@@ -97,7 +97,7 @@ export function PrimaryButton({
   return (
     <button
       type={type}
-      className="rounded-md bg-stone-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-stone-700"
+      className="rounded-xl bg-[var(--system-blue)] px-4 text-sm font-semibold text-white"
     >
       {children}
     </button>
@@ -114,7 +114,7 @@ export function SecondaryButton({
   return (
     <button
       type={type}
-      className="rounded-md border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium text-stone-700 hover:bg-stone-50"
+      className="rounded-xl bg-black/[0.06] px-4 text-sm font-semibold text-[var(--system-blue)]"
     >
       {children}
     </button>
@@ -131,7 +131,7 @@ export function LinkButton({
   return (
     <Link
       href={href}
-      className="rounded-md bg-stone-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-stone-700"
+      className="flex min-h-11 items-center rounded-xl bg-[var(--system-blue)] px-4 text-sm font-semibold text-white"
     >
       {children}
     </Link>
@@ -139,5 +139,5 @@ export function LinkButton({
 }
 
 export const inputClass =
-  "mt-1 w-full rounded-md border border-stone-300 px-3 py-2 text-sm focus:border-stone-500 focus:outline-none bg-white";
+  "mt-1 min-h-11 w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-[15px] focus:outline-none";
 export const labelClass = "block text-sm font-medium text-stone-700";

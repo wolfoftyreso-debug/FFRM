@@ -5,6 +5,7 @@ import {
   automationExecutions,
   automations,
   calls,
+  blockedNumbers,
   commitments,
   contactFacts,
   contactMedia,
@@ -19,6 +20,7 @@ import {
 import { and, asc, desc, eq, gte, isNotNull, lte, ne, or, sql } from "drizzle-orm";
 import { nextYearlyOccurrence } from "@/lib/automations/recurrence";
 import { defaultTimezone } from "@/lib/env";
+import { cleanErrorMessage } from "@/lib/errors";
 
 export async function getOwner() {
   const db = await getDb();
@@ -162,61 +164,134 @@ export async function getContactDetail(id: string) {
   const db = await getDb();
   const contact = await getContact(id);
   if (!contact) return null;
-  const facts = await db
-    .select()
-    .from(contactFacts)
-    .where(eq(contactFacts.contactId, id))
-    .orderBy(desc(contactFacts.createdAt));
-  const contactCommitments = await db
-    .select()
-    .from(commitments)
-    .where(eq(commitments.contactId, id))
-    .orderBy(desc(commitments.createdAt));
-  const contactAutomations = await db
-    .select()
-    .from(automations)
-    .where(eq(automations.contactId, id))
-    .orderBy(asc(automations.name));
-  const contactConversations = await db
-    .select()
-    .from(conversations)
-    .where(eq(conversations.contactId, id))
-    .orderBy(desc(conversations.lastMessageAt));
+  const [
+    facts,
+    contactCommitments,
+    contactAutomations,
+    contactConversations,
+    messageRows,
+    activityRows,
+    callRows,
+    assetRows,
+  ] = await Promise.all([
+    db
+      .select()
+      .from(contactFacts)
+      .where(eq(contactFacts.contactId, id))
+      .orderBy(desc(contactFacts.createdAt)),
+    db
+      .select()
+      .from(commitments)
+      .where(eq(commitments.contactId, id))
+      .orderBy(desc(commitments.createdAt)),
+    db
+      .select()
+      .from(automations)
+      .where(eq(automations.contactId, id))
+      .orderBy(asc(automations.name)),
+    db
+      .select()
+      .from(conversations)
+      .where(eq(conversations.contactId, id))
+      .orderBy(desc(conversations.lastMessageAt)),
+    db
+      .select()
+      .from(messages)
+      .where(eq(messages.contactId, id))
+      .orderBy(desc(messages.createdAt))
+      .limit(120),
+    db
+      .select()
+      .from(activityLog)
+      .where(eq(activityLog.contactId, id))
+      .orderBy(desc(activityLog.createdAt))
+      .limit(120),
+    db
+      .select()
+      .from(calls)
+      .where(eq(calls.contactId, id))
+      .orderBy(desc(calls.createdAt))
+      .limit(80),
+    db
+      .select({ messageId: mediaAssets.messageId })
+      .from(mediaAssets)
+      .innerJoin(messages, eq(mediaAssets.messageId, messages.id))
+      .where(eq(messages.contactId, id)),
+  ]);
+  const mediaCount = new Map<string, number>();
+  for (const asset of assetRows) {
+    mediaCount.set(asset.messageId, (mediaCount.get(asset.messageId) ?? 0) + 1);
+  }
 
-  // Timeline: messages + activity entries merged chronologically.
-  const messageRows = await db
-    .select()
-    .from(messages)
-    .where(eq(messages.contactId, id))
-    .orderBy(desc(messages.createdAt))
-    .limit(50);
-  const activityRows = await db
-    .select()
-    .from(activityLog)
-    .where(eq(activityLog.contactId, id))
-    .orderBy(desc(activityLog.createdAt))
-    .limit(50);
-
+  const duplicateActivity = /^(SMS_|MMS_|CALL_|VOICEMAIL_|IMAGE_UNDERSTOOD)/;
   const timeline = [
-    ...messageRows.map((m) => ({
-      at: m.createdAt,
-      kind:
-        m.direction === "INBOUND" ? ("INCOMING_SMS" as const) : ("OUTGOING_SMS" as const),
-      title:
-        m.direction === "INBOUND"
-          ? "Incoming SMS"
-          : `Outgoing SMS${m.sender ? ` (${m.sender})` : ""}`,
-      body: m.text,
-      status: m.status,
+    ...messageRows
+      .filter(
+        (m) =>
+          !(
+            m.contentType === "SYSTEM" &&
+            (m.channel === "VOICE_CALL" || m.channel === "VOICEMAIL")
+          ),
+      )
+      .map((m) => {
+        const photo =
+          m.contentType === "IMAGE" || m.contentType === "TEXT_AND_IMAGE";
+        const system = m.contentType === "SYSTEM";
+        return {
+          id: `message:${m.id}`,
+          at: m.createdAt,
+          category: (system ? "SYSTEM" : photo ? "PHOTOS" : "MESSAGES") as
+            | "SYSTEM"
+            | "PHOTOS"
+            | "MESSAGES",
+          title: system
+            ? "AI / system"
+            : `${m.direction === "INBOUND" ? "Incoming" : "Outgoing"} ${m.channel}`,
+          body: m.text || (photo ? "Photo" : ""),
+          status: m.status,
+          href: m.conversationId ? `/messages/${m.conversationId}` : null,
+          mediaCount: mediaCount.get(m.id) ?? 0,
+        };
+      }),
+    ...callRows.map((call) => ({
+      id: `call:${call.id}`,
+      at: call.createdAt,
+      category: (call.state === "VOICEMAIL" || call.recordingUrl
+        ? "VOICEMAIL"
+        : "CALLS") as "VOICEMAIL" | "CALLS",
+      title: `${call.direction === "INBOUND" ? "Incoming" : "Outgoing"} call · ${call.state.toLowerCase()}`,
+      body:
+        call.aiSummary ??
+        call.transcript ??
+        (call.durationSeconds ? `${call.durationSeconds} seconds` : call.policyReason ?? ""),
+      status: call.aiRequiresUser ? "NEEDS YOU" : call.state,
+      href: call.conversationId ? `/messages/${call.conversationId}` : "/phone",
+      mediaCount: 0,
     })),
     ...activityRows
-      .filter((a) => a.action !== "SMS_RECEIVED" && a.action !== "SMS_SENT")
+      .filter((a) => !duplicateActivity.test(a.action))
       .map((a) => ({
+        id: `activity:${a.id}`,
         at: a.createdAt,
-        kind: "ACTIVITY" as const,
-        title: a.action.replaceAll("_", " "),
+        category: (
+          a.action.includes("AUTOMATION")
+            ? "AUTOMATIONS"
+            : /(FACT|MEMORY)/.test(a.action)
+              ? "FACTS"
+              : /(REMINDER|COMMITMENT|TASK)/.test(a.action)
+                ? "REMINDERS"
+                : "SYSTEM"
+        ) as "AUTOMATIONS" | "FACTS" | "REMINDERS" | "SYSTEM",
+        title: a.action.replaceAll("_", " ").toLowerCase(),
         body: a.summary,
         status: a.actor,
+        href:
+          a.entityType === "automation" && a.entityId
+            ? `/automations/${a.entityId}`
+            : a.conversationId
+              ? `/messages/${a.conversationId}`
+              : null,
+        mediaCount: 0,
       })),
   ].sort((a, b) => b.at.getTime() - a.at.getTime());
 
@@ -355,7 +430,7 @@ export async function getCalendarItems(
       at: row.reminder.dueAt!,
       title: row.reminder.title,
       kind: row.reminder.kind === "DRAFT" ? "ESCALATED" : "HUMAN",
-      detailUrl: "/",
+      detailUrl: row.contact ? `/people/${row.contact.id}` : "/calendar",
       contactName: row.contact ? displayName(row.contact) : null,
     });
   }
@@ -480,6 +555,38 @@ export async function listCalls(limit = 50) {
     .limit(limit);
 }
 
+export async function listBlockedNumbers() {
+  const db = await getDb();
+  return db
+    .select()
+    .from(blockedNumbers)
+    .orderBy(desc(blockedNumbers.createdAt));
+}
+
+export async function getStyleMediaSummary(contactId: string) {
+  const db = await getDb();
+  const rows = await db
+    .select({
+      id: contactMedia.id,
+      status: contactMedia.analysisStatus,
+      retryCount: contactMedia.retryCount,
+      error: contactMedia.analysisError,
+      createdAt: contactMedia.createdAt,
+    })
+    .from(contactMedia)
+    .where(eq(contactMedia.contactId, contactId))
+    .orderBy(desc(contactMedia.createdAt));
+  return {
+    count: rows.length,
+    pending: rows.filter((r) => r.status === "PENDING" || r.status === "PROCESSING")
+      .length,
+    failed: rows.filter((r) => r.status === "FAILED").length,
+    latestError: rows.find((r) => r.error)
+      ? cleanErrorMessage(rows.find((r) => r.error)!.error)
+      : null,
+  };
+}
+
 export async function getAssistantHistory(limit = 40) {
   const db = await getDb();
   const rows = await db
@@ -488,15 +595,6 @@ export async function getAssistantHistory(limit = 40) {
     .orderBy(desc(assistantMessages.createdAt))
     .limit(limit);
   return rows.reverse();
-}
-
-export async function countStyleScreenshots(contactId: string): Promise<number> {
-  const db = await getDb();
-  const rows = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(contactMedia)
-    .where(eq(contactMedia.contactId, contactId));
-  return Number(rows[0]?.count ?? 0);
 }
 
 export async function getAttentionSummary() {

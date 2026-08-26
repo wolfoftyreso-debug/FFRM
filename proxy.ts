@@ -32,5 +32,7 @@ export default async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|icon.svg).*)"],
+  // Framework assets, RSC/HMR and WebSocket upgrade paths must bypass auth.
+  // User/application routes and every /api/* route remain protected below.
+  matcher: ["/((?!_next/|favicon.ico|icon.svg).*)"],
 };

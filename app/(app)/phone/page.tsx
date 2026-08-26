@@ -2,14 +2,24 @@ import Link from "next/link";
 import { format } from "date-fns";
 import {
   PhoneIncoming,
+  Phone,
   PhoneMissed,
   PhoneOutgoing,
   Voicemail as VoicemailIcon,
   PhoneOff,
 } from "lucide-react";
-import { listCalls, displayName } from "@/lib/queries";
-import { blockNumber, callContact } from "@/app/actions";
-import { Badge, Card, EmptyState, PageHeader } from "@/components/ui";
+import { listBlockedNumbers, listCalls, displayName } from "@/lib/queries";
+import {
+  blockNumber,
+  callContact,
+  markCallHandled,
+  unblockNumber,
+} from "@/app/actions";
+import {
+  ContactAvatar,
+  InsetSection,
+  SegmentedLinks,
+} from "@/components/apple-ui";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Phone" };
@@ -26,105 +36,139 @@ function stateIcon(state: string, direction: string) {
   );
 }
 
-function stateBadge(state: string): string {
-  switch (state) {
-    case "MISSED":
-      return "NEEDS YOU";
-    case "VOICEMAIL":
-      return "REMINDER";
-    case "COMPLETED":
-    case "CONNECTED":
-      return "COMPLETED";
-    case "REJECTED":
-      return "DISABLED";
-    default:
-      return state;
-  }
-}
-
-export default async function PhonePage() {
-  const rows = await listCalls(60);
+export default async function PhonePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ view?: string }>;
+}) {
+  const view = (await searchParams).view ?? "recents";
+  const [allRows, blocked] = await Promise.all([
+    listCalls(100),
+    listBlockedNumbers(),
+  ]);
+  const blockedSet = new Set(blocked.map((b) => b.phoneNumber));
+  const rows =
+    view === "missed"
+      ? allRows.filter(({ call }) => call.state === "MISSED")
+      : view === "voicemail"
+        ? allRows.filter(
+            ({ call }) => call.state === "VOICEMAIL" || !!call.recordingUrl,
+          )
+        : allRows;
 
   return (
     <>
-      <PageHeader
-        title="Phone"
-        subtitle="Calls on your number — routed by your relationships"
-      />
+      <div className="mb-4">
+        <p className="text-sm font-medium text-[var(--system-blue)]">
+          Your 46elks number
+        </p>
+        <h1 className="text-[34px] font-bold tracking-tight">Phone</h1>
+      </div>
+      <div className="mb-5">
+        <SegmentedLinks
+          active={view}
+          items={[
+            { id: "recents", label: "Recents", href: "/phone?view=recents" },
+            { id: "missed", label: "Missed", href: "/phone?view=missed" },
+            {
+              id: "voicemail",
+              label: "Voicemail",
+              href: "/phone?view=voicemail",
+            },
+          ]}
+        />
+      </div>
       {rows.length === 0 ? (
-        <EmptyState text="No calls yet. Incoming calls to your 46elks number appear here." />
+        <div className="ios-inset-group px-6 py-12 text-center">
+          <Phone className="mx-auto h-10 w-10 text-[var(--system-blue)]" />
+          <p className="mt-3 text-lg font-semibold">No calls here</p>
+          <p className="mt-1 text-sm text-[var(--secondary-label)]">
+            Calls to your number will appear automatically.
+          </p>
+        </div>
       ) : (
-        <div className="space-y-2">
+        <InsetSection>
           {rows.map(({ call, contact }) => {
             const who = contact ? displayName(contact) : call.fromNumber;
+            const number =
+              call.direction === "INBOUND" ? call.fromNumber : call.toNumber;
+            const isBlocked = blockedSet.has(number);
             return (
-              <Card key={call.id}>
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex min-w-0 items-start gap-3">
-                    <div className="mt-0.5">{stateIcon(call.state, call.direction)}</div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium">
-                        {contact ? (
-                          <Link
-                            href={`/people/${contact.id}`}
-                            className="hover:underline"
-                          >
-                            {who}
-                          </Link>
-                        ) : (
-                          who
-                        )}
+              <div key={call.id} className="ios-hairline px-4 py-3">
+                <div className="flex items-start gap-3">
+                  <ContactAvatar name={who} />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      {stateIcon(call.state, call.direction)}
+                      <p
+                        className={`truncate text-[17px] font-semibold ${
+                          call.state === "MISSED"
+                            ? "text-[var(--system-red)]"
+                            : ""
+                        }`}
+                      >
+                        {who}
                       </p>
-                      <p className="text-xs text-stone-400">
-                        {call.direction === "INBOUND" ? "Incoming" : "Outgoing"} ·{" "}
-                        {call.state.toLowerCase()}
-                        {call.durationSeconds
-                          ? ` · ${Math.floor(call.durationSeconds / 60)}:${String(call.durationSeconds % 60).padStart(2, "0")}`
-                          : ""}{" "}
-                        · {format(call.createdAt, "d MMM HH:mm")}
-                      </p>
-                      {call.policyReason ? (
-                        <p className="mt-0.5 text-xs text-stone-400">
-                          Policy: {call.policyReason}
-                        </p>
-                      ) : null}
-                      {call.aiSummary ? (
-                        <div className="mt-2 rounded-md bg-stone-50 p-2">
-                          <p className="text-[10px] font-semibold uppercase tracking-wide text-stone-400">
-                            AI summary
-                          </p>
-                          <p className="text-sm text-stone-700">{call.aiSummary}</p>
-                          {call.aiRequiresUser ? (
-                            <p className="mt-1 text-xs font-medium text-red-600">
-                              Requires you.
-                            </p>
-                          ) : null}
-                        </div>
-                      ) : call.transcript ? (
-                        <p className="mt-1.5 line-clamp-2 text-sm text-stone-600">
-                          “{call.transcript}”
-                        </p>
-                      ) : call.state === "VOICEMAIL" && call.error ? (
-                        <p className="mt-1.5 text-xs text-amber-700">
-                          Voicemail received — transcription failed.
-                        </p>
-                      ) : null}
                     </div>
+                    <p className="mt-0.5 text-[14px] text-[var(--secondary-label)]">
+                      {call.direction === "INBOUND" ? "Incoming" : "Outgoing"} ·{" "}
+                      {call.state.toLowerCase()}
+                      {call.durationSeconds
+                        ? ` · ${Math.floor(call.durationSeconds / 60)}:${String(call.durationSeconds % 60).padStart(2, "0")}`
+                        : ""}{" "}
+                      · {format(call.createdAt, "d MMM, HH:mm")}
+                    </p>
+                    {call.aiSummary ? (
+                      <div className="mt-2 rounded-xl bg-black/[0.04] p-3">
+                        <p className="text-xs font-semibold text-[var(--system-blue)]">
+                          AI SUMMARY
+                        </p>
+                        <p className="mt-0.5 text-[14px]">{call.aiSummary}</p>
+                        {call.aiRequiresUser ? (
+                          <p className="mt-1 text-xs font-semibold text-[var(--system-red)]">
+                            Requires you
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : call.transcript ? (
+                      <p className="mt-2 line-clamp-3 text-[14px] text-[var(--secondary-label)]">
+                        “{call.transcript}”
+                      </p>
+                    ) : call.state === "VOICEMAIL" && call.error ? (
+                      <p className="mt-2 text-xs text-[var(--system-orange)]">
+                        Voicemail saved · transcription retry pending/failed
+                      </p>
+                    ) : null}
+                    {call.recordingUrl ? (
+                      <audio
+                        controls
+                        preload="none"
+                        className="mt-2 h-9 w-full max-w-sm"
+                        src={`/api/calls/${call.id}/recording`}
+                      />
+                    ) : null}
                   </div>
-                  <Badge label={stateBadge(call.state)} />
                 </div>
-                <div className="mt-3 flex flex-wrap gap-2">
+                <div className="mt-3 flex flex-wrap gap-1">
                   {contact?.phoneNumber ? (
                     <form action={callContact.bind(null, contact.id)}>
-                      <button className="rounded-md bg-stone-900 px-3 py-1 text-xs font-medium text-white hover:bg-stone-700">
+                      <button className="rounded-lg px-3 text-sm font-medium text-[var(--system-blue)]">
                         Call
                       </button>
                     </form>
                   ) : null}
+                  {call.conversationId ? (
+                    <Link
+                      href={`/messages/${call.conversationId}`}
+                      className="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-[var(--system-blue)]"
+                    >
+                      Conversation
+                    </Link>
+                  ) : null}
                   {contact ? (
                     <Link
                       href={`/people/${contact.id}`}
-                      className="rounded-md border border-stone-300 px-3 py-1 text-xs text-stone-700 hover:bg-stone-50"
+                      className="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-[var(--system-blue)]"
                     >
                       Contact
                     </Link>
@@ -132,37 +176,29 @@ export default async function PhonePage() {
                     <>
                       <Link
                         href={`/people/new?phone=${encodeURIComponent(call.direction === "INBOUND" ? call.fromNumber : call.toNumber)}`}
-                        className="rounded-md border border-stone-300 px-3 py-1 text-xs text-stone-700 hover:bg-stone-50"
+                        className="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-[var(--system-blue)]"
                       >
                         Create contact
                       </Link>
-                      <form
-                        action={blockNumber.bind(
-                          null,
-                          call.direction === "INBOUND" ? call.fromNumber : call.toNumber,
-                        )}
-                      >
-                        <button className="rounded-md px-3 py-1 text-xs text-stone-400 hover:text-red-600">
-                          Block
+                      <form action={(isBlocked ? unblockNumber : blockNumber).bind(null, number)}>
+                        <button className="rounded-lg px-3 text-sm font-medium text-[var(--system-red)]">
+                          {isBlocked ? "Unblock" : "Block"}
                         </button>
                       </form>
                     </>
                   )}
-                  {call.transcript ? (
-                    <details className="text-xs text-stone-500">
-                      <summary className="cursor-pointer rounded-md border border-stone-200 px-3 py-1 hover:bg-stone-50">
-                        Transcript
-                      </summary>
-                      <p className="mt-2 max-w-prose whitespace-pre-wrap rounded-md bg-stone-50 p-2">
-                        {call.transcript}
-                      </p>
-                    </details>
+                  {call.aiRequiresUser ? (
+                    <form action={markCallHandled.bind(null, call.id)}>
+                      <button className="rounded-lg px-3 text-sm font-medium text-[var(--system-green)]">
+                        Mark handled
+                      </button>
+                    </form>
                   ) : null}
                 </div>
-              </Card>
+              </div>
             );
           })}
-        </div>
+        </InsetSection>
       )}
     </>
   );

@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, lt, or, sql } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { contacts, mediaAssets, messages } from "@/lib/db/schema";
 import { fetchProviderImage, sanitizeImage } from "@/lib/media/image";
@@ -29,13 +29,26 @@ export async function processInboundMms(messageId: string): Promise<void> {
     : [];
 
   for (const asset of assets) {
+    const staleLease = new Date(Date.now() - 5 * 60 * 1000);
     const claimed = await db
       .update(mediaAssets)
-      .set({ analysisStatus: "PROCESSING" })
+      .set({
+        analysisStatus: "PROCESSING",
+        processingStartedAt: new Date(),
+        processingAttemptCount: sql`${mediaAssets.processingAttemptCount} + 1`,
+      })
       .where(
         and(
           eq(mediaAssets.id, asset.id),
-          eq(mediaAssets.analysisStatus, "PENDING"),
+          lt(mediaAssets.processingAttemptCount, 3),
+          or(
+            eq(mediaAssets.analysisStatus, "PENDING"),
+            eq(mediaAssets.analysisStatus, "ANALYZING"),
+            and(
+              eq(mediaAssets.analysisStatus, "PROCESSING"),
+              lt(mediaAssets.processingStartedAt, staleLease),
+            ),
+          ),
         ),
       )
       .returning();
@@ -55,7 +68,8 @@ export async function processInboundMms(messageId: string): Promise<void> {
           byteSize: clean.data.byteLength,
           width: clean.width,
           height: clean.height,
-          analysisStatus: contact ? "ANALYZING" : "STORED",
+          analysisStatus: contact ? "PROCESSING" : "STORED",
+          processingStartedAt: contact ? claimed[0].processingStartedAt : null,
         })
         .where(eq(mediaAssets.id, asset.id));
 
@@ -77,6 +91,7 @@ export async function processInboundMms(messageId: string): Promise<void> {
             analysisConfidence: understood.confidence,
             analysis: understood.analysis,
             analyzedAt: new Date(),
+            processingStartedAt: null,
           })
           .where(eq(mediaAssets.id, asset.id));
         await logActivity({
@@ -95,12 +110,14 @@ export async function processInboundMms(messageId: string): Promise<void> {
       }
     } catch (err) {
       const error = err instanceof Error ? err.message : String(err);
+      const finalFailure = claimed[0].processingAttemptCount >= 3;
       await db
         .update(mediaAssets)
         .set({
-          analysisStatus: "FAILED",
+          analysisStatus: finalFailure ? "FAILED" : "PENDING",
           analysisError: error,
           analyzedAt: new Date(),
+          processingStartedAt: null,
         })
         .where(eq(mediaAssets.id, asset.id));
       await logActivity({
@@ -113,6 +130,14 @@ export async function processInboundMms(messageId: string): Promise<void> {
         entityId: asset.id,
       });
     }
+  }
+
+  const remaining = await db
+    .select({ status: mediaAssets.analysisStatus })
+    .from(mediaAssets)
+    .where(eq(mediaAssets.messageId, messageId));
+  if (remaining.some((a) => a.status === "PENDING" || a.status === "PROCESSING")) {
+    return; // cron fallback retries; do not mark the Message handled yet.
   }
 
   // The ordinary inbound loop now sees media observations in the message and

@@ -30,6 +30,13 @@ Your Swedish number → 46elks → this app → relationship/context/policy → 
   kept separate from the stored provenance screenshots
 - **Assistant chat** — ask "Vem behöver uppmärksamhet?", "När pratade jag med
   Johan senast?" — the assistant answers with tools over your real data
+- **Apple-native operational UI** — iOS system colors/typography, desktop
+  sidebar and mobile Phone/Messages/Contacts/More tab bar, grouped lists,
+  initials avatars, native message bubbles and safe-area-aware sticky composer
+- **Professional Contacts** — A–Z grouping, search/filter/sort, hero card with
+  Call/Message/Remind actions, rich work/interests fields, and unified history
+  filterable by Messages, Photos, Calls, Voicemail, Automation, Facts,
+  Reminders and System (40-event pagination)
 - Plus: relationship memory, personal calendar, automation engine with a
   central minute-level scheduler, and a complete audit history
 
@@ -158,6 +165,12 @@ with a `nextRunAt`; the dispatcher executes what is due and computes the next
 occurrence. Executions are idempotent via a unique
 `(automationId, occurrenceKey)` constraint — a repeated invocation can never
 send the same SMS twice.
+
+The dispatcher also owns recovery: a database lease prevents overlapping
+runs; failed automations retry after 1 and 2 minutes; stale ambiguous RUNNING
+executions are stopped for manual review (never blindly resent); stale inbound
+messages, MMS media, voicemails and communication-style extraction are
+reclaimed. See `ARCHITECTURE.md` for exact state semantics.
 
 ## Run locally
 

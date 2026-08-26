@@ -1,7 +1,17 @@
 import { format } from "date-fns";
-import { getOwner, getSystemHealth, listRecentAiCalls } from "@/lib/queries";
+import {
+  getOwner,
+  getSystemHealth,
+  listBlockedNumbers,
+  listRecentAiCalls,
+} from "@/lib/queries";
 import { getSystemState } from "@/lib/system-state";
-import { logout, updateGlobalCallPolicy, updateOwnerSettings } from "@/app/actions";
+import {
+  logout,
+  unblockNumber,
+  updateGlobalCallPolicy,
+  updateOwnerSettings,
+} from "@/app/actions";
 import { Card, PageHeader, PrimaryButton, inputClass, labelClass } from "@/components/ui";
 import { fastModel, smartModel } from "@/lib/ai/config";
 import { DEFAULT_GLOBAL_CALL_POLICY } from "@/lib/voice/policy";
@@ -26,11 +36,12 @@ function healthValue(value: string | undefined): string {
 }
 
 export default async function SettingsPage() {
-  const [owner, health, state, aiCalls] = await Promise.all([
+  const [owner, health, state, aiCalls, blockedNumbers] = await Promise.all([
     getOwner(),
     getSystemHealth(),
     getSystemState(),
     listRecentAiCalls(15),
+    listBlockedNumbers(),
   ]);
 
   return (
@@ -104,6 +115,37 @@ export default async function SettingsPage() {
             </p>
           )}
         </Card>
+
+        {blockedNumbers.length > 0 ? (
+          <Card>
+            <h2 className="mb-1 text-sm font-semibold text-stone-700">
+              Blocked numbers
+            </h2>
+            <p className="mb-3 text-sm text-stone-500">
+              These callers are rejected before call policy runs.
+            </p>
+            <div className="divide-y divide-stone-100">
+              {blockedNumbers.map((blocked) => (
+                <div
+                  key={blocked.phoneNumber}
+                  className="flex min-h-12 items-center justify-between gap-3"
+                >
+                  <div>
+                    <p className="text-sm font-medium">{blocked.phoneNumber}</p>
+                    {blocked.reason ? (
+                      <p className="text-xs text-stone-400">{blocked.reason}</p>
+                    ) : null}
+                  </div>
+                  <form action={unblockNumber.bind(null, blocked.phoneNumber)}>
+                    <button className="px-3 text-sm font-medium text-[var(--system-red)]">
+                      Unblock
+                    </button>
+                  </form>
+                </div>
+              ))}
+            </div>
+          </Card>
+        ) : null}
 
         <Card>
           <h2 className="mb-1 text-sm font-semibold text-stone-700">

@@ -72,6 +72,7 @@ export async function sendMediaMessage(input: {
     .where(eq(mediaAssets.id, asset.id));
   asset.storageUrl = `/api/media/${asset.id}`;
 
+  let acceptedProviderId: string | null = null;
   try {
     const provider = await getMessagingProvider();
     if (!provider.sendMms) throw new Error("Messaging provider does not support MMS");
@@ -80,6 +81,7 @@ export async function sendMediaMessage(input: {
       text: input.text,
       imageDataUrl: dataUrl,
     });
+    acceptedProviderId = result.providerMessageId;
     const [updated] = await db
       .update(messages)
       .set({
@@ -113,15 +115,23 @@ export async function sendMediaMessage(input: {
     return { ok: true as const, message: updated, asset };
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err);
+    const ambiguous = acceptedProviderId !== null;
     const [failed] = await db
       .update(messages)
-      .set({ status: "FAILED", error, failedAt: new Date() })
+      .set({
+        status: ambiguous ? "SENT_UNKNOWN" : "FAILED",
+        providerMessageId: acceptedProviderId,
+        error,
+        failedAt: ambiguous ? null : new Date(),
+      })
       .where(eq(messages.id, message.id))
       .returning();
     await logActivity({
       actor: input.sender,
-      action: "MMS_FAILED",
-      summary: `MMS to ${input.to} failed: ${error.slice(0, 160)}`,
+      action: ambiguous ? "MMS_STATUS_UNKNOWN" : "MMS_FAILED",
+      summary: ambiguous
+        ? `46elks accepted MMS ${acceptedProviderId}, but local confirmation failed; automatic resend blocked`
+        : `MMS to ${input.to} failed: ${error.slice(0, 160)}`,
       contactId: input.contactId,
       conversationId,
       entityType: "message",

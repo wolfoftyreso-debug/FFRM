@@ -1,6 +1,7 @@
 import type { Contact } from "@/lib/db/schema";
 import {
   proposeRelationshipFromDescription,
+  retryStyleExtraction,
   updateAdvancedRelationship,
   uploadStyleScreenshots,
 } from "@/app/actions";
@@ -46,9 +47,15 @@ const CALL_POLICIES: { value: string; label: string }[] = [
 export function RelationshipSection({
   contact,
   screenshotCount,
+  stylePending = 0,
+  styleFailed = 0,
+  styleError,
 }: {
   contact: Contact;
   screenshotCount: number;
+  stylePending?: number;
+  styleFailed?: number;
+  styleError?: string | null;
 }) {
   const vector = (contact.relationshipVector ?? {}) as Record<string, number>;
   const envelope = resolveEnvelope(
@@ -179,6 +186,25 @@ export function RelationshipSection({
             ? ` ${screenshotCount} screenshot(s) stored as provenance.`
             : ""}
         </p>
+        {stylePending > 0 ? (
+          <p className="mt-2 rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-700">
+            Learning from {stylePending} screenshot{stylePending === 1 ? "" : "s"}.
+            If interrupted, the scheduler retries automatically.
+          </p>
+        ) : null}
+        {styleFailed > 0 ? (
+          <div className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">
+            <p>
+              Style learning needs attention
+              {styleError ? `: ${styleError.slice(0, 120)}` : "."}
+            </p>
+            <form action={retryStyleExtraction.bind(null, contact.id)}>
+              <button className="mt-1 font-semibold text-[var(--system-blue)]">
+                Retry analysis
+              </button>
+            </form>
+          </div>
+        ) : null}
         <form
           action={uploadStyleScreenshots.bind(null, contact.id)}
           className="mt-2"

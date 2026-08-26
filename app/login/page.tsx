@@ -30,14 +30,15 @@ export default async function LoginPage({
           <input
             type="password"
             name="password"
+            autoComplete="current-password"
             required
             autoFocus
-            className="mt-1 w-full rounded-md border border-stone-300 px-3 py-2 text-sm focus:border-stone-500 focus:outline-none"
+            className="mt-1 h-12 w-full rounded-xl border border-black/10 bg-black/[0.035] px-3 text-[16px] focus:outline-none"
           />
         </label>
         <button
           type="submit"
-          className="mt-6 w-full rounded-md bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700"
+          className="mt-6 h-12 w-full rounded-xl bg-[var(--system-blue)] px-4 text-[16px] font-semibold text-white"
         >
           Sign in
         </button>

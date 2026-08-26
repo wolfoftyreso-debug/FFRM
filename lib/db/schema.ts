@@ -10,6 +10,7 @@ import {
   uniqueIndex,
   index,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { createId } from "@/lib/id";
 
 const id = () => text("id").primaryKey().$defaultFn(createId);
@@ -253,7 +254,17 @@ export const conversations = pgTable(
       withTimezone: true,
     }),
   },
-  (t) => [index("conversations_contact_idx").on(t.contactId)],
+  (t) => [
+    index("conversations_contact_idx").on(t.contactId),
+    uniqueIndex("conversations_open_contact_unique")
+      .on(t.contactId)
+      .where(sql`${t.status} = 'OPEN' AND ${t.contactId} IS NOT NULL`),
+    uniqueIndex("conversations_open_peer_unique")
+      .on(t.peerNumber)
+      .where(
+        sql`${t.status} = 'OPEN' AND ${t.contactId} IS NULL AND ${t.peerNumber} IS NOT NULL`,
+      ),
+  ],
 );
 
 export const messages = pgTable(
@@ -284,6 +295,12 @@ export const messages = pgTable(
     error: text("error"),
     /** Set when inbound processing (triage) has claimed this message. */
     processedAt: timestamp("processed_at", { withTimezone: true }),
+    processingStartedAt: timestamp("processing_started_at", {
+      withTimezone: true,
+    }),
+    processingAttemptCount: integer("processing_attempt_count")
+      .notNull()
+      .default(0),
     createdAt: createdAt(),
     sentAt: timestamp("sent_at", { withTimezone: true }),
     deliveredAt: timestamp("delivered_at", { withTimezone: true }),
@@ -343,10 +360,18 @@ export const mediaAssets = pgTable(
     analysis: jsonb("analysis").$type<MediaAnalysis>(),
     analysisError: text("analysis_error"),
     analyzedAt: timestamp("analyzed_at", { withTimezone: true }),
+    processingStartedAt: timestamp("processing_started_at", {
+      withTimezone: true,
+    }),
+    processingAttemptCount: integer("processing_attempt_count")
+      .notNull()
+      .default(0),
+    updatedAt: updatedAt(),
   },
   (t) => [
     index("media_assets_message_idx").on(t.messageId),
     index("media_assets_conversation_idx").on(t.conversationId),
+    uniqueIndex("media_assets_provider_media_unique").on(t.providerMediaId),
   ],
 );
 
@@ -455,6 +480,7 @@ export const automationExecutions = pgTable(
     aiOutputTokens: integer("ai_output_tokens"),
     error: text("error"),
     retryCount: integer("retry_count").notNull().default(0),
+    nextRetryAt: timestamp("next_retry_at", { withTimezone: true }),
     createdAt: createdAt(),
   },
   (t) => [
@@ -549,6 +575,7 @@ export const calls = pgTable(
     direction: text("direction").notNull(), // INBOUND | OUTBOUND
     fromNumber: text("from_number").notNull(),
     toNumber: text("to_number").notNull(),
+    routedToNumber: text("routed_to_number"),
     /** RINGING → CONNECTED | VOICEMAIL | MISSED | REJECTED | FAILED | COMPLETED */
     state: text("state").notNull().default("RINGING"),
     /** What the policy engine decided: CONNECT | VOICEMAIL | SCREEN | REJECT. */
@@ -563,6 +590,17 @@ export const calls = pgTable(
     aiRequiresUser: boolean("ai_requires_user"),
     /** Set when recording post-processing has been claimed. */
     processedAt: timestamp("processed_at", { withTimezone: true }),
+    recordingProcessingStartedAt: timestamp(
+      "recording_processing_started_at",
+      { withTimezone: true },
+    ),
+    recordingAttemptCount: integer("recording_attempt_count")
+      .notNull()
+      .default(0),
+    missedNotifiedAt: timestamp("missed_notified_at", { withTimezone: true }),
+    voicemailNotifiedAt: timestamp("voicemail_notified_at", {
+      withTimezone: true,
+    }),
     error: text("error"),
     createdAt: createdAt(),
     answeredAt: timestamp("answered_at", { withTimezone: true }),
@@ -594,6 +632,10 @@ export const contactMedia = pgTable(
     kind: text("kind").notNull().default("STYLE_SCREENSHOT"),
     mimeType: text("mime_type").notNull(),
     dataBase64: text("data_base64").notNull(),
+    analysisStatus: text("analysis_status").notNull().default("PENDING"),
+    retryCount: integer("retry_count").notNull().default(0),
+    analysisError: text("analysis_error"),
+    analyzedAt: timestamp("analyzed_at", { withTimezone: true }),
     createdAt: createdAt(),
   },
   (t) => [index("contact_media_contact_idx").on(t.contactId)],

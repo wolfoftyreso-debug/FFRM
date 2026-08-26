@@ -26,6 +26,46 @@ The central scheduler is unchanged: one Vercel Cron per minute →
 `/api/cron/dispatcher` → due automations from the database, plus fallback
 reprocessing of unclaimed inbound SMS/MMS and unprocessed voicemail recordings.
 
+## Reliability and recovery model
+
+Database state — never process memory — is the source of truth:
+
+- **Inbound SMS/MMS:** unique provider id; expiring processing lease;
+  `processedAt` is written only after reply/escalation/extraction completes.
+  Generic failures release the lease for cron retry (max 3); final failure
+  escalates. A provider failure after an approved auto-reply escalates instead
+  of silently marking the message handled.
+- **MMS:** Message + all provider media metadata + interaction timestamps are
+  one transaction. Per-asset leases and attempt counters reclaim stale
+  `PROCESSING`; failed fetch/vision work stays unprocessed until cron retries,
+  then fails closed to escalation.
+- **Outbound SMS/MMS:** local PENDING row first. Explicit provider failure is
+  FAILED. If the provider accepted but local confirmation failed, status is
+  `SENT_UNKNOWN`; automatic resend is blocked to prevent duplicate texts.
+  Cron converts stale PENDING rows to this visible ambiguous state.
+- **Conversations:** partial unique indexes guarantee one OPEN thread per
+  contact or unknown peer even under concurrent webhooks.
+- **Voice:** duplicate `voice_start` returns the persisted disposition and
+  original routing target (policy changes cannot alter an in-flight retry).
+  `after-connect` is state-idempotent; missed-call notification is atomically
+  deduplicated.
+- **Voicemail:** recording-processing lease + attempts; Gateway/fetch failures
+  retry, then notify without transcript. `processedAt` means DB + owner
+  notification handled.
+- **Automations:** a cron lease prevents overlapping dispatchers. Explicit
+  failures retry at 1m/2m in the same permanent execution row. A stale RUNNING
+  row is *not* resent (side effect ambiguous); it becomes terminal FAILED for
+  manual review. Disabled automations never retry.
+- **Style screenshots:** sanitized provenance is persisted with status,
+  attempt count and error. Extraction rebuilds the contact profile from the
+  latest 10 stored screenshots; cron retries failed/stale jobs and the contact
+  UI exposes status + manual retry.
+- **Cron fallbacks:** due automations, execution retries, stale RUNNING
+  recovery, stale outbound ambiguity, inbound messages, MMS assets, voicemail
+  recordings and style extraction all converge through the dispatcher.
+
+All persisted errors are stripped of ANSI/control sequences before rendering.
+
 ## Unified conversation/message model
 
 `Conversation` is contact-centric. One thread contains `Message` rows from

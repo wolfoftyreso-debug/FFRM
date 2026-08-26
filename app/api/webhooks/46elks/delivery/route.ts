@@ -2,13 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb } from "@/lib/db";
 import { messages } from "@/lib/db/schema";
-import { and, eq } from "drizzle-orm";
+import { and, eq, ne, sql } from "drizzle-orm";
 import { logActivity } from "@/lib/activity";
 import { optionalEnv } from "@/lib/env";
 
 const deliverySchema = z.object({
   id: z.string().min(1),
-  status: z.string().min(1), // "delivered" | "failed"
+  status: z.enum(["delivered", "failed"]),
   delivered: z.string().optional(),
 });
 
@@ -45,6 +45,7 @@ export async function POST(req: NextRequest) {
         eq(messages.provider, "46elks"),
         eq(messages.direction, "OUTBOUND"),
         eq(messages.providerMessageId, parsed.id),
+        isDelivered ? sql`true` : ne(messages.status, "DELIVERED"),
       ),
     )
     .returning({ id: messages.id, contactId: messages.contactId });

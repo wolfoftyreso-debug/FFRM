@@ -12,7 +12,7 @@ export async function POST(req: Request) {
     const form = await req.formData();
     const contactId = String(form.get("contactId") ?? "");
     const file = form.get("image");
-    if (!(file instanceof File) || !contactId) {
+    if (!file || typeof file === "string" || !contactId) {
       return NextResponse.json({ error: "contactId and image required" }, { status: 400 });
     }
     const db = await getDb();

@@ -40,6 +40,15 @@ export function ContactFormFields({ contact }: { contact?: Contact | null }) {
         />
       </label>
       <label className={labelClass}>
+        Display name
+        <input
+          name="displayName"
+          placeholder="How the name appears in Phone and Messages"
+          defaultValue={contact?.displayName ?? ""}
+          className={inputClass}
+        />
+      </label>
+      <label className={labelClass}>
         Phone number
         <input
           name="phoneNumber"
@@ -176,6 +185,41 @@ export function ContactFormFields({ contact }: { contact?: Contact | null }) {
           name="notes"
           rows={3}
           defaultValue={contact?.notes ?? ""}
+          className={inputClass}
+        />
+      </label>
+      <div className="sm:col-span-2 mt-2 border-t border-black/10 pt-4">
+        <h3 className="text-sm font-semibold text-stone-800">Work & interests</h3>
+      </div>
+      <label className={labelClass}>
+        Company
+        <input
+          name="company"
+          defaultValue={contact?.profile?.company ?? ""}
+          className={inputClass}
+        />
+      </label>
+      <label className={labelClass}>
+        Job title
+        <input
+          name="jobTitle"
+          defaultValue={contact?.profile?.jobTitle ?? ""}
+          className={inputClass}
+        />
+      </label>
+      <label className={labelClass}>
+        Interests (comma-separated)
+        <input
+          name="interests"
+          defaultValue={contact?.profile?.interests?.join(", ") ?? ""}
+          className={inputClass}
+        />
+      </label>
+      <label className={labelClass}>
+        Hobbies (comma-separated)
+        <input
+          name="hobbies"
+          defaultValue={contact?.profile?.hobbies?.join(", ") ?? ""}
           className={inputClass}
         />
       </label>

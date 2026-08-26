@@ -10,6 +10,7 @@ import {
 } from "@/app/actions";
 import { Badge, Card, PageHeader, PrimaryButton, SecondaryButton } from "@/components/ui";
 import { AutomationFormFields } from "@/components/automation-form";
+import { ConfirmForm } from "@/components/confirm-form";
 
 export const dynamic = "force-dynamic";
 
@@ -55,11 +56,11 @@ export default async function AutomationDetailPage({
             {automation.enabled ? "Disable" : "Enable"}
           </SecondaryButton>
         </form>
-        <form action={deleteAutomation.bind(null, automation.id)}>
-          <button className="rounded-md px-3 py-1.5 text-sm text-stone-400 hover:text-red-600">
-            Delete
-          </button>
-        </form>
+        <ConfirmForm
+          action={deleteAutomation.bind(null, automation.id)}
+          label="Delete"
+          confirmText={`Delete automation "${automation.name}" and its execution history?`}
+        />
       </div>
 
       <div className="space-y-6">

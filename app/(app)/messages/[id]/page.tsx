@@ -5,12 +5,14 @@ import { getConversationDetail, conversationStateLabel, displayName } from "@/li
 import {
   closeConversation,
   pauseConversation,
+  reopenConversation,
   returnConversationToAi,
   takeOverConversation,
 } from "@/app/actions";
 import { Badge, Card } from "@/components/ui";
 import { AUTONOMY_LABELS } from "@/lib/ai/policy";
 import { MessageComposer } from "@/components/message-composer";
+import { ContactAvatar } from "@/components/apple-ui";
 
 export const dynamic = "force-dynamic";
 
@@ -32,21 +34,32 @@ export default async function ConversationPage({
     : (conversation.peerNumber ?? "Unknown");
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
       <div>
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <div>
-            <h1 className="text-xl font-semibold">{title}</h1>
+        <header className="sticky top-0 z-10 mb-3 flex items-center justify-between gap-3 border-b border-black/10 bg-[var(--system-gray-6)]/90 py-2 backdrop-blur-xl">
+          <div className="flex min-w-0 items-center gap-3">
+            <ContactAvatar name={title} />
+            <div className="min-w-0">
+            <h1 className="truncate text-[17px] font-semibold">{title}</h1>
             {conversation.escalationReason ? (
-              <p className="mt-1 text-sm text-red-600">
+              <p className="truncate text-xs text-[var(--system-red)]">
                 {conversation.escalationReason}
               </p>
-            ) : null}
+            ) : (
+              <p className="text-xs text-[var(--secondary-label)]">
+                {conversation.aiControlState === "AI"
+                  ? "AI handling low-risk messages"
+                  : conversation.aiControlState === "USER"
+                    ? "You are handling"
+                    : conversation.aiControlState.toLowerCase()}
+              </p>
+            )}
+            </div>
           </div>
           <Badge label={stateLabel} />
-        </div>
+        </header>
 
-        <Card className="space-y-3">
+        <div className="ios-inset-group ios-scroll min-h-[45vh] space-y-2 p-3 md:p-4">
           {messages.length === 0 ? (
             <p className="py-6 text-center text-sm text-stone-400">
               No messages yet.
@@ -72,9 +85,9 @@ export default async function ConversationPage({
                   className={`max-w-[80%] rounded-2xl px-3.5 py-2 text-sm ${
                     m.direction === "OUTBOUND"
                       ? m.sender === "AI"
-                        ? "bg-violet-600 text-white"
-                        : "bg-stone-900 text-white"
-                      : "bg-stone-100 text-stone-900"
+                        ? "rounded-br-md bg-violet-500 text-white"
+                        : "rounded-br-md bg-[var(--system-blue)] text-white"
+                      : "rounded-bl-md bg-[#e9e9eb] text-black"
                   }`}
                 >
                   {assets.map((asset) =>
@@ -163,7 +176,7 @@ export default async function ConversationPage({
               );
             })
           )}
-        </Card>
+        </div>
 
         <div className="mt-4 flex flex-wrap gap-2">
           {conversation.aiControlState !== "USER" && (
@@ -191,6 +204,13 @@ export default async function ConversationPage({
             <form action={closeConversation.bind(null, conversation.id)}>
               <button className="rounded-md px-3 py-1.5 text-sm text-stone-400 hover:text-stone-600">
                 Close
+              </button>
+            </form>
+          )}
+          {conversation.status === "CLOSED" && (
+            <form action={reopenConversation.bind(null, conversation.id)}>
+              <button className="rounded-lg px-3 text-sm font-medium text-[var(--system-blue)]">
+                Reopen
               </button>
             </form>
           )}

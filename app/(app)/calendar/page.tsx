@@ -2,6 +2,7 @@ import Link from "next/link";
 import { addMonths, format, startOfMonth, endOfMonth } from "date-fns";
 import { getCalendarItems } from "@/lib/queries";
 import { Badge, Card, EmptyState, PageHeader } from "@/components/ui";
+import { addReminder } from "@/app/actions";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Calendar" };
@@ -64,6 +65,28 @@ export default async function CalendarPage({
           <Badge label="ESCALATED" /> requires you
         </span>
       </div>
+
+      <details className="ios-inset-group mb-5 px-4 py-3">
+        <summary className="cursor-pointer text-[15px] font-semibold text-[var(--system-blue)]">
+          Add reminder
+        </summary>
+        <form action={addReminder.bind(null, null)} className="mt-3 grid gap-2 sm:grid-cols-[1fr_220px_auto]">
+          <input
+            name="title"
+            required
+            placeholder="What should I remember?"
+            className="h-11 rounded-xl border border-black/10 bg-white px-3 text-sm"
+          />
+          <input
+            name="dueAt"
+            type="datetime-local"
+            className="h-11 rounded-xl border border-black/10 bg-white px-3 text-sm"
+          />
+          <button className="rounded-xl bg-[var(--system-blue)] px-4 text-sm font-semibold text-white">
+            Save
+          </button>
+        </form>
+      </details>
 
       {byDay.size === 0 ? (
         <EmptyState text="Nothing this month." />
