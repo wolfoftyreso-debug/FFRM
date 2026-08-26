@@ -38,7 +38,9 @@ export default async function MorePage() {
           <div className="min-w-0 flex-1">
             <p className="truncate text-[17px] font-semibold">{owner.name}</p>
             <p className="truncate text-[14px] text-[var(--secondary-label)]">
-              {owner.phoneNumber ?? "Dela QR, vCard, SMS och mail"}
+              {[owner.jobTitle, owner.company, owner.phoneNumber]
+                .filter(Boolean)
+                .join(" · ") || "Dela QR, vCard, SMS och mail"}
             </p>
           </div>
           <QrCode className="h-6 w-6 text-[var(--system-blue)]" />
