@@ -1,6 +1,7 @@
 import { getAttentionSummary } from "@/lib/queries";
 import { AppNavigation } from "@/components/app-navigation";
 import { ensureOwner } from "@/lib/auth/owner";
+import { ContextBackBar } from "@/components/context-back-bar";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,7 @@ export default async function AppLayout({
       <AppNavigation messageBadge={messageBadge} phoneBadge={phoneBadge} />
       <div className="min-w-0 flex-1 pb-20 md:pb-0">
         <main className="mx-auto max-w-5xl px-4 py-5 md:px-8 md:py-8">
+          <ContextBackBar />
           {children}
         </main>
       </div>

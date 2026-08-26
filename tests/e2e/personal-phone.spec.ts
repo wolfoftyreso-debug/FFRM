@@ -456,4 +456,80 @@ test.describe.serial("Personal Phone complete UI", () => {
       caret: "initial",
     });
   });
+
+  test("every detail, create, edit and secondary route has a safe Back path", async ({
+    page,
+  }) => {
+    await page.goto("/people");
+    const contactHref = await page
+      .getByText("Johan Testsson")
+      .first()
+      .locator("xpath=ancestor::a")
+      .getAttribute("href");
+    expect(contactHref).toBeTruthy();
+    await page.goto(contactHref!);
+    await page.getByRole("button", { name: "Message" }).click();
+    await page.waitForURL(/\/messages\/[^/]+$/);
+    const conversationPath = new URL(page.url()).pathname;
+
+    await page.goto("/automations");
+    const automationHref = await page
+      .locator('a[href^="/automations/"]:not([href="/automations/new"])')
+      .first()
+      .getAttribute("href");
+    expect(automationHref).toBeTruthy();
+
+    const deepRoutes = [
+      {
+        path: "/people/new",
+        label: "Back to Contacts",
+        expected: "/people",
+      },
+      {
+        path: contactHref!,
+        label: "Back to Contacts",
+        expected: "/people",
+      },
+      {
+        path: `${contactHref}/edit`,
+        label: "Back to Contact",
+        expected: contactHref!,
+      },
+      {
+        path: conversationPath,
+        label: "Back to Messages",
+        expected: "/messages",
+      },
+      {
+        path: "/automations/new",
+        label: "Back to Automations",
+        expected: "/automations",
+      },
+      {
+        path: automationHref!,
+        label: "Back to Automations",
+        expected: "/automations",
+      },
+    ];
+    for (const route of deepRoutes) {
+      await page.goto("about:blank");
+      await page.goto(route.path);
+      await page.getByRole("button", { name: route.label }).click();
+      await expect(page).toHaveURL(new RegExp(`${route.expected}$`));
+    }
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    for (const path of [
+      "/chat",
+      "/calendar",
+      "/automations",
+      "/activity",
+      "/settings",
+    ]) {
+      await page.goto("about:blank");
+      await page.goto(path);
+      await page.getByRole("button", { name: "Back to More" }).click();
+      await expect(page).toHaveURL(/\/more$/);
+    }
+  });
 });

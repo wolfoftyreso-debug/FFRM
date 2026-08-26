@@ -14,7 +14,6 @@ import { AUTONOMY_LABELS } from "@/lib/ai/policy";
 import { MessageComposer } from "@/components/message-composer";
 import { ContactAvatar } from "@/components/apple-ui";
 import { ConversationReadReceipt } from "@/components/conversation-read-receipt";
-import { ChevronLeft } from "lucide-react";
 import { PendingActionButton } from "@/components/pending-action-button";
 
 export const dynamic = "force-dynamic";
@@ -42,13 +41,6 @@ export default async function ConversationPage({
       <div>
         <header className="sticky top-0 z-10 mb-3 flex items-center justify-between gap-3 border-b border-black/10 bg-[var(--system-gray-6)]/90 py-2 backdrop-blur-xl">
           <div className="flex min-w-0 items-center gap-3">
-            <Link
-              href="/messages"
-              aria-label="Back to Messages"
-              className="flex h-11 w-8 items-center justify-start text-[var(--system-blue)] md:hidden"
-            >
-              <ChevronLeft className="h-6 w-6" />
-            </Link>
             <ContactAvatar name={title} />
             <div className="min-w-0">
             <h1 className="truncate text-[17px] font-semibold">{title}</h1>
