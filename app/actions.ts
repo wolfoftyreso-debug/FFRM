@@ -13,6 +13,7 @@ import {
   reminders,
   users,
   type ActionType,
+  type CalendarActivityKind,
   type TriggerType,
 } from "@/lib/db/schema";
 import { and, eq, ne, sql } from "drizzle-orm";
@@ -24,6 +25,12 @@ import { computeNextRun, occurrenceKeyFor } from "@/lib/automations/recurrence";
 import { executeAutomation } from "@/lib/automations/engine";
 import { destroySession } from "@/lib/auth/session";
 import { getContact, displayName } from "@/lib/queries";
+import { createId } from "@/lib/id";
+import {
+  CALENDAR_ACTIVITY_KINDS,
+  calendarActivityOption,
+  isCalendarActivityConfig,
+} from "@/lib/calendar-activities";
 
 // ---------------------------------------------------------------- contacts
 
@@ -637,6 +644,204 @@ export async function addTask(formData: FormData): Promise<void> {
   revalidatePath("/tasks");
 }
 
+// ---------------------------------------------------- calendar activities
+
+const calendarActivitySchema = z.object({
+  eventKind: z.enum(CALENDAR_ACTIVITY_KINDS),
+  contactId: z.string().min(1),
+  title: z.string().optional(),
+  date: z.iso.date(),
+  time: z.string().regex(/^\d{2}:\d{2}$/),
+  recurring: z.string().optional(),
+  randomMinute: z.string().optional(),
+  instruction: z.string().max(2_000).optional(),
+});
+
+function parseCalendarActivity(
+  formData: FormData,
+  randomMinuteSeed = createId(),
+) {
+  const input = calendarActivitySchema.parse(
+    Object.fromEntries(formData.entries()),
+  );
+  const option = calendarActivityOption(
+    input.eventKind as CalendarActivityKind,
+  );
+  return {
+    input,
+    option,
+    triggerConfig: {
+      date: input.date,
+      time: input.time,
+      yearly: input.recurring === "1",
+      eventKind: input.eventKind as CalendarActivityKind,
+      randomMinute: input.randomMinute === "1",
+      randomMinuteSeed,
+    },
+  };
+}
+
+export async function createCalendarActivity(
+  formData: FormData,
+): Promise<void> {
+  const db = await getDb();
+  const parsed = parseCalendarActivity(formData);
+  const contact = await getContact(parsed.input.contactId);
+  if (!contact) throw new Error("Choose a contact");
+  if (!contact.phoneNumber) throw new Error("Contact needs a phone number");
+  await syncContactSpecialDate(
+    contact.id,
+    parsed.input.eventKind,
+    parsed.input.date,
+  );
+  const name =
+    parsed.input.title?.trim() ||
+    `${parsed.option.label} – ${displayName(contact)}`;
+  const nextRunAt = computeNextRun({
+    triggerType: "ANNIVERSARY",
+    triggerConfig: parsed.triggerConfig,
+    contact,
+    after: new Date(),
+  });
+  if (!nextRunAt) throw new Error("Choose a future date");
+  const [created] = await db
+    .insert(automations)
+    .values({
+      name,
+      description: `${parsed.option.label} i kalendern`,
+      triggerType: "ANNIVERSARY",
+      triggerConfig: parsed.triggerConfig,
+      actionType: "GENERATE_DRAFT",
+      actionConfig: {
+        purpose: parsed.option.purpose,
+        instruction: parsed.input.instruction?.trim() || undefined,
+      },
+      contactId: contact.id,
+      autonomyLevel: 2,
+      nextRunAt,
+    })
+    .returning();
+  await logActivity({
+    actor: "USER",
+    action: "CALENDAR_ACTIVITY_CREATED",
+    summary: `Calendar activity created: ${name}`,
+    contactId: contact.id,
+    entityType: "automation",
+    entityId: created.id,
+  });
+  revalidatePath("/calendar");
+  redirect(`/calendar/${created.id}`);
+}
+
+export async function updateCalendarActivity(
+  automationId: string,
+  formData: FormData,
+): Promise<void> {
+  const db = await getDb();
+  const [existing] = await db
+    .select()
+    .from(automations)
+    .where(eq(automations.id, automationId))
+    .limit(1);
+  if (!existing || !isCalendarActivityConfig(existing.triggerConfig)) {
+    throw new Error("Calendar activity not found");
+  }
+  const parsed = parseCalendarActivity(
+    formData,
+    existing.triggerConfig.randomMinuteSeed,
+  );
+  const contact = await getContact(parsed.input.contactId);
+  if (!contact) throw new Error("Choose a contact");
+  if (!contact.phoneNumber) throw new Error("Contact needs a phone number");
+  await syncContactSpecialDate(
+    contact.id,
+    parsed.input.eventKind,
+    parsed.input.date,
+  );
+  const name =
+    parsed.input.title?.trim() ||
+    `${parsed.option.label} – ${displayName(contact)}`;
+  const nextRunAt = computeNextRun({
+    triggerType: "ANNIVERSARY",
+    triggerConfig: parsed.triggerConfig,
+    contact,
+    after: new Date(),
+  });
+  if (!nextRunAt) throw new Error("Choose a future date");
+  await db
+    .update(automations)
+    .set({
+      name,
+      description: `${parsed.option.label} i kalendern`,
+      triggerType: "ANNIVERSARY",
+      triggerConfig: parsed.triggerConfig,
+      actionType: "GENERATE_DRAFT",
+      actionConfig: {
+        purpose: parsed.option.purpose,
+        instruction: parsed.input.instruction?.trim() || undefined,
+      },
+      contactId: contact.id,
+      autonomyLevel: 2,
+      nextRunAt,
+      updatedAt: sql`now()`,
+    })
+    .where(eq(automations.id, automationId));
+  await logActivity({
+    actor: "USER",
+    action: "CALENDAR_ACTIVITY_UPDATED",
+    summary: `Calendar activity updated: ${name}`,
+    contactId: contact.id,
+    entityType: "automation",
+    entityId: automationId,
+  });
+  revalidatePath("/calendar");
+  revalidatePath(`/calendar/${automationId}`);
+  redirect(`/calendar/${automationId}`);
+}
+
+export async function deleteCalendarActivity(
+  automationId: string,
+): Promise<void> {
+  const db = await getDb();
+  const [existing] = await db
+    .select()
+    .from(automations)
+    .where(eq(automations.id, automationId))
+    .limit(1);
+  if (!existing || !isCalendarActivityConfig(existing.triggerConfig)) return;
+  await db.delete(automations).where(eq(automations.id, automationId));
+  await logActivity({
+    actor: "USER",
+    action: "CALENDAR_ACTIVITY_DELETED",
+    summary: `Calendar activity deleted: ${existing.name}`,
+    contactId: existing.contactId,
+    entityType: "automation",
+    entityId: existing.id,
+  });
+  revalidatePath("/calendar");
+  redirect("/calendar");
+}
+
+async function syncContactSpecialDate(
+  contactId: string,
+  eventKind: CalendarActivityKind,
+  date: string,
+): Promise<void> {
+  const db = await getDb();
+  if (eventKind === "BIRTHDAY") {
+    await db
+      .update(contacts)
+      .set({ birthday: date, updatedAt: sql`now()` })
+      .where(eq(contacts.id, contactId));
+  } else if (eventKind === "NAME_DAY") {
+    const [, month, day] = date.split("-").map(Number);
+    await db
+      .update(contacts)
+      .set({ nameDayMonth: month, nameDayDay: day, updatedAt: sql`now()` })
+      .where(eq(contacts.id, contactId));
+  }
+}
+
 // -------------------------------------------------------------- automations
 
 const automationSchema = z.object({
@@ -656,6 +861,7 @@ const automationSchema = z.object({
   actionType: z.enum([
     "SEND_SMS",
     "GENERATE_SMS",
+    "GENERATE_DRAFT",
     "REMIND_USER",
     "CREATE_TASK",
     "CREATE_CALENDAR_EVENT",
@@ -801,6 +1007,8 @@ export async function toggleAutomation(automationId: string): Promise<void> {
   });
   revalidatePath(`/automations/${automationId}`);
   revalidatePath("/automations");
+  revalidatePath(`/calendar/${automationId}`);
+  revalidatePath("/calendar");
 }
 
 export async function runAutomationNow(automationId: string): Promise<void> {

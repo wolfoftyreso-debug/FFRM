@@ -4,6 +4,7 @@ import {
   nextCronOccurrence,
   nextYearlyOccurrence,
   occurrenceKeyFor,
+  randomizedMinuteForYear,
 } from "@/lib/automations/recurrence";
 
 const TZ = "Europe/Stockholm";
@@ -79,6 +80,33 @@ describe("computeNextRun", () => {
     expect(next).toBeNull();
   });
 
+  it("keeps the chosen hour but varies the minute each year", () => {
+    const config = {
+      date: "2026-02-14",
+      time: "09:00",
+      yearly: true,
+      randomMinute: true,
+      randomMinuteSeed: "valentine-anna",
+    };
+    const first = computeNextRun({
+      triggerType: "ANNIVERSARY",
+      triggerConfig: config,
+      after: new Date("2026-01-01T00:00:00Z"),
+      timezone: TZ,
+    });
+    const second = computeNextRun({
+      triggerType: "ANNIVERSARY",
+      triggerConfig: config,
+      after: first!,
+      timezone: TZ,
+    });
+    expect(first).not.toBeNull();
+    expect(second).not.toBeNull();
+    expect(first!.getUTCHours()).toBe(8);
+    expect(second!.getUTCHours()).toBe(8);
+    expect(first!.getUTCMinutes()).not.toBe(second!.getUTCMinutes());
+  });
+
   it("INTERVAL adds N days", () => {
     const after = new Date("2026-01-01T00:00:00Z");
     const next = computeNextRun({
@@ -103,6 +131,17 @@ describe("computeNextRun", () => {
     expect(
       computeNextRun({ triggerType: "MANUAL", triggerConfig: {}, after: new Date() }),
     ).toBeNull();
+  });
+});
+
+describe("randomizedMinuteForYear", () => {
+  it("is deterministic for retries and changes in consecutive years", () => {
+    expect(randomizedMinuteForYear("seed", 2026)).toBe(
+      randomizedMinuteForYear("seed", 2026),
+    );
+    expect(randomizedMinuteForYear("seed", 2027)).not.toBe(
+      randomizedMinuteForYear("seed", 2026),
+    );
   });
 });
 

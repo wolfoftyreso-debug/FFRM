@@ -446,6 +446,30 @@ test.describe.serial("Personal Phone complete UI", () => {
       .fill("2026-08-26T13:00");
     await page.getByRole("button", { name: "Save" }).click();
 
+    await page.getByRole("link", { name: "Skapa aktivitet" }).click();
+    await expect(
+      page.getByRole("heading", { name: "Ny aktivitet" }),
+    ).toBeVisible();
+    await page
+      .locator('select[name="eventKind"]')
+      .selectOption("VALENTINES_DAY");
+    await page.locator('select[name="contactId"]').selectOption({ index: 1 });
+    await page.locator('input[name="date"]').fill("2027-02-14");
+    await page.locator('input[name="time"]').fill("09:00");
+    await expect(page.locator('input[name="recurring"]')).toBeChecked();
+    await expect(page.locator('input[name="randomMinute"]')).toBeChecked();
+    await page
+      .locator('textarea[name="instruction"]')
+      .fill("Kort, varmt och personligt.");
+    await page.getByRole("button", { name: "Spara aktivitet" }).click();
+    await page.waitForURL(/\/calendar\/[^/]+$/);
+    await expect(page.getByText(/Nästa \d/)).toBeVisible();
+    await expect(
+      page.getByText(/AI skapar ett personligt SMS-utkast/),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Back to Calendar" }).click();
+    await expect(page).toHaveURL(/\/calendar$/);
+
     await page.goto("/automations/new");
     const trigger = page.locator('select[name="triggerType"]');
     await expect(trigger.locator('option[value="INCOMING_SMS"]')).toHaveText(

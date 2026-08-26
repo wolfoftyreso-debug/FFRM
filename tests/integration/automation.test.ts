@@ -82,6 +82,45 @@ describe("automation engine", () => {
     expect(inbox[0].unread).toBe(true);
   });
 
+  it("calendar GENERATE_DRAFT always creates a draft and never sends", async () => {
+    const owner = await seedOwner(db);
+    const contact = await seedContact(db, owner.id, { autonomyLevel: 0 });
+    const [automation] = await db
+      .insert(schema.automations)
+      .values({
+        name: "Alla hjärtans dag – Johan",
+        triggerType: "ANNIVERSARY",
+        triggerConfig: {
+          date: "2026-02-14",
+          time: "09:00",
+          yearly: true,
+          eventKind: "VALENTINES_DAY",
+          randomMinute: true,
+          randomMinuteSeed: "stable-seed",
+        },
+        actionType: "GENERATE_DRAFT",
+        actionConfig: { purpose: "alla hjärtans dag" },
+        contactId: contact.id,
+        autonomyLevel: 2,
+        nextRunAt: new Date(),
+      })
+      .returning();
+
+    const result = await executeAutomation({
+      automation,
+      occurrenceKey: "anniversary-2026-02-14",
+      scheduledFor: new Date(),
+    });
+    expect(result.status).toBe("ESCALATED");
+    expect(provider.sent).toHaveLength(0);
+    const [draft] = await db
+      .select()
+      .from(schema.reminders)
+      .where(eq(schema.reminders.automationId, automation.id));
+    expect(draft.kind).toBe("DRAFT");
+    expect(draft.draftText).toContain("Grattis");
+  });
+
   it("is idempotent: the same occurrence can never send twice", async () => {
     const owner = await seedOwner(db);
     const contact = await seedContact(db, owner.id);

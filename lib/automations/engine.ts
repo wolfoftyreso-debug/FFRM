@@ -270,6 +270,7 @@ async function runAction(args: {
         : { status: "FAILED", summary: sent.error };
     }
 
+    case "GENERATE_DRAFT":
     case "GENERATE_SMS": {
       if (!contact?.phoneNumber)
         return { status: "FAILED", summary: "Contact has no phone number" };
@@ -289,6 +290,18 @@ async function runAction(args: {
         aiInputTokens: generated.usage.inputTokens,
         aiOutputTokens: generated.usage.outputTokens,
       };
+      if (automation.actionType === "GENERATE_DRAFT") {
+        return {
+          ...base,
+          ...(await queueDraft({
+            contact,
+            automation,
+            executionId,
+            text: generated.text,
+            summary: "Calendar activity draft created for approval",
+          })),
+        };
+      }
       if (canSendAutomatically(autonomy)) {
         const sent = await sendMessage({
           to: contact.phoneNumber,

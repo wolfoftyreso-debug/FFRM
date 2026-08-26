@@ -24,35 +24,63 @@ export function computeNextRun(args: {
 }): Date | null {
   const tz = args.timezone ?? args.contact?.timezone ?? defaultTimezone();
   const { hour, minute } = parseTimeOfDay(args.triggerConfig.time);
+  const minuteForYear = (year: number) =>
+    args.triggerConfig.randomMinute
+      ? randomizedMinuteForYear(
+          args.triggerConfig.randomMinuteSeed ?? "calendar",
+          year,
+        )
+      : minute;
 
   switch (args.triggerType) {
     case "BIRTHDAY": {
       const birthday = args.contact?.birthday;
       if (!birthday) return null;
       const [, m, d] = birthday.split("-").map(Number);
-      return nextYearlyOccurrence(m, d, hour, minute, tz, args.after);
+      return nextYearlyOccurrenceWithMinute(
+        m,
+        d,
+        hour,
+        minuteForYear,
+        tz,
+        args.after,
+      );
     }
     case "NAME_DAY": {
       const month = args.contact?.nameDayMonth;
       const day = args.contact?.nameDayDay;
       if (!month || !day) return null;
-      return nextYearlyOccurrence(month, day, hour, minute, tz, args.after);
+      return nextYearlyOccurrenceWithMinute(
+        month,
+        day,
+        hour,
+        minuteForYear,
+        tz,
+        args.after,
+      );
     }
     case "ANNIVERSARY": {
       const dateStr = args.triggerConfig.date;
       if (!dateStr) return null;
       const [y, m, d] = dateStr.split("-").map(Number);
       if (args.triggerConfig.yearly === false) {
-        const at = zonedTimeToUtc(y, m, d, hour, minute, tz);
+        const at = zonedTimeToUtc(y, m, d, hour, minuteForYear(y), tz);
         return at > args.after ? at : null;
       }
-      return nextYearlyOccurrence(m, d, hour, minute, tz, args.after);
+      return nextYearlyOccurrenceWithMinute(
+        m,
+        d,
+        hour,
+        minuteForYear,
+        tz,
+        args.after,
+      );
     }
     case "DATE": {
       const dateStr = args.triggerConfig.date;
       if (!dateStr) return null;
       const [y, m, d] = dateStr.split("-").map(Number);
-      const at = zonedTimeToUtc(y, m, d, hour, minute, tz);
+      const at = zonedTimeToUtc(y, m, d, hour, minuteForYear(y), tz);
       return at > args.after ? at : null;
     }
     case "INTERVAL": {
@@ -99,6 +127,38 @@ export function nextYearlyOccurrence(
     if (candidate > after) return candidate;
   }
   throw new Error("nextYearlyOccurrence failed to converge");
+}
+
+function nextYearlyOccurrenceWithMinute(
+  month: number,
+  day: number,
+  hour: number,
+  minuteForYear: (year: number) => number,
+  tz: string,
+  after: Date,
+): Date {
+  const startYear = utcToZonedParts(after, tz).year;
+  for (let year = startYear; year <= startYear + 2; year++) {
+    let d = day;
+    if (month === 2 && day === 29 && !isLeapYear(year)) d = 28;
+    const candidate = zonedTimeToUtc(
+      year,
+      month,
+      d,
+      hour,
+      minuteForYear(year),
+      tz,
+    );
+    if (candidate > after) return candidate;
+  }
+  throw new Error("nextYearlyOccurrenceWithMinute failed to converge");
+}
+
+/** Stable per year, different in consecutive years, and safe across retries. */
+export function randomizedMinuteForYear(seed: string, year: number): number {
+  let hash = 0;
+  for (const char of seed) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  return (hash + year * 17) % 60;
 }
 
 function isLeapYear(year: number): boolean {

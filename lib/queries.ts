@@ -22,6 +22,7 @@ import { and, asc, desc, eq, gte, isNotNull, lte, ne, or, sql } from "drizzle-or
 import { nextYearlyOccurrence } from "@/lib/automations/recurrence";
 import { defaultTimezone } from "@/lib/env";
 import { cleanErrorMessage } from "@/lib/errors";
+import { isCalendarActivityConfig } from "@/lib/calendar-activities";
 
 export async function getOwner() {
   const db = await getDb();
@@ -363,7 +364,11 @@ export async function listAutomations() {
     .from(automations)
     .leftJoin(contacts, eq(automations.contactId, contacts.id))
     .orderBy(asc(automations.name));
-  return rows.filter(({ automation }) => !automation.id.startsWith("system-"));
+  return rows.filter(
+    ({ automation }) =>
+      !automation.id.startsWith("system-") &&
+      !isCalendarActivityConfig(automation.triggerConfig),
+  );
 }
 
 export async function getAutomationDetail(id: string) {
@@ -437,7 +442,9 @@ export async function getCalendarItems(
       at: row.automation.nextRunAt!,
       title: row.automation.name,
       kind: "AUTOMATIC",
-      detailUrl: `/automations/${row.automation.id}`,
+      detailUrl: isCalendarActivityConfig(row.automation.triggerConfig)
+        ? `/calendar/${row.automation.id}`
+        : `/automations/${row.automation.id}`,
       contactName: row.contact ? displayName(row.contact) : null,
     });
   }
@@ -464,7 +471,9 @@ export async function getCalendarItems(
       title: row.automation.name,
       kind: row.execution.status === "ESCALATED" ? "ESCALATED" : "COMPLETED",
       status: row.execution.status,
-      detailUrl: `/automations/${row.automation.id}`,
+      detailUrl: isCalendarActivityConfig(row.automation.triggerConfig)
+        ? `/calendar/${row.automation.id}`
+        : `/automations/${row.automation.id}`,
       contactName: row.contact ? displayName(row.contact) : null,
     });
   }

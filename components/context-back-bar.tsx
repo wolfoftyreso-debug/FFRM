@@ -37,6 +37,12 @@ function targetFor(pathname: string): BackTarget | null {
   if (/^\/review\/[^/]+$/.test(pathname)) {
     return { href: "/review", label: "Quotes" };
   }
+  if (
+    pathname === "/calendar/new" ||
+    /^\/calendar\/[^/]+$/.test(pathname)
+  ) {
+    return { href: "/calendar", label: "Calendar" };
+  }
   if (pathname === "/automations/new") {
     return { href: "/automations", label: "Automations" };
   }

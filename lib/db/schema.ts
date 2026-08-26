@@ -401,6 +401,7 @@ export type TriggerType =
 export type ActionType =
   | "SEND_SMS"
   | "GENERATE_SMS"
+  | "GENERATE_DRAFT"
   | "REMIND_USER"
   | "CREATE_TASK"
   | "CREATE_CALENDAR_EVENT"
@@ -409,6 +410,17 @@ export type ActionType =
   | "UPDATE_CONTACT"
   | "LOG_EVENT"
   | "EXTRACT_INSIGHTS";
+
+export type CalendarActivityKind =
+  | "BIRTHDAY"
+  | "NAME_DAY"
+  | "GRADUATION"
+  | "WOMENS_DAY"
+  | "MENS_DAY"
+  | "VALENTINES_DAY"
+  | "ANNIVERSARY"
+  | "WEDDING_ANNIVERSARY"
+  | "CUSTOM";
 
 export interface TriggerConfig {
   /** DATE / ANNIVERSARY: ISO date (YYYY-MM-DD). */
@@ -421,14 +433,20 @@ export interface TriggerConfig {
   cron?: string;
   /** ANNIVERSARY: whether it repeats yearly (default true). */
   yearly?: boolean;
+  /** Calendar-created relationship activity type. */
+  eventKind?: CalendarActivityKind;
+  /** Keep the selected hour but vary the minute for each yearly occurrence. */
+  randomMinute?: boolean;
+  /** Stable seed makes scheduling deterministic across dispatcher retries. */
+  randomMinuteSeed?: string;
 }
 
 export interface ActionConfig {
   /** SEND_SMS: literal message text. */
   text?: string;
-  /** GENERATE_SMS / AI_EVALUATE: what kind of message ("birthday", "checkin", ...). */
+  /** GENERATE_SMS / GENERATE_DRAFT / AI_EVALUATE: message purpose. */
   purpose?: string;
-  /** GENERATE_SMS: extra instruction for the model. */
+  /** GENERATE_SMS / GENERATE_DRAFT: extra instruction for the model. */
   instruction?: string;
   /** REMIND_USER / CREATE_TASK / CREATE_CALENDAR_EVENT: title/description. */
   title?: string;

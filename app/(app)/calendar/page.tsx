@@ -51,6 +51,13 @@ export default async function CalendarPage({
         }
       />
 
+      <Link
+        href="/calendar/new"
+        className="mb-5 flex min-h-14 w-full items-center justify-center rounded-2xl bg-[var(--system-blue)] text-[17px] font-semibold text-white"
+      >
+        Skapa aktivitet
+      </Link>
+
       <div className="mb-4 flex flex-wrap gap-2 text-xs text-stone-500">
         <span className="flex items-center gap-1">
           <Badge label="AUTOMATIC" /> the system will do this
@@ -68,7 +75,7 @@ export default async function CalendarPage({
 
       <details className="ios-inset-group mb-5 px-4 py-3">
         <summary className="cursor-pointer text-[15px] font-semibold text-[var(--system-blue)]">
-          Add reminder
+          Lägg till vanlig påminnelse
         </summary>
         <form action={addReminder.bind(null, null)} className="mt-3 grid gap-2 sm:grid-cols-[1fr_220px_auto]">
           <input
