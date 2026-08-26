@@ -1225,7 +1225,8 @@ export async function generateElevenLabsGreetings(): Promise<void> {
       .returning();
     return [vm, screen];
   });
-  const current = (await getProviderStatus()).elevenlabs.publicConfig;
+  const current =
+    (await getProviderStatus()).elevenlabs?.publicConfig ?? {};
   await saveProviderConfig("elevenlabs", {}, {
     ...current,
     voicemailAudioId: voicemailAsset.id,

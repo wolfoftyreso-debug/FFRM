@@ -201,6 +201,38 @@ export async function updateProviderTestStatus(
   error?: unknown,
 ): Promise<void> {
   const db = await getDb();
+  if (!(await readProvider(provider))) {
+    if (
+      provider === "46elks" &&
+      process.env.ELKS46_USERNAME &&
+      process.env.ELKS46_PASSWORD &&
+      process.env.ELKS46_FROM_NUMBER
+    ) {
+      await saveProviderConfig(
+        "46elks",
+        {
+          username: process.env.ELKS46_USERNAME,
+          password: process.env.ELKS46_PASSWORD,
+        },
+        { fromNumber: process.env.ELKS46_FROM_NUMBER, source: "environment" },
+      );
+    } else if (
+      provider === "elevenlabs" &&
+      process.env.ELEVENLABS_API_KEY &&
+      process.env.ELEVENLABS_VOICE_ID
+    ) {
+      await saveProviderConfig(
+        "elevenlabs",
+        { apiKey: process.env.ELEVENLABS_API_KEY },
+        {
+          voiceId: process.env.ELEVENLABS_VOICE_ID,
+          modelId:
+            process.env.ELEVENLABS_MODEL_ID ?? "eleven_multilingual_v2",
+          source: "environment",
+        },
+      );
+    }
+  }
   await db
     .update(providerSettings)
     .set({
@@ -215,7 +247,7 @@ export async function updateProviderTestStatus(
 export async function getProviderStatus() {
   const db = await getDb();
   const rows = await db.select().from(providerSettings);
-  return Object.fromEntries(
+  const result = Object.fromEntries(
     rows.map((row) => [
       row.provider,
       {
@@ -229,7 +261,8 @@ export async function getProviderStatus() {
           : null,
       },
     ]),
-  ) as Record<
+  ) as Partial<
+    Record<
     ProviderName,
     {
       configured: boolean;
@@ -239,6 +272,45 @@ export async function getProviderStatus() {
       lastTestStatus: string | null;
       lastTestError: string | null;
     }
+    >
   >;
+  if (
+    !result["46elks"] &&
+    process.env.ELKS46_USERNAME &&
+    process.env.ELKS46_PASSWORD &&
+    process.env.ELKS46_FROM_NUMBER
+  ) {
+    result["46elks"] = {
+      configured: true,
+      publicConfig: {
+        fromNumber: process.env.ELKS46_FROM_NUMBER,
+        source: "environment",
+      },
+      updatedAt: new Date(),
+      lastTestAt: null,
+      lastTestStatus: null,
+      lastTestError: null,
+    };
+  }
+  if (
+    !result.elevenlabs &&
+    process.env.ELEVENLABS_API_KEY &&
+    process.env.ELEVENLABS_VOICE_ID
+  ) {
+    result.elevenlabs = {
+      configured: true,
+      publicConfig: {
+        voiceId: process.env.ELEVENLABS_VOICE_ID,
+        modelId:
+          process.env.ELEVENLABS_MODEL_ID ?? "eleven_multilingual_v2",
+        source: "environment",
+      },
+      updatedAt: new Date(),
+      lastTestAt: null,
+      lastTestStatus: null,
+      lastTestError: null,
+    };
+  }
+  return result;
 }
 

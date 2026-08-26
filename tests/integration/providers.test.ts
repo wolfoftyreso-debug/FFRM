@@ -88,7 +88,7 @@ describe("encrypted provider configuration", () => {
       new Response(JSON.stringify({ id: "me" }), { status: 200 })) as typeof fetch;
     await testElksConnection();
     await updateProviderTestStatus("46elks", true);
-    expect((await getProviderStatus())["46elks"].lastTestStatus).toBe("OK");
+    expect((await getProviderStatus())["46elks"]?.lastTestStatus).toBe("OK");
   });
 
   it("resolves ElevenLabs, lists voices and generates bounded speech", async () => {
