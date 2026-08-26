@@ -216,7 +216,13 @@ test.describe.serial("Personal Phone complete UI", () => {
     }
     await page.getByLabel("Search contacts").fill("Johan");
     await page.getByLabel("Search contacts").press("Enter");
-    await page.getByText("Johan Testsson").first().click();
+    const johanLink = page
+      .getByText("Johan Testsson")
+      .first()
+      .locator("xpath=ancestor::a");
+    const johanPath = await johanLink.getAttribute("href");
+    expect(johanPath).toBeTruthy();
+    await johanLink.click();
 
     await expect(page.getByRole("heading", { name: "Johan Testsson" })).toBeVisible();
     for (const action of ["Call", "Message", "Remind"]) {
@@ -310,6 +316,23 @@ test.describe.serial("Personal Phone complete UI", () => {
     await expect(
       page.getByText("A contact with this phone number already exists."),
     ).toBeVisible();
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(johanPath!);
+    await page.getByText("Advanced relationship").click();
+    await expect(page.getByText("Relationship dimensions")).toBeVisible();
+    await expect(page.getByText("What AI may do")).toBeVisible();
+    await expect(page.getByText("Small talk")).not.toBeVisible();
+    const mobileWidth = await page.evaluate(() => ({
+      viewport: document.documentElement.clientWidth,
+      content: document.documentElement.scrollWidth,
+    }));
+    expect(mobileWidth.content).toBeLessThanOrEqual(mobileWidth.viewport);
+    await page.screenshot({
+      path: `${ARTIFACTS}/mobile-contact-settings-after.png`,
+      fullPage: true,
+      caret: "initial",
+    });
   });
 
   test("Phone, Calendar, Automations, Activity and Settings are operational", async ({

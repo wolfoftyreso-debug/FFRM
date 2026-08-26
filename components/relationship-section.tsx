@@ -108,40 +108,51 @@ export function RelationshipSection({
                 className={inputClass}
               />
             </label>
-            <div className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
-              {VECTOR_DIMS.map((dim) => (
-                <label
-                  key={dim.key}
-                  className="flex items-center justify-between gap-3 text-sm text-stone-700"
-                >
-                  {dim.label}
-                  <input
-                    type="number"
-                    min={0}
-                    max={100}
-                    name={`vector_${dim.key}`}
-                    defaultValue={vector[dim.key] ?? ""}
-                    className="w-20 rounded-md border border-stone-300 px-2 py-1 text-right text-sm focus:border-stone-500 focus:outline-none"
-                  />
-                </label>
-              ))}
-            </div>
+            <details className="rounded-xl border border-black/10 bg-white">
+              <summary className="flex min-h-12 cursor-pointer items-center px-3 text-sm font-semibold text-stone-700">
+                Relationship dimensions
+                <span className="ml-auto text-xs font-normal text-stone-400">
+                  0–100
+                </span>
+              </summary>
+              <div className="grid gap-x-6 gap-y-1 border-t border-black/10 p-3 sm:grid-cols-2">
+                {VECTOR_DIMS.map((dim) => (
+                  <label
+                    key={dim.key}
+                    className="grid min-h-11 grid-cols-[minmax(0,1fr)_72px] items-center gap-3 text-sm text-stone-700"
+                  >
+                    <span>{dim.label}</span>
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      name={`vector_${dim.key}`}
+                      defaultValue={vector[dim.key] ?? ""}
+                      className="h-10 w-full rounded-lg border border-black/10 px-2 text-right text-sm focus-visible:ring-2 focus-visible:ring-[var(--system-blue)]"
+                    />
+                  </label>
+                ))}
+              </div>
+            </details>
 
-            <div>
-              <p className="mb-1.5 text-sm font-medium text-stone-700">
-                Confidence envelope — what the AI may do
-              </p>
-              <div className="grid gap-x-6 gap-y-1.5 sm:grid-cols-2">
+            <details className="rounded-xl border border-black/10 bg-white">
+              <summary className="flex min-h-12 cursor-pointer items-center px-3 text-sm font-semibold text-stone-700">
+                What AI may do
+                <span className="ml-auto text-xs font-normal text-stone-400">
+                  11 policies
+                </span>
+              </summary>
+              <div className="grid gap-x-6 gap-y-1 border-t border-black/10 p-3 sm:grid-cols-2">
                 {ENVELOPE_ROWS.map((row) => (
                   <label
                     key={row.key}
-                    className="flex items-center justify-between gap-3 text-sm text-stone-700"
+                    className="grid min-h-11 grid-cols-[minmax(0,1fr)_112px] items-center gap-3 text-sm text-stone-700"
                   >
-                    {row.label}
+                    <span>{row.label}</span>
                     <select
                       name={`envelope_${row.key}`}
                       defaultValue={envelope[row.key] ?? "ESCALATE"}
-                      className="rounded-md border border-stone-300 px-2 py-1 text-sm focus:border-stone-500 focus:outline-none"
+                      className="h-10 w-full rounded-lg border border-black/10 bg-white px-2 text-sm focus-visible:ring-2 focus-visible:ring-[var(--system-blue)]"
                     >
                       <option value="AUTO">Auto</option>
                       <option value="ESCALATE">Escalate</option>
@@ -150,7 +161,7 @@ export function RelationshipSection({
                   </label>
                 ))}
               </div>
-            </div>
+            </details>
 
             <label className={labelClass}>
               Call policy
@@ -167,7 +178,7 @@ export function RelationshipSection({
               </select>
             </label>
 
-            <button className="rounded-md bg-stone-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-stone-700">
+            <button className="sticky bottom-20 z-10 min-h-11 w-full rounded-xl bg-[var(--system-blue)] px-4 text-sm font-semibold text-white shadow-lg sm:static sm:w-auto sm:shadow-none">
               Save advanced settings
             </button>
           </form>
@@ -175,9 +186,11 @@ export function RelationshipSection({
       </Card>
 
       <Card>
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-stone-400">
-          Teach AI how we talk
-        </h3>
+        <details open={stylePending > 0 || styleFailed > 0}>
+          <summary className="flex min-h-11 cursor-pointer items-center text-sm font-semibold text-stone-700">
+            Teach AI how we talk
+          </summary>
+          <div className="border-t border-black/10 pt-3">
         <p className="mt-1 text-sm text-stone-500">
           Upload up to 10 screenshots of previous conversations. The AI
           extracts style — not content — and learns how you and{" "}
@@ -243,6 +256,8 @@ export function RelationshipSection({
             ) : null}
           </div>
         ) : null}
+          </div>
+        </details>
       </Card>
     </>
   );

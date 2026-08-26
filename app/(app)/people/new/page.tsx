@@ -21,7 +21,7 @@ export default async function NewContactPage({
       <Card>
         <form action={createContact}>
           <ContactFormFields contact={prefill} />
-          <div className="mt-6">
+          <div className="ios-safe-bottom sticky bottom-16 z-20 -mx-4 mt-6 border-t border-black/10 bg-white/95 px-4 pt-3 backdrop-blur-xl md:static md:mx-0 md:border-0 md:bg-transparent md:px-0 md:pt-0">
             <PrimaryButton>Create contact</PrimaryButton>
           </div>
         </form>

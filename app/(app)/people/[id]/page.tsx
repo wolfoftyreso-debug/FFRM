@@ -49,6 +49,20 @@ export default async function ContactPage({
     (historyPage - 1) * historyPageSize,
     historyPage * historyPageSize,
   );
+  const historyItems = [
+    { id: "ALL", label: "All" },
+    { id: "MESSAGES", label: "Messages" },
+    { id: "PHOTOS", label: "Photos" },
+    { id: "CALLS", label: "Calls" },
+    { id: "VOICEMAIL", label: "Voicemail" },
+    { id: "AUTOMATIONS", label: "Automation" },
+    { id: "FACTS", label: "Facts" },
+    { id: "REMINDERS", label: "Reminders" },
+    { id: "SYSTEM", label: "System" },
+  ].map((item) => ({
+    ...item,
+    href: `/people/${id}?history=${item.id}`,
+  }));
 
   return (
     <>
@@ -136,8 +150,8 @@ export default async function ContactPage({
         ) : null}
       </InsetSection>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_320px]">
-        <div className="space-y-6">
+      <div className="mt-6 grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="min-w-0 space-y-6">
           <RelationshipSection
             contact={contact}
             screenshotCount={styleMedia.count}
@@ -147,23 +161,29 @@ export default async function ContactPage({
           />
           <section>
             <h2 className="mb-2 px-1 text-xl font-bold">History</h2>
-            <div className="mb-3 overflow-x-auto">
-              <div className="min-w-[650px]">
+            <div className="mb-3 overflow-x-auto pb-1 md:hidden">
+              <div className="flex min-w-max gap-2">
+                {historyItems.map((item) => (
+                  <Link
+                    key={item.id}
+                    href={item.href}
+                    aria-current={historyFilter === item.id ? "page" : undefined}
+                    className={`flex min-h-10 items-center rounded-full px-3 text-sm font-medium ${
+                      historyFilter === item.id
+                        ? "bg-[var(--system-blue)] text-white"
+                        : "bg-white text-[var(--secondary-label)]"
+                    }`}
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+              </div>
+            </div>
+            <div className="mb-3 hidden md:block">
                 <SegmentedLinks
                   active={historyFilter}
-                  items={[
-                    { id: "ALL", label: "All", href: `/people/${id}?history=ALL` },
-                    { id: "MESSAGES", label: "Messages", href: `/people/${id}?history=MESSAGES` },
-                    { id: "PHOTOS", label: "Photos", href: `/people/${id}?history=PHOTOS` },
-                    { id: "CALLS", label: "Calls", href: `/people/${id}?history=CALLS` },
-                    { id: "VOICEMAIL", label: "Voicemail", href: `/people/${id}?history=VOICEMAIL` },
-                    { id: "AUTOMATIONS", label: "Automation", href: `/people/${id}?history=AUTOMATIONS` },
-                    { id: "FACTS", label: "Facts", href: `/people/${id}?history=FACTS` },
-                    { id: "REMINDERS", label: "Reminders", href: `/people/${id}?history=REMINDERS` },
-                    { id: "SYSTEM", label: "System", href: `/people/${id}?history=SYSTEM` },
-                  ]}
+                  items={historyItems}
                 />
-              </div>
             </div>
             {filteredTimeline.length === 0 ? (
               <Card>
@@ -238,7 +258,7 @@ export default async function ContactPage({
           </section>
         </div>
 
-        <aside className="space-y-4">
+        <aside className="min-w-0 space-y-4">
           <Card>
             <h3 className="text-xs font-semibold uppercase tracking-wide text-stone-400">
               Facts

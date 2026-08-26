@@ -14,6 +14,12 @@ const RELATIONSHIP_TYPES = [
 export function ContactFormFields({ contact }: { contact?: Contact | null }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2">
+      <div className="sm:col-span-2">
+        <h3 className="text-sm font-semibold text-stone-800">Identity</h3>
+        <p className="mt-0.5 text-xs text-stone-400">
+          Start with the essentials. Everything else can be added later.
+        </p>
+      </div>
       <label className={labelClass}>
         First name *
         <input
@@ -93,6 +99,9 @@ export function ContactFormFields({ contact }: { contact?: Contact | null }) {
           Only month and day are used; it repeats every year.
         </span>
       </label>
+      <div className="sm:col-span-2 mt-2 border-t border-black/10 pt-4">
+        <h3 className="text-sm font-semibold text-stone-800">Relationship</h3>
+      </div>
       <label className={labelClass}>
         Relationship
         <select
@@ -137,6 +146,14 @@ export function ContactFormFields({ contact }: { contact?: Contact | null }) {
           className={inputClass}
         />
       </label>
+      <div className="sm:col-span-2 mt-2 border-t border-black/10 pt-4">
+        <h3 className="text-sm font-semibold text-stone-800">
+          AI & communication
+        </h3>
+        <p className="mt-0.5 text-xs text-stone-400">
+          These settings control tone and how much the assistant may do.
+        </p>
+      </div>
       <label className={labelClass}>
         Desired contact cadence (days)
         <input
