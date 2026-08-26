@@ -153,7 +153,9 @@ test.describe.serial("Personal Phone complete UI", () => {
       "href",
       /^\/api\/public\/contact\/.+\/vcard$/,
     );
-    await expect(page.getByRole("button", { name: /logga/ })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: /Lägg till logga|Byt logga/ }),
+    ).toBeVisible();
     const companyLogo = await sharp({
       create: {
         width: 240,
