@@ -23,7 +23,11 @@ export default async function ApolloPage() {
     listApolloLists(8),
   ]);
   const filters = defaultFiltersFromConfig(config);
-  const configured = Boolean(providers.apollo?.configured);
+  const configured = Boolean(
+    providers.apollo?.configured &&
+      (providers.apollo.publicConfig.hasApiKey === true ||
+        process.env.APOLLO_API_KEY),
+  );
 
   return (
     <>

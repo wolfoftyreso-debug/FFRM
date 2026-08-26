@@ -365,6 +365,7 @@ async function saveApolloField(field: string, value: string) {
   if (field === "apiKey" || field === "masterKey") {
     if (!value.trim()) return;
     secrets.apiKey = value.trim();
+    publicConfig.hasApiKey = true;
   } else if (field === "defaultLimit") {
     const limit = Number(value);
     if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
