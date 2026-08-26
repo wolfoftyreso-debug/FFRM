@@ -14,6 +14,12 @@ export default async function proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
+  // Preview deployments are protected by Vercel Authentication at the
+  // project edge. Production never takes this branch and keeps app auth.
+  if (process.env.VERCEL_ENV === "preview") {
+    return NextResponse.next();
+  }
+
   const token = req.cookies.get("ffrm_session")?.value;
   if (token && process.env.AUTH_SECRET) {
     try {

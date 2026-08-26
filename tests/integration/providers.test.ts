@@ -29,17 +29,19 @@ describe("encrypted provider configuration", () => {
     await seedOwner(db);
   });
 
-  it("AES-GCM round-trips secrets and binds ciphertext to provider", () => {
-    const encrypted = encryptProviderSecrets("46elks", {
+  it("AES-GCM round-trips secrets and binds ciphertext to provider", async () => {
+    const encrypted = await encryptProviderSecrets("46elks", {
       username: "u_secret",
       password: "p_secret",
     });
     expect(encrypted).not.toContain("u_secret");
-    expect(decryptProviderSecrets("46elks", encrypted)).toEqual({
+    expect(await decryptProviderSecrets("46elks", encrypted)).toEqual({
       username: "u_secret",
       password: "p_secret",
     });
-    expect(() => decryptProviderSecrets("elevenlabs", encrypted)).toThrow();
+    await expect(
+      decryptProviderSecrets("elevenlabs", encrypted),
+    ).rejects.toThrow();
   });
 
   it("stores no plaintext 46elks credentials and resolver prefers saved values", async () => {

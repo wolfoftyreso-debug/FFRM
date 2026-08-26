@@ -25,6 +25,7 @@ const updatedAt = () =>
 /** The system owner. Single row for now; keyed so multi-user remains possible. */
 export const users = pgTable("users", {
   id: id(),
+  singletonKey: text("singleton_key").notNull().default("owner").unique(),
   name: text("name").notNull(),
   email: text("email"),
   phoneNumber: text("phone_number"),
@@ -673,6 +674,13 @@ export const systemState = pgTable("system_state", {
   key: text("key").primaryKey(),
   value: text("value").notNull(),
   updatedAt: updatedAt(),
+});
+
+/** Bootstrap-only secret material when Vercel Preview SSO replaces app env auth. */
+export const systemSecrets = pgTable("system_secrets", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+  createdAt: createdAt(),
 });
 
 /** Encrypted runtime provider credentials + non-secret configuration/status. */

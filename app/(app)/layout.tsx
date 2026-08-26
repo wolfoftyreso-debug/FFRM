@@ -1,5 +1,6 @@
 import { getAttentionSummary } from "@/lib/queries";
 import { AppNavigation } from "@/components/app-navigation";
+import { ensureOwner } from "@/lib/auth/owner";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +12,7 @@ export default async function AppLayout({
   let messageBadge = 0;
   let phoneBadge = 0;
   try {
+    await ensureOwner();
     const attention = await getAttentionSummary();
     messageBadge = attention.escalated.length + attention.draftCount;
     phoneBadge = attention.voicemailNeedsYou;

@@ -7,8 +7,7 @@ import {
 } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import { getDb } from "@/lib/db";
-import { providerSettings } from "@/lib/db/schema";
-import { requireEnv } from "@/lib/env";
+import { providerSettings, systemSecrets } from "@/lib/db/schema";
 import { cleanErrorMessage } from "@/lib/errors";
 
 export interface ElksCredentials {
@@ -29,18 +28,37 @@ export interface ElevenLabsConfig {
 
 type ProviderName = "46elks" | "elevenlabs";
 
-function encryptionKey(): Buffer {
-  return createHash("sha256")
-    .update(`personal-phone:providers:${requireEnv("AUTH_SECRET")}`)
-    .digest();
+async function encryptionKey(): Promise<Buffer> {
+  const configured = process.env.AUTH_SECRET;
+  if (configured && configured.length >= 16) {
+    return createHash("sha256")
+      .update(`personal-phone:providers:${configured}`)
+      .digest();
+  }
+  // Private previews are already protected by Vercel Authentication. Generate
+  // durable bootstrap key material in Postgres so Settings works immediately.
+  const db = await getDb();
+  await db
+    .insert(systemSecrets)
+    .values({
+      key: "provider-encryption-v1",
+      value: randomBytes(32).toString("base64url"),
+    })
+    .onConflictDoNothing();
+  const [stored] = await db
+    .select()
+    .from(systemSecrets)
+    .where(eq(systemSecrets.key, "provider-encryption-v1"));
+  if (!stored) throw new Error("Could not initialize provider encryption");
+  return Buffer.from(stored.value, "base64url");
 }
 
-export function encryptProviderSecrets(
+export async function encryptProviderSecrets(
   provider: ProviderName,
   secrets: Record<string, string>,
-): string {
+): Promise<string> {
   const iv = randomBytes(12);
-  const cipher = createCipheriv("aes-256-gcm", encryptionKey(), iv);
+  const cipher = createCipheriv("aes-256-gcm", await encryptionKey(), iv);
   cipher.setAAD(Buffer.from(provider));
   const encrypted = Buffer.concat([
     cipher.update(JSON.stringify(secrets), "utf8"),
@@ -54,17 +72,17 @@ export function encryptProviderSecrets(
   ].join(".");
 }
 
-export function decryptProviderSecrets(
+export async function decryptProviderSecrets(
   provider: ProviderName,
   payload: string,
-): Record<string, string> {
+): Promise<Record<string, string>> {
   const [version, ivRaw, tagRaw, encryptedRaw] = payload.split(".");
   if (version !== "v1" || !ivRaw || !tagRaw || !encryptedRaw) {
     throw new Error("Invalid encrypted provider configuration");
   }
   const decipher = createDecipheriv(
     "aes-256-gcm",
-    encryptionKey(),
+    await encryptionKey(),
     Buffer.from(ivRaw, "base64url"),
   );
   decipher.setAAD(Buffer.from(provider));
@@ -95,7 +113,10 @@ export async function saveProviderConfig(
   let oldSecrets: Record<string, string> = {};
   if (current) {
     try {
-      oldSecrets = decryptProviderSecrets(provider, current.encryptedSecrets);
+      oldSecrets = await decryptProviderSecrets(
+        provider,
+        current.encryptedSecrets,
+      );
     } catch {
       // AUTH_SECRET rotation: allow a full credential re-entry to replace
       // undecryptable ciphertext instead of permanently locking the UI.
@@ -106,17 +127,18 @@ export async function saveProviderConfig(
   for (const [key, value] of Object.entries(newSecrets)) {
     if (value.trim()) merged[key] = value.trim();
   }
+  const encrypted = await encryptProviderSecrets(provider, merged);
   await db
     .insert(providerSettings)
     .values({
       provider,
-      encryptedSecrets: encryptProviderSecrets(provider, merged),
+      encryptedSecrets: encrypted,
       publicConfig,
     })
     .onConflictDoUpdate({
       target: providerSettings.provider,
       set: {
-        encryptedSecrets: encryptProviderSecrets(provider, merged),
+        encryptedSecrets: encrypted,
         publicConfig,
         updatedAt: sql`now()`,
         lastTestStatus: null,
@@ -128,7 +150,7 @@ export async function saveProviderConfig(
 export async function getElksCredentials(): Promise<ElksCredentials> {
   const row = await readProvider("46elks");
   const secrets = row
-    ? decryptProviderSecrets("46elks", row.encryptedSecrets)
+    ? await decryptProviderSecrets("46elks", row.encryptedSecrets)
     : {};
   const username = secrets.username || process.env.ELKS46_USERNAME;
   const password = secrets.password || process.env.ELKS46_PASSWORD;
@@ -144,7 +166,7 @@ export async function getElksCredentials(): Promise<ElksCredentials> {
 export async function getElevenLabsConfig(): Promise<ElevenLabsConfig> {
   const row = await readProvider("elevenlabs");
   const secrets = row
-    ? decryptProviderSecrets("elevenlabs", row.encryptedSecrets)
+    ? await decryptProviderSecrets("elevenlabs", row.encryptedSecrets)
     : {};
   const apiKey = secrets.apiKey || process.env.ELEVENLABS_API_KEY;
   const config = row?.publicConfig ?? {};

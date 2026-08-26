@@ -64,6 +64,13 @@
       "when": 1787740069799,
       "tag": "0008_melted_shooting_star",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1787750057554,
+      "tag": "0009_curved_sentinel",
+      "breakpoints": true
     }
   ]
 }
