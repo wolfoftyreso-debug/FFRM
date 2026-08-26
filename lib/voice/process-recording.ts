@@ -71,7 +71,8 @@ export async function processCallRecording(callId: string): Promise<void> {
     const audio = new Uint8Array(await res.arrayBuffer());
 
     const transcript = await transcribeAudio({
-      model: optionalEnv("AI_MODEL_TRANSCRIBE") ?? "openai/whisper-1",
+      model:
+        optionalEnv("AI_MODEL_TRANSCRIBE") ?? "fish-audio/transcribe-1",
       audio,
       purpose: "voicemail-transcribe",
     });

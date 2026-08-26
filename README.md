@@ -104,10 +104,10 @@ pnpm db:seed
 3. Choose models (any Gateway `provider/model` IDs):
 
 ```
-AI_MODEL_FAST=openai/gpt-5.4-mini    # classification, extraction, simple messages
-AI_MODEL_SMART=openai/gpt-5.4        # ambiguous conversations, escalation analysis
-AI_MODEL_VISION=google/gemini-3.7-flash # MMS image understanding
-AI_MODEL_TRANSCRIBE=openai/whisper-1 # voicemail transcription
+AI_MODEL_FAST=minimax/minimax-m3      # free-tier tool/structured model
+AI_MODEL_SMART=minimax/minimax-m3     # free-tier reasoning/tool model
+AI_MODEL_VISION=minimax/minimax-m3    # free-tier vision model
+AI_MODEL_TRANSCRIBE=fish-audio/transcribe-1 # free-tier transcription
 ```
 
 No model strings are hardcoded — switch vendors by changing the env vars.

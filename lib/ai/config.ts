@@ -10,11 +10,11 @@ import { optionalEnv } from "@/lib/env";
  */
 
 export function fastModel(): string {
-  return optionalEnv("AI_MODEL_FAST") ?? "openai/gpt-5.4-mini";
+  return optionalEnv("AI_MODEL_FAST") ?? "minimax/minimax-m3";
 }
 
 export function smartModel(): string {
-  return optionalEnv("AI_MODEL_SMART") ?? "openai/gpt-5.4";
+  return optionalEnv("AI_MODEL_SMART") ?? "minimax/minimax-m3";
 }
 
 /** Confidence below which fast-model triage is re-run with the smart model. */

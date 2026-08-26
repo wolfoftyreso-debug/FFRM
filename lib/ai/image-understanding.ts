@@ -38,7 +38,7 @@ export async function understandImage(args: {
   usage: AiUsage;
 }> {
   const model =
-    optionalEnv("AI_MODEL_VISION") ?? "google/gemini-3.7-flash";
+    optionalEnv("AI_MODEL_VISION") ?? "minimax/minimax-m3";
   const messages: ModelMessage[] = [
     {
       role: "user",
@@ -101,7 +101,7 @@ export async function suggestImageMessage(args: {
   context: ContactContext;
 }): Promise<string> {
   const model =
-    optionalEnv("AI_MODEL_VISION") ?? "google/gemini-3.7-flash";
+    optionalEnv("AI_MODEL_VISION") ?? "minimax/minimax-m3";
   const result = await generateStructuredFromMessages({
     model,
     system:

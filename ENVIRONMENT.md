@@ -9,10 +9,10 @@ production. Never commit real values. See `.env.example` for a template.
 | `APP_PASSWORD` | yes | Password for the single-user login. |
 | `AUTH_SECRET` | yes | ≥16 random chars; signs the session cookie (HS256). |
 | `AI_GATEWAY_API_KEY` | yes* | Vercel AI Gateway key. *On Vercel you may instead rely on OIDC (`VERCEL_OIDC_TOKEN`), which the AI SDK picks up automatically. |
-| `AI_MODEL_FAST` | no | Gateway model ID for classification/extraction/simple generation. Default `openai/gpt-5.4-mini`. |
-| `AI_MODEL_SMART` | no | Gateway model ID for ambiguous conversations/escalation analysis, style extraction and the assistant chat. Default `openai/gpt-5.4`. |
-| `AI_MODEL_VISION` | no | Vision-capable Gateway model for MMS image understanding and image-message drafts. Default `google/gemini-3.7-flash`. |
-| `AI_MODEL_TRANSCRIBE` | no | Gateway transcription model for voicemail. Default `openai/whisper-1`. |
+| `AI_MODEL_FAST` | no | Gateway model for classification/extraction/simple generation. Default `minimax/minimax-m3` (current free-tier tool model). |
+| `AI_MODEL_SMART` | no | Gateway model for ambiguous conversations, style extraction and Assistant. Default `minimax/minimax-m3`. |
+| `AI_MODEL_VISION` | no | Vision-capable Gateway model for MMS understanding/drafts. Default `minimax/minimax-m3`. |
+| `AI_MODEL_TRANSCRIBE` | no | Gateway transcription model for voicemail. Default `fish-audio/transcribe-1`. |
 | `ELEVENLABS_API_KEY` | no | Optional environment fallback for ElevenLabs. Prefer encrypted Settings UI for private/self-hosted use. |
 | `ELEVENLABS_VOICE_ID` | no | Optional ElevenLabs voice-id fallback. |
 | `ELEVENLABS_MODEL_ID` | no | Optional model fallback; default `eleven_multilingual_v2`. |
