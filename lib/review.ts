@@ -46,7 +46,15 @@ export async function getCallDetail(id: string) {
     .leftJoin(contacts, eq(calls.contactId, contacts.id))
     .where(eq(calls.id, id))
     .limit(1);
-  return row ?? null;
+  if (!row) return null;
+  const [callbackTicket] = row.call.callbackTicketId
+    ? await db
+        .select()
+        .from(reminders)
+        .where(eq(reminders.id, row.call.callbackTicketId))
+        .limit(1)
+    : [];
+  return { ...row, callbackTicket: callbackTicket ?? null };
 }
 
 export async function listTickets(view: "open" | "done" = "open") {
@@ -87,7 +95,12 @@ export async function getNotificationCount(now = new Date()): Promise<number> {
     db
       .select({ count: sql<number>`count(*)` })
       .from(calls)
-      .where(eq(calls.aiRequiresUser, true)),
+      .where(
+        and(
+          eq(calls.aiRequiresUser, true),
+          isNull(calls.callbackTicketId),
+        ),
+      ),
     db
       .select({ count: sql<number>`count(*)` })
       .from(conversations)

@@ -4,6 +4,7 @@ import { AppNavigation } from "@/components/app-navigation";
 import { NotificationBell } from "@/components/notification-bell";
 import { ensureOwner } from "@/lib/auth/owner";
 import { ContextBackBar } from "@/components/context-back-bar";
+import { PresenceHeartbeat } from "@/components/presence-heartbeat";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,7 @@ export default async function AppLayout({
 
   return (
     <div className="flex min-h-screen">
+      <PresenceHeartbeat />
       <AppNavigation messageBadge={messageBadge} phoneBadge={phoneBadge} />
       <div className="min-w-0 flex-1 pb-40 md:pb-0">
         <main className="mx-auto max-w-5xl px-4 py-5 md:px-8 md:py-8">

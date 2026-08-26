@@ -23,6 +23,7 @@ import {
 } from "@/components/apple-ui";
 import { ConfirmForm } from "@/components/confirm-form";
 import { Card, PrimaryButton, inputClass } from "@/components/ui";
+import { getReceptionistState } from "@/lib/voice/receptionist-config";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Phone" };
@@ -51,9 +52,10 @@ export default async function PhonePage({
 }) {
   const params = await searchParams;
   const view = params.view ?? "recents";
-  const [allRows, blocked] = await Promise.all([
+  const [allRows, blocked, receptionist] = await Promise.all([
     listCalls(100),
     listBlockedNumbers(),
+    getReceptionistState(),
   ]);
   const blockedSet = new Set(blocked.map((b) => b.phoneNumber));
   const rows =
@@ -63,6 +65,11 @@ export default async function PhonePage({
         ? allRows.filter(
             ({ call }) => call.state === "VOICEMAIL" || !!call.recordingUrl,
           )
+        : view === "callback"
+          ? allRows.filter(
+              ({ call }) =>
+                call.screeningDecision === "CALLBACK" && call.aiRequiresUser,
+            )
         : allRows;
 
   return (
@@ -87,6 +94,26 @@ export default async function PhonePage({
           Calling your phone now. Answer to connect the outbound call.
         </p>
       ) : null}
+      <Link
+        href="/settings?section=calls"
+        className="mb-4 flex min-h-14 items-center justify-between rounded-2xl bg-white px-4"
+      >
+        <span>
+          <span className="block text-[16px] font-semibold">AI-växel</span>
+          <span className="block text-xs text-[var(--secondary-label)]">
+            Namn och ärende krävs före framkoppling
+          </span>
+        </span>
+        <span
+          className={`rounded-full px-3 py-1 text-xs font-semibold ${
+            receptionist?.config.enabled
+              ? "bg-green-100 text-green-800"
+              : "bg-stone-100 text-stone-600"
+          }`}
+        >
+          {receptionist?.config.enabled ? "AKTIV" : "AV"}
+        </span>
+      </Link>
       {params.dial ? (
         <Card className="mb-5">
           <form action={callNumber} className="flex flex-col gap-3 sm:flex-row sm:items-end">
@@ -126,6 +153,11 @@ export default async function PhonePage({
               label: "Voicemail",
               href: "/phone?view=voicemail",
             },
+            {
+              id: "callback",
+              label: "Callback",
+              href: "/phone?view=callback",
+            },
           ]}
         />
       </div>
@@ -140,7 +172,9 @@ export default async function PhonePage({
       ) : (
         <InsetSection>
           {rows.map(({ call, contact }) => {
-            const who = contact ? displayName(contact) : call.fromNumber;
+            const who = contact
+              ? displayName(contact)
+              : call.callerName || call.fromNumber;
             const number =
               call.direction === "INBOUND" ? call.fromNumber : call.toNumber;
             const isBlocked = blockedSet.has(number);
@@ -169,12 +203,19 @@ export default async function PhonePage({
                         : ""}{" "}
                       · {format(call.createdAt, "d MMM, HH:mm")}
                     </p>
-                    {call.aiSummary ? (
+                    {call.aiSummary || call.screeningSummary ? (
                       <div className="mt-2 rounded-xl bg-black/[0.04] p-3">
                         <p className="text-xs font-semibold text-[var(--system-blue)]">
-                          AI SUMMARY
+                          {call.screeningState ? "AI-VÄXEL" : "AI SUMMARY"}
                         </p>
-                        <p className="mt-0.5 text-[14px]">{call.aiSummary}</p>
+                        <p className="mt-0.5 text-[14px]">
+                          {call.screeningSummary ?? call.aiSummary}
+                        </p>
+                        {call.callerPurpose ? (
+                          <p className="mt-1 text-xs text-[var(--secondary-label)]">
+                            Ärende: {call.callerPurpose}
+                          </p>
+                        ) : null}
                         {call.aiRequiresUser ? (
                           <p className="mt-1 text-xs font-semibold text-[var(--system-red)]">
                             Requires you
@@ -203,11 +244,17 @@ export default async function PhonePage({
                 <div className="mt-3 flex flex-wrap gap-1">
                   {contact?.phoneNumber ? (
                     <form action={callContact.bind(null, contact.id)}>
-                      <button className="rounded-lg px-3 text-sm font-medium text-[var(--system-blue)]">
+                      <button className="min-h-11 rounded-lg px-3 text-sm font-medium text-[var(--system-blue)]">
                         Call
                       </button>
                     </form>
                   ) : null}
+                  <Link
+                    href={`/phone/${call.id}`}
+                    className="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-[var(--system-blue)]"
+                  >
+                    Details
+                  </Link>
                   {call.conversationId ? (
                     <Link
                       href={`/messages/${call.conversationId}`}
@@ -248,7 +295,7 @@ export default async function PhonePage({
                   )}
                   {call.aiRequiresUser ? (
                     <form action={markCallHandled.bind(null, call.id)}>
-                      <button className="rounded-lg px-3 text-sm font-medium text-[var(--system-green)]">
+                      <button className="min-h-11 rounded-lg px-3 text-sm font-medium text-[var(--system-green)]">
                         Mark handled
                       </button>
                     </form>

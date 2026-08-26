@@ -37,6 +37,10 @@ export const users = pgTable("users", {
   voiceProfile: jsonb("voice_profile").$type<VoiceProfile>(),
   /** Global inbound call policy; per-contact settings override. */
   callPolicy: jsonb("call_policy").$type<GlobalCallPolicy>(),
+  /** AI receptionist, work-hours, availability and generated voice assets. */
+  receptionistConfig: jsonb("receptionist_config").$type<ReceptionistConfig>(),
+  /** Privacy-safe app activity heartbeat used by AUTO availability. */
+  lastActiveAt: timestamp("last_active_at", { withTimezone: true }),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });
@@ -57,6 +61,23 @@ export interface GlobalCallPolicy {
    * this value ring through even at night (default 85).
    */
   nightPriorityThreshold?: number;
+}
+
+export interface ReceptionistConfig {
+  enabled?: boolean;
+  availabilityMode?: "AUTO" | "AJOUR" | "NOT_AJOUR";
+  workStart?: string;
+  workEnd?: string;
+  activeWindowMinutes?: number;
+  greetingText?: string;
+  retryText?: string;
+  connectText?: string;
+  callbackText?: string;
+  licensedHoldAudioUrl?: string;
+  greetingAudioId?: string;
+  retryAudioId?: string;
+  connectAudioId?: string;
+  callbackAudioId?: string;
 }
 
 export type CallDisposition = "RING_THROUGH" | "VOICEMAIL" | "SCREEN" | "REJECT";
@@ -611,6 +632,11 @@ export const reminders = pgTable(
     priority: text("priority").notNull().default("MEDIUM"), // LOW | MEDIUM | HIGH
     assignee: text("assignee"),
     sourceInsightId: text("source_insight_id"),
+    /** Callback tickets keep notifying until marked done. */
+    sourceCallId: text("source_call_id"),
+    repeatEveryMinutes: integer("repeat_every_minutes"),
+    notificationCount: integer("notification_count").notNull().default(0),
+    lastNotifiedAt: timestamp("last_notified_at", { withTimezone: true }),
     automationId: text("automation_id"),
     automationExecutionId: text("automation_execution_id"),
     createdAt: createdAt(),
@@ -676,6 +702,21 @@ export const calls = pgTable(
     aiSummary: text("ai_summary"),
     aiTopic: text("ai_topic"),
     aiRequiresUser: boolean("ai_requires_user"),
+    /** AI receptionist gate: identity, purpose, decision and callback linkage. */
+    screeningState: text("screening_state"),
+    callerName: text("caller_name"),
+    callerPurpose: text("caller_purpose"),
+    screeningTranscript: text("screening_transcript"),
+    screeningSummary: text("screening_summary"),
+    screeningQuestion: text("screening_question"),
+    screeningQuestionAudioId: text("screening_question_audio_id"),
+    screeningUrgency: text("screening_urgency"),
+    screeningDecision: text("screening_decision"),
+    screeningAttemptCount: integer("screening_attempt_count")
+      .notNull()
+      .default(0),
+    callbackTicketId: text("callback_ticket_id"),
+    screenedAt: timestamp("screened_at", { withTimezone: true }),
     /** Set when recording post-processing has been claimed. */
     processedAt: timestamp("processed_at", { withTimezone: true }),
     recordingProcessingStartedAt: timestamp(
@@ -699,6 +740,30 @@ export const calls = pgTable(
     index("calls_conversation_idx").on(t.conversationId),
     index("calls_contact_idx").on(t.contactId),
     index("calls_created_idx").on(t.createdAt),
+  ],
+);
+
+/** Individual gate recordings are retained even when the connected call follows. */
+export const callScreeningTurns = pgTable(
+  "call_screening_turns",
+  {
+    id: id(),
+    callId: text("call_id")
+      .notNull()
+      .references(() => calls.id, { onDelete: "cascade" }),
+    attempt: integer("attempt").notNull(),
+    recordingUrl: text("recording_url").notNull(),
+    audioDataBase64: text("audio_data_base64"),
+    audioMimeType: text("audio_mime_type"),
+    durationSeconds: integer("duration_seconds"),
+    transcript: text("transcript"),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex("call_screening_turns_call_attempt_unique").on(
+      t.callId,
+      t.attempt,
+    ),
   ],
 );
 
@@ -841,6 +906,7 @@ export const audioAssets = pgTable("audio_assets", {
 
 export type User = typeof users.$inferSelect;
 export type Call = typeof calls.$inferSelect;
+export type CallScreeningTurn = typeof callScreeningTurns.$inferSelect;
 export type ContactMediaItem = typeof contactMedia.$inferSelect;
 export type AssistantMessage = typeof assistantMessages.$inferSelect;
 export type Contact = typeof contacts.$inferSelect;

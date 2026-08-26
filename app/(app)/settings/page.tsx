@@ -10,6 +10,7 @@ import {
   logout,
   removeProviderConfig,
   generateElevenLabsGreetings,
+  generateReceptionistPrompts,
   testElevenLabsSettings,
   testElksSettings,
   unblockNumber,
@@ -23,6 +24,10 @@ import { AutosaveField } from "@/components/autosave-field";
 import { VoiceCloneRecorder } from "@/components/voice-clone-recorder";
 import { SegmentedLinks } from "@/components/apple-ui";
 import { PendingActionButton } from "@/components/pending-action-button";
+import {
+  DEFAULT_RECEPTIONIST_CONFIG,
+  isOwnerAjour,
+} from "@/lib/voice/receptionist-config";
 
 const DISPOSITIONS = [
   { value: "RING_THROUGH", label: "Ring through to my phone" },
@@ -65,6 +70,17 @@ export default async function SettingsPage({
     ]);
   const elks = providers["46elks"];
   const eleven = providers.elevenlabs;
+  const receptionistConfig = {
+    ...DEFAULT_RECEPTIONIST_CONFIG,
+    ...(owner?.receptionistConfig ?? {}),
+  };
+  const availability = owner
+    ? isOwnerAjour({
+        config: receptionistConfig,
+        lastActiveAt: owner.lastActiveAt,
+        timezone: owner.timezone,
+      })
+    : null;
 
   return (
     <>
@@ -315,6 +331,171 @@ export default async function SettingsPage({
                 : undefined
             }
           />
+        </Card>
+
+        <Card className={section === "calls" ? "" : "hidden"}>
+          <h2 className="mb-1 text-sm font-semibold text-stone-700">
+            AI-växel
+          </h2>
+          <p className="mb-4 text-sm text-stone-500">
+            Assistenten kräver namn och ärende innan ett samtal kan kopplas.
+          </p>
+          {availability ? (
+            <p
+              className={`mb-4 rounded-xl px-3 py-2 text-sm font-medium ${
+                availability.available
+                  ? "bg-green-50 text-green-800"
+                  : "bg-amber-50 text-amber-800"
+              }`}
+            >
+              {availability.available ? "Ajour" : "Ej ajour"} ·{" "}
+              {availability.reason}
+            </p>
+          ) : null}
+          {owner ? (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <AutosaveField
+                section="receptionist"
+                field="enabled"
+                label="AI-växel"
+                options={[
+                  { value: "false", label: "Av" },
+                  { value: "true", label: "Alla inkommande samtal" },
+                ]}
+                defaultValue={String(
+                  owner.receptionistConfig?.enabled ??
+                    DEFAULT_RECEPTIONIST_CONFIG.enabled,
+                )}
+              />
+              <AutosaveField
+                section="receptionist"
+                field="availabilityMode"
+                label="Ajour"
+                options={[
+                  { value: "AUTO", label: "Automatiskt" },
+                  { value: "AJOUR", label: "Ajour nu" },
+                  { value: "NOT_AJOUR", label: "Ej ajour" },
+                ]}
+                defaultValue={
+                  owner.receptionistConfig?.availabilityMode ??
+                  DEFAULT_RECEPTIONIST_CONFIG.availabilityMode
+                }
+              />
+              <AutosaveField
+                section="receptionist"
+                field="workStart"
+                label="Arbetsdag börjar"
+                type="time"
+                defaultValue={
+                  owner.receptionistConfig?.workStart ??
+                  DEFAULT_RECEPTIONIST_CONFIG.workStart
+                }
+              />
+              <AutosaveField
+                section="receptionist"
+                field="workEnd"
+                label="Arbetsdag slutar"
+                type="time"
+                defaultValue={
+                  owner.receptionistConfig?.workEnd ??
+                  DEFAULT_RECEPTIONIST_CONFIG.workEnd
+                }
+              />
+              <AutosaveField
+                section="receptionist"
+                field="activeWindowMinutes"
+                label="Ajour efter aktivitet (minuter)"
+                type="number"
+                defaultValue={String(
+                  owner.receptionistConfig?.activeWindowMinutes ??
+                    DEFAULT_RECEPTIONIST_CONFIG.activeWindowMinutes,
+                )}
+              />
+              <div />
+              <div className="sm:col-span-2">
+                <AutosaveField
+                  section="receptionist"
+                  field="greetingText"
+                  label="Svarsfras"
+                  multiline
+                  defaultValue={
+                    owner.receptionistConfig?.greetingText ??
+                    DEFAULT_RECEPTIONIST_CONFIG.greetingText
+                  }
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <AutosaveField
+                  section="receptionist"
+                  field="retryText"
+                  label="Om namn eller ärende saknas"
+                  multiline
+                  defaultValue={
+                    owner.receptionistConfig?.retryText ??
+                    DEFAULT_RECEPTIONIST_CONFIG.retryText
+                  }
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <AutosaveField
+                  section="receptionist"
+                  field="connectText"
+                  label="Före framkoppling"
+                  multiline
+                  defaultValue={
+                    owner.receptionistConfig?.connectText ??
+                    DEFAULT_RECEPTIONIST_CONFIG.connectText
+                  }
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <AutosaveField
+                  section="receptionist"
+                  field="callbackText"
+                  label="När återuppringning behövs"
+                  multiline
+                  defaultValue={
+                    owner.receptionistConfig?.callbackText ??
+                    DEFAULT_RECEPTIONIST_CONFIG.callbackText
+                  }
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <AutosaveField
+                  section="receptionist"
+                  field="licensedHoldAudioUrl"
+                  label="Licensierat vänteljud (valfri URL)"
+                  type="url"
+                  placeholder="https://…/hold.mp3"
+                  defaultValue={
+                    owner.receptionistConfig?.licensedHoldAudioUrl ?? ""
+                  }
+                />
+                <p className="mt-1 text-xs text-stone-500">
+                  Lägg bara in musik du har rätt att spela för inringare.
+                </p>
+              </div>
+              <form
+                action={generateReceptionistPrompts}
+                className="sm:col-span-2"
+              >
+                <PendingActionButton
+                  pendingText="Skapar röstfraser…"
+                  variant="filled"
+                >
+                  Skapa röstfraser med min AI-röst
+                </PendingActionButton>
+              </form>
+              {owner.receptionistConfig?.greetingAudioId &&
+              owner.receptionistConfig?.retryAudioId &&
+              owner.receptionistConfig?.connectAudioId &&
+              owner.receptionistConfig?.callbackAudioId ? (
+                <p className="text-xs font-medium text-[var(--system-green)] sm:col-span-2">
+                  Röstfraserna är klara.
+                </p>
+              ) : null}
+            </div>
+          ) : null}
         </Card>
 
         <Card className={section === "calls" ? "" : "hidden"}>

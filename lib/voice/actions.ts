@@ -1,5 +1,6 @@
 import { appUrl, optionalEnv } from "@/lib/env";
 import { getElevenLabsConfig } from "@/lib/providers/config";
+import type { ReceptionistConfig } from "@/lib/db/schema";
 
 /**
  * Builders for 46elks call-action JSON structures
@@ -20,8 +21,61 @@ export function hangupUrl(): string {
   return webhookUrl("/api/webhooks/46elks/hangup");
 }
 
-export function recordingWebhookUrl(): string {
-  return webhookUrl("/api/webhooks/46elks/recording");
+export function recordingWebhookUrl(params?: Record<string, string>): string {
+  const url = new URL(webhookUrl("/api/webhooks/46elks/recording"));
+  for (const [key, value] of Object.entries(params ?? {})) {
+    url.searchParams.set(key, value);
+  }
+  return url.toString();
+}
+
+function publicAudioUrl(id: string): string {
+  return webhookUrl(`/api/public/audio/${id}`);
+}
+
+/** AI gate: play a cloned prompt, then capture one caller turn. */
+export function gateCaptureAction(
+  config: ReceptionistConfig,
+  attempt: number,
+): ElksCallAction {
+  const audioId =
+    attempt > 1 ? config.retryAudioId : config.greetingAudioId;
+  if (!audioId) throw new Error("Receptionist voice prompts are not generated");
+  return gateCaptureWithAudio(audioId, attempt);
+}
+
+export function gateCaptureWithAudio(
+  audioId: string,
+  attempt: number,
+): ElksCallAction {
+  return {
+    play: publicAudioUrl(audioId),
+    next: {
+      record: recordingWebhookUrl({
+        stage: "gate",
+        attempt: String(attempt),
+      }),
+      timelimit: 90,
+      silencedetection: "yes",
+      next: webhookUrl(
+        `/api/webhooks/46elks/voice/gate?attempt=${attempt}`,
+      ),
+      whenhangup: hangupUrl(),
+    },
+    whenhangup: hangupUrl(),
+  };
+}
+
+export function gateResultAction(args: {
+  audioId: string;
+  nextPath?: string;
+}): ElksCallAction {
+  return {
+    play: publicAudioUrl(args.audioId),
+    ...(args.nextPath ? { next: webhookUrl(args.nextPath) } : {}),
+    skippable: false,
+    whenhangup: hangupUrl(),
+  };
 }
 
 /** Ring the owner's phone; on no answer/busy, the after-connect webhook decides (voicemail). */

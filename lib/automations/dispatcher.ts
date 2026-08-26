@@ -204,6 +204,10 @@ export async function runDispatcher(now: Date = new Date()): Promise<DispatchSum
     .limit(20);
     const { processCampaignQueue } = await import("@/lib/sms/campaign");
     await processCampaignQueue(now);
+    const { processCallbackNotifications } = await import(
+      "@/lib/voice/receptionist"
+    );
+    await processCallbackNotifications(now);
 
     for (const m of unprocessed) {
     if (m.channel === "MMS") {

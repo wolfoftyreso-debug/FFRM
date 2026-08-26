@@ -15,6 +15,8 @@ import {
   voicemailAction,
   rejectAction,
   recordingWebhookUrl,
+  gateCaptureAction,
+  gateResultAction,
   type ElksCallAction,
 } from "./actions";
 import { logActivity } from "@/lib/activity";
@@ -26,6 +28,11 @@ import { appendConversationEvent } from "@/lib/conversation-events";
 import { createId } from "@/lib/id";
 import { getElksCredentials } from "@/lib/providers/config";
 import { elksBasicAuth } from "@/lib/providers/elks46";
+import {
+  DEFAULT_RECEPTIONIST_CONFIG,
+  getReceptionistState,
+} from "@/lib/voice/receptionist-config";
+import { createCallbackTicket } from "@/lib/voice/receptionist";
 
 export interface IncomingCallInput {
   callid: string;
@@ -72,12 +79,29 @@ export async function handleIncomingCall(
     .limit(1);
 
   const [owner] = await db.select().from(users).limit(1);
-  const decision = decideCallRouting({
-    contact: contact ?? null,
-    isBlocked: !!blocked || contact?.callPolicy === "BLOCK",
-    globalPolicy: owner?.callPolicy,
-    timezone: contact?.timezone ?? owner?.timezone,
-  });
+  const receptionistConfig = {
+    ...DEFAULT_RECEPTIONIST_CONFIG,
+    ...(owner?.receptionistConfig ?? {}),
+  };
+  const receptionistEnabled =
+    receptionistConfig.enabled &&
+    !blocked &&
+    contact?.callPolicy !== "BLOCK" &&
+    !!receptionistConfig.greetingAudioId &&
+    !!receptionistConfig.retryAudioId &&
+    !!receptionistConfig.connectAudioId &&
+    !!receptionistConfig.callbackAudioId;
+  const decision = receptionistEnabled
+    ? {
+        disposition: "SCREEN" as const,
+        reason: "AI receptionist gate: name and purpose required",
+      }
+    : decideCallRouting({
+        contact: contact ?? null,
+        isBlocked: !!blocked || contact?.callPolicy === "BLOCK",
+        globalPolicy: owner?.callPolicy,
+        timezone: contact?.timezone ?? owner?.timezone,
+      });
 
   const target = await ownerPhone();
   const conversationId = await getOrCreateConversation(
@@ -103,6 +127,9 @@ export async function handleIncomingCall(
       state: "RINGING",
       disposition,
       policyReason: decision.reason,
+      screeningState: receptionistEnabled
+        ? "AWAITING_IDENTITY_PURPOSE"
+        : null,
     })
     .onConflictDoNothing()
     .returning({ id: calls.id });
@@ -143,7 +170,9 @@ export async function handleIncomingCall(
     case "VOICEMAIL":
       return voicemailAction("VOICEMAIL");
     case "SCREEN":
-      return voicemailAction("SCREEN");
+      return receptionistEnabled
+        ? gateCaptureAction(receptionistConfig, 1)
+        : voicemailAction("SCREEN");
     case "REJECT":
       return rejectAction();
   }
@@ -156,6 +185,15 @@ async function actionForStoredCall(call: Call): Promise<ElksCallAction> {
         ? connectAction(call.routedToNumber)
         : voicemailAction("VOICEMAIL");
     case "SCREEN":
+      if (call.screeningState) {
+        const state = await getReceptionistState();
+        if (state) {
+          return gateCaptureAction(
+            state.config,
+            Math.min(2, Math.max(1, call.screeningAttemptCount + 1)),
+          );
+        }
+      }
       return voicemailAction("SCREEN");
     case "REJECT":
       return rejectAction();
@@ -197,6 +235,16 @@ export async function handleAfterConnect(
       });
     }
     return { hangup: "" };
+  }
+
+  if (call?.screeningDecision === "CONNECT") {
+    await createCallbackTicket(call, `Framkoppling misslyckades: ${result}`);
+    const receptionist = await getReceptionistState();
+    if (receptionist?.config.callbackAudioId) {
+      return gateResultAction({
+        audioId: receptionist.config.callbackAudioId,
+      });
+    }
   }
 
   // No answer → voicemail (state updated; MISSED is set at hangup if the

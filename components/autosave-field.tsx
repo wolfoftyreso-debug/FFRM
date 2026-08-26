@@ -3,7 +3,12 @@
 import { useState } from "react";
 import { AlertCircle, CheckCircle2, LoaderCircle } from "lucide-react";
 
-type Section = "owner" | "callPolicy" | "46elks" | "elevenlabs";
+type Section =
+  | "owner"
+  | "callPolicy"
+  | "receptionist"
+  | "46elks"
+  | "elevenlabs";
 
 export function AutosaveField({
   section,

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { getDb } from "@/lib/db";
 import {
   automations,
+  calls,
   commitments,
   conversationInsights,
   contactFacts,
@@ -1158,6 +1159,12 @@ export async function completeReminder(reminderId: string): Promise<void> {
     .where(eq(reminders.id, reminderId))
     .returning();
   if (reminder) {
+    if (reminder.sourceCallId) {
+      await db
+        .update(calls)
+        .set({ aiRequiresUser: false })
+        .where(eq(calls.id, reminder.sourceCallId));
+    }
     await logActivity({
       actor: "USER",
       action: "REMINDER_COMPLETED",
@@ -1166,6 +1173,9 @@ export async function completeReminder(reminderId: string): Promise<void> {
     });
   }
   revalidatePath("/");
+  revalidatePath("/phone");
+  revalidatePath("/tasks");
+  revalidatePath("/notifications");
 }
 
 export async function reviewFact(
@@ -1479,13 +1489,18 @@ export async function unblockNumber(phoneNumber: string): Promise<void> {
 
 export async function markCallHandled(callId: string): Promise<void> {
   const db = await getDb();
-  const { calls } = await import("@/lib/db/schema");
   const [call] = await db
     .update(calls)
     .set({ aiRequiresUser: false })
     .where(eq(calls.id, callId))
     .returning();
   if (call) {
+    if (call.callbackTicketId) {
+      await db
+        .update(reminders)
+        .set({ status: "DONE", updatedAt: sql`now()` })
+        .where(eq(reminders.id, call.callbackTicketId));
+    }
     await logActivity({
       actor: "USER",
       action: "CALL_HANDLED",
@@ -1588,6 +1603,72 @@ export async function generateElevenLabsGreetings(): Promise<void> {
     actor: "USER",
     action: "VOICE_GREETINGS_GENERATED",
     summary: "ElevenLabs voicemail and screening greetings generated",
+  });
+  revalidatePath("/settings");
+}
+
+export async function generateReceptionistPrompts(): Promise<void> {
+  const db = await getDb();
+  const { audioAssets } = await import("@/lib/db/schema");
+  const { generateElevenLabsSpeech } = await import(
+    "@/lib/providers/elevenlabs"
+  );
+  const { getReceptionistState } = await import(
+    "@/lib/voice/receptionist-config"
+  );
+  const state = await getReceptionistState();
+  if (!state) throw new Error("Owner profile is unavailable");
+  const prompts = [
+    ["RECEPTIONIST_GREETING", state.config.greetingText],
+    ["RECEPTIONIST_RETRY", state.config.retryText],
+    ["RECEPTIONIST_CONNECT", state.config.connectText],
+    ["RECEPTIONIST_CALLBACK", state.config.callbackText],
+  ] as const;
+  const generated = await Promise.all(
+    prompts.map(async ([purpose, text]) => ({
+      purpose,
+      text,
+      audio: await generateElevenLabsSpeech(text),
+    })),
+  );
+  const assets = await db.transaction(async (tx) => {
+    const rows = [];
+    for (const item of generated) {
+      const [asset] = await tx
+        .insert(audioAssets)
+        .values({
+          provider: "elevenlabs",
+          purpose: item.purpose,
+          mimeType: item.audio.mimeType,
+          dataBase64: Buffer.from(item.audio.data).toString("base64"),
+          byteSize: item.audio.data.byteLength,
+          sourceText: item.text,
+        })
+        .returning();
+      rows.push(asset);
+    }
+    return rows;
+  });
+  const byPurpose = Object.fromEntries(
+    assets.map((asset) => [asset.purpose, asset.id]),
+  );
+  await db
+    .update(users)
+    .set({
+      receptionistConfig: {
+        ...state.owner.receptionistConfig,
+        greetingAudioId: byPurpose.RECEPTIONIST_GREETING,
+        retryAudioId: byPurpose.RECEPTIONIST_RETRY,
+        connectAudioId: byPurpose.RECEPTIONIST_CONNECT,
+        callbackAudioId: byPurpose.RECEPTIONIST_CALLBACK,
+      },
+      updatedAt: sql`now()`,
+    })
+    .where(eq(users.id, state.owner.id));
+  await logActivity({
+    actor: "USER",
+    action: "RECEPTIONIST_PROMPTS_GENERATED",
+    summary: "AI receptionist prompts generated with ElevenLabs voice",
   });
   revalidatePath("/settings");
 }

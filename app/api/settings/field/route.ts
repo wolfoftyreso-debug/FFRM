@@ -10,9 +10,16 @@ import {
 } from "@/lib/providers/config";
 import { ensureOwner } from "@/lib/auth/owner";
 import { cleanErrorMessage } from "@/lib/errors";
+import type { ReceptionistConfig } from "@/lib/db/schema";
 
 const inputSchema = z.object({
-  section: z.enum(["owner", "callPolicy", "46elks", "elevenlabs"]),
+  section: z.enum([
+    "owner",
+    "callPolicy",
+    "receptionist",
+    "46elks",
+    "elevenlabs",
+  ]),
   field: z.string().min(1).max(64),
   value: z.string().max(10_000),
 });
@@ -32,6 +39,8 @@ export async function POST(req: Request) {
     if (input.section === "owner") await saveOwnerField(input.field, input.value);
     else if (input.section === "callPolicy")
       await saveCallPolicyField(input.field, input.value);
+    else if (input.section === "receptionist")
+      await saveReceptionistField(input.field, input.value);
     else if (input.section === "46elks")
       await saveElksField(input.field, input.value);
     else await saveElevenField(input.field, input.value);
@@ -42,6 +51,79 @@ export async function POST(req: Request) {
       { status: 400 },
     );
   }
+}
+
+async function saveReceptionistField(field: string, value: string) {
+  const allowed = new Set([
+    "enabled",
+    "availabilityMode",
+    "workStart",
+    "workEnd",
+    "activeWindowMinutes",
+    "greetingText",
+    "retryText",
+    "connectText",
+    "callbackText",
+    "licensedHoldAudioUrl",
+  ]);
+  if (!allowed.has(field)) throw new Error("Unsupported receptionist field");
+  const db = await getDb();
+  const current = await owner();
+  const config: ReceptionistConfig = { ...(current.receptionistConfig ?? {}) };
+  if (field === "enabled") {
+    if (!["true", "false"].includes(value)) throw new Error("Invalid setting");
+    if (
+      value === "true" &&
+      (!config.greetingAudioId ||
+        !config.retryAudioId ||
+        !config.connectAudioId ||
+        !config.callbackAudioId)
+    ) {
+      throw new Error("Generate the receptionist voice prompts first");
+    }
+    config.enabled = value === "true";
+  } else if (field === "availabilityMode") {
+    if (!["AUTO", "AJOUR", "NOT_AJOUR"].includes(value)) {
+      throw new Error("Invalid availability mode");
+    }
+    config.availabilityMode = value as ReceptionistConfig["availabilityMode"];
+  } else if (field === "activeWindowMinutes") {
+    const minutes = Number(value);
+    if (!Number.isInteger(minutes) || minutes < 1 || minutes > 120) {
+      throw new Error("Use 1–120 minutes");
+    }
+    config.activeWindowMinutes = minutes;
+  } else if (field === "workStart" || field === "workEnd") {
+    if (!/^\d{2}:\d{2}$/.test(value)) throw new Error("Invalid time");
+    config[field] = value;
+  } else if (field === "licensedHoldAudioUrl") {
+    const url = value.trim();
+    if (url && !z.string().url().safeParse(url).success) {
+      throw new Error("Use a valid URL");
+    }
+    config.licensedHoldAudioUrl = url || undefined;
+  } else {
+    const text = value.trim();
+    if (!text) throw new Error("Text cannot be empty");
+    config[
+      field as "greetingText" | "retryText" | "connectText" | "callbackText"
+    ] = text;
+    const audioField = {
+      greetingText: "greetingAudioId",
+      retryText: "retryAudioId",
+      connectText: "connectAudioId",
+      callbackText: "callbackAudioId",
+    }[field] as
+      | "greetingAudioId"
+      | "retryAudioId"
+      | "connectAudioId"
+      | "callbackAudioId";
+    config[audioField] = undefined;
+  }
+  await db
+    .update(users)
+    .set({ receptionistConfig: config, updatedAt: sql`now()` })
+    .where(eq(users.id, current.id));
 }
 
 async function owner() {

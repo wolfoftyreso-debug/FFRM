@@ -411,7 +411,7 @@ test.describe.serial("Personal Phone complete UI", () => {
     page,
   }) => {
     await page.goto("/phone");
-    for (const tab of ["Recents", "Missed", "Voicemail"]) {
+    for (const tab of ["Recents", "Missed", "Voicemail", "Callback"]) {
       await page.getByRole("tab", { name: tab, exact: true }).click();
       await expect(page.getByRole("tab", { name: tab, exact: true })).toHaveAttribute(
         "aria-selected",
@@ -419,6 +419,7 @@ test.describe.serial("Personal Phone complete UI", () => {
       );
     }
     await page.getByRole("tab", { name: "Recents", exact: true }).click();
+    await expect(page.getByText("AI-växel").first()).toBeVisible();
     if (!(await page.getByText("No calls here").isVisible())) {
       await expect(page.getByText(/Incoming|Outgoing/).first()).toBeVisible();
       await expect(
@@ -489,6 +490,14 @@ test.describe.serial("Personal Phone complete UI", () => {
       "Vi hörs!\nHa det fint.",
     );
     await page.getByRole("tab", { name: "Calls" }).click();
+    await expect(page.locator('select[name="enabled"]')).toBeVisible();
+    await expect(page.locator('select[name="availabilityMode"]')).toBeVisible();
+    await expect(page.locator('textarea[name="greetingText"]')).toBeVisible();
+    await expect(
+      page.getByRole("button", {
+        name: "Skapa röstfraser med min AI-röst",
+      }),
+    ).toBeVisible();
     await autosaveSelect(page, "knownContacts", "RING_THROUGH");
     await autosaveSelect(page, "unknownCallers", "VOICEMAIL");
     await autosaveInput(page, "nightStart", "22:00");
