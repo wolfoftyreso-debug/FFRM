@@ -1537,6 +1537,104 @@ export async function testElksSettings(): Promise<void> {
   revalidatePath("/settings");
 }
 
+export async function testApolloSettings(): Promise<void> {
+  const { testApolloConnection } = await import("@/lib/providers/apollo");
+  const { updateProviderTestStatus } = await import("@/lib/providers/config");
+  try {
+    await testApolloConnection();
+    await updateProviderTestStatus("apollo", true);
+  } catch (error) {
+    await updateProviderTestStatus("apollo", false, error);
+  }
+  revalidatePath("/settings");
+  revalidatePath("/apollo");
+}
+
+export async function previewApolloSearch(formData: FormData) {
+  const { filtersFromForm } = await import("@/lib/apollo/filters");
+  const { previewApolloAudience } = await import("@/lib/apollo/service");
+  return previewApolloAudience(
+    filtersFromForm({
+      titles: String(formData.get("titles") ?? ""),
+      seniorities: String(formData.get("seniorities") ?? ""),
+      industries: String(formData.get("industries") ?? ""),
+      personLocations: String(formData.get("personLocations") ?? ""),
+      organizationLocations: String(formData.get("organizationLocations") ?? ""),
+      keywords: String(formData.get("keywords") ?? ""),
+      includeSimilarTitles: String(formData.get("includeSimilarTitles") ?? "true"),
+      requirePhone: String(formData.get("requirePhone") ?? "true"),
+      limit: String(formData.get("limit") ?? "25"),
+    }),
+  );
+}
+
+export async function fetchApolloPhoneList(formData: FormData) {
+  const { filtersFromForm } = await import("@/lib/apollo/filters");
+  const { fetchApolloPhones } = await import("@/lib/apollo/service");
+  const result = await fetchApolloPhones({
+    filters: filtersFromForm({
+      titles: String(formData.get("titles") ?? ""),
+      seniorities: String(formData.get("seniorities") ?? ""),
+      industries: String(formData.get("industries") ?? ""),
+      personLocations: String(formData.get("personLocations") ?? ""),
+      organizationLocations: String(formData.get("organizationLocations") ?? ""),
+      keywords: String(formData.get("keywords") ?? ""),
+      includeSimilarTitles: String(formData.get("includeSimilarTitles") ?? "true"),
+      requirePhone: String(formData.get("requirePhone") ?? "true"),
+      limit: String(formData.get("limit") ?? "25"),
+    }),
+    audienceId: String(formData.get("audienceId") ?? "") || null,
+    name: String(formData.get("name") ?? ""),
+  });
+  revalidatePath("/apollo");
+  revalidatePath(`/apollo/${result.list.id}`);
+  redirect(`/apollo/${result.list.id}`);
+}
+
+export async function saveApolloAudiencePreset(formData: FormData) {
+  const { filtersFromForm } = await import("@/lib/apollo/filters");
+  const { saveApolloAudience } = await import("@/lib/apollo/service");
+  await saveApolloAudience({
+    name: String(formData.get("name") ?? ""),
+    filters: filtersFromForm({
+      titles: String(formData.get("titles") ?? ""),
+      seniorities: String(formData.get("seniorities") ?? ""),
+      industries: String(formData.get("industries") ?? ""),
+      personLocations: String(formData.get("personLocations") ?? ""),
+      organizationLocations: String(formData.get("organizationLocations") ?? ""),
+      keywords: String(formData.get("keywords") ?? ""),
+      includeSimilarTitles: String(formData.get("includeSimilarTitles") ?? "true"),
+      requirePhone: String(formData.get("requirePhone") ?? "true"),
+      limit: String(formData.get("limit") ?? "25"),
+    }),
+  });
+  revalidatePath("/apollo");
+  revalidatePath("/settings");
+}
+
+export async function deleteApolloAudiencePreset(id: string) {
+  const { deleteApolloAudience } = await import("@/lib/apollo/service");
+  await deleteApolloAudience(id);
+  revalidatePath("/apollo");
+  revalidatePath("/settings");
+}
+
+export async function importApolloContacts(listId: string) {
+  const { importApolloList } = await import("@/lib/apollo/service");
+  await importApolloList(listId);
+  revalidatePath("/people");
+  revalidatePath("/apollo");
+  revalidatePath(`/apollo/${listId}`);
+  redirect("/people");
+}
+
+export async function refreshApolloPhoneList(listId: string) {
+  const { pollPendingApolloPhones } = await import("@/lib/apollo/service");
+  await pollPendingApolloPhones();
+  revalidatePath(`/apollo/${listId}`);
+  revalidatePath("/apollo");
+}
+
 export async function testTwilioSettings(): Promise<void> {
   const { testTwilioConnection } = await import("@/lib/providers/twilio");
   const { updateProviderTestStatus } = await import("@/lib/providers/config");
@@ -1686,7 +1784,7 @@ export async function generateReceptionistPrompts(): Promise<void> {
 }
 
 export async function removeProviderConfig(
-  provider: "46elks" | "twilio" | "elevenlabs",
+  provider: "46elks" | "twilio" | "elevenlabs" | "apollo",
 ): Promise<void> {
   const db = await getDb();
   const { audioAssets, providerSettings } = await import("@/lib/db/schema");

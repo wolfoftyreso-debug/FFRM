@@ -10,7 +10,8 @@ type Section =
   | "messaging"
   | "46elks"
   | "twilio"
-  | "elevenlabs";
+  | "elevenlabs"
+  | "apollo";
 
 export function AutosaveField({
   section,

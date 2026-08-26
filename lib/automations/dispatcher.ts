@@ -208,6 +208,8 @@ export async function runDispatcher(now: Date = new Date()): Promise<DispatchSum
       "@/lib/voice/receptionist"
     );
     await processCallbackNotifications(now);
+    const { pollPendingApolloPhones } = await import("@/lib/apollo/service");
+    await pollPendingApolloPhones();
 
     for (const m of unprocessed) {
     if (m.channel === "MMS") {

@@ -10,6 +10,7 @@ import {
   ListChecks,
   MessageCircle,
   Phone,
+  Radar,
   Settings,
   Users,
 } from "lucide-react";
@@ -27,6 +28,7 @@ const primary = [
 const secondary = [
   { href: "/chat", label: "Assistant", icon: Bot },
   { href: "/me/share", label: "Dela min kontakt", icon: ContactRound },
+  { href: "/apollo", label: "Apollo", icon: Radar },
   { href: "/calendar", label: "Calendar", icon: CalendarDays },
   { href: "/tasks", label: "Tickets", icon: ListChecks },
   { href: "/activity", label: "Activity", icon: ListChecks },

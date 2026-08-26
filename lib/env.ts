@@ -20,6 +20,7 @@ const envSchema = z.object({
   ELEVENLABS_API_KEY: z.string().optional(),
   ELEVENLABS_VOICE_ID: z.string().optional(),
   ELEVENLABS_MODEL_ID: z.string().optional(),
+  APOLLO_API_KEY: z.string().optional(),
   ELKS46_USERNAME: z.string().min(1),
   ELKS46_PASSWORD: z.string().min(1),
   ELKS46_FROM_NUMBER: z.string().min(1),

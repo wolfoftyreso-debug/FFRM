@@ -14,6 +14,7 @@ import {
   testElevenLabsSettings,
   testElksSettings,
   testTwilioSettings,
+  testApolloSettings,
   unblockNumber,
 } from "@/app/actions";
 import { Card, PageHeader } from "@/components/ui";
@@ -30,6 +31,7 @@ import {
   DEFAULT_RECEPTIONIST_CONFIG,
   isOwnerAjour,
 } from "@/lib/voice/receptionist-config";
+import { parseApolloPublicConfig } from "@/lib/apollo/config";
 
 const DISPOSITIONS = [
   { value: "RING_THROUGH", label: "Ring through to my phone" },
@@ -73,6 +75,8 @@ export default async function SettingsPage({
   const elks = providers["46elks"];
   const twilio = providers.twilio;
   const eleven = providers.elevenlabs;
+  const apollo = providers.apollo;
+  const apolloConfig = parseApolloPublicConfig(apollo?.publicConfig);
   const messagingProvider =
     state.messagingProvider === "twilio" ? "twilio" : "46elks";
   const receptionistConfig = {
@@ -436,6 +440,125 @@ export default async function SettingsPage({
                 : undefined
             }
           />
+        </Card>
+
+        <Card className={section === "integrations" ? "" : "hidden"}>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-semibold text-stone-700">Apollo</h2>
+              <p className="mt-1 text-sm text-stone-500">
+                Hämta telefonnummer för målgrupper och geografiskt urval.
+                API-nyckeln krypteras.
+              </p>
+            </div>
+            <ProviderStatus status={apollo?.lastTestStatus} />
+          </div>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <AutosaveField
+                section="apollo"
+                field="masterKey"
+                label="API-nyckel"
+                type="password"
+                placeholder={apollo ? "•••••••• (sparad)" : "Apollo API key"}
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <AutosaveField
+                section="apollo"
+                field="defaultTitles"
+                label="Standardtitlar / målgrupp"
+                multiline
+                defaultValue={apolloConfig.defaultTitles}
+              />
+            </div>
+            <AutosaveField
+              section="apollo"
+              field="defaultSeniorities"
+              label="Standardsenioritet"
+              defaultValue={apolloConfig.defaultSeniorities}
+            />
+            <AutosaveField
+              section="apollo"
+              field="defaultPersonLocations"
+              label="Standardgeografi (person)"
+              defaultValue={apolloConfig.defaultPersonLocations}
+            />
+            <AutosaveField
+              section="apollo"
+              field="defaultOrganizationLocations"
+              label="Standardgeografi (företag)"
+              defaultValue={apolloConfig.defaultOrganizationLocations}
+            />
+            <AutosaveField
+              section="apollo"
+              field="defaultIndustries"
+              label="Standardbranscher"
+              defaultValue={apolloConfig.defaultIndustries}
+            />
+            <AutosaveField
+              section="apollo"
+              field="defaultKeywords"
+              label="Standardnyckelord"
+              defaultValue={apolloConfig.defaultKeywords}
+            />
+            <AutosaveField
+              section="apollo"
+              field="defaultLimit"
+              label="Max personer per hämtning"
+              type="number"
+              defaultValue={String(apolloConfig.defaultLimit)}
+            />
+            <AutosaveField
+              section="apollo"
+              field="requirePhone"
+              label="Bara personer med telefon"
+              options={[
+                { value: "true", label: "Ja" },
+                { value: "false", label: "Nej" },
+              ]}
+              defaultValue={apolloConfig.requirePhone ? "true" : "false"}
+            />
+            <AutosaveField
+              section="apollo"
+              field="revealPhoneNumbers"
+              label="Hämta telefonnummer vid sökning"
+              options={[
+                { value: "true", label: "Ja, förbruka Apollo-krediter" },
+                { value: "false", label: "Nej, bara förhandsgranska" },
+              ]}
+              defaultValue={apolloConfig.revealPhoneNumbers ? "true" : "false"}
+            />
+            <AutosaveField
+              section="apollo"
+              field="includeSimilarTitles"
+              label="Inkludera liknande titlar"
+              options={[
+                { value: "true", label: "Ja" },
+                { value: "false", label: "Nej, exakta titlar" },
+              ]}
+              defaultValue={apolloConfig.includeSimilarTitles ? "true" : "false"}
+            />
+          </div>
+          {apollo ? (
+            <div className="mt-2 flex flex-wrap gap-3">
+              <form action={testApolloSettings}>
+                <PendingActionButton pendingText="Testar Apollo…">
+                  Testa Apollo
+                </PendingActionButton>
+              </form>
+              <ConfirmForm
+                action={removeProviderConfig.bind(null, "apollo")}
+                label="Ta bort Apollo"
+                confirmText="Ta bort krypterad Apollo-nyckel?"
+              />
+            </div>
+          ) : null}
+          <ProviderTestDetail provider={apollo} />
+          <p className="mt-3 text-xs text-stone-500">
+            Sök och hämta nummer: <a className="text-[var(--system-blue)]" href="/apollo">/apollo</a>
+            . Webhook: <code>/api/webhooks/apollo/phone</code>
+          </p>
         </Card>
 
         <Card className={section === "calls" ? "" : "hidden"}>

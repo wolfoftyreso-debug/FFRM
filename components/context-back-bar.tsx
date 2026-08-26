@@ -21,6 +21,12 @@ function targetFor(pathname: string): BackTarget | null {
   if (pathname === "/people/new") {
     return { href: "/people", label: "Contacts" };
   }
+  if (pathname === "/apollo") {
+    return { href: "/people", label: "Contacts" };
+  }
+  if (/^\/apollo\/[^/]+$/.test(pathname)) {
+    return { href: "/apollo", label: "Apollo" };
+  }
   const editContact = pathname.match(/^\/people\/([^/]+)\/edit$/);
   if (editContact) {
     return { href: `/people/${editContact[1]}`, label: "Contact" };

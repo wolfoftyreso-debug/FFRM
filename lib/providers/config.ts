@@ -34,7 +34,11 @@ export interface TwilioCredentials {
   fromNumber: string;
 }
 
-type ProviderName = "46elks" | "elevenlabs" | "twilio";
+export interface ApolloCredentials {
+  apiKey: string;
+}
+
+type ProviderName = "46elks" | "elevenlabs" | "twilio" | "apollo";
 
 async function encryptionKey(): Promise<Buffer> {
   const configured = process.env.AUTH_SECRET;
@@ -226,6 +230,16 @@ export async function getTwilioCredentials(): Promise<TwilioCredentials> {
   return { accountSid, apiKeySid, apiKeySecret, authToken, fromNumber };
 }
 
+export async function getApolloCredentials(): Promise<ApolloCredentials> {
+  const row = await readProvider("apollo");
+  const secrets = row
+    ? await decryptProviderSecrets("apollo", row.encryptedSecrets)
+    : {};
+  const apiKey = secrets.apiKey || process.env.APOLLO_API_KEY || "";
+  if (!apiKey.trim()) throw new Error("Apollo is not configured");
+  return { apiKey: apiKey.trim() };
+}
+
 export async function updateProviderTestStatus(
   provider: ProviderName,
   ok: boolean,
@@ -261,6 +275,12 @@ export async function updateProviderTestStatus(
             process.env.ELEVENLABS_MODEL_ID ?? "eleven_multilingual_v2",
           source: "environment",
         },
+      );
+    } else if (provider === "apollo" && process.env.APOLLO_API_KEY) {
+      await saveProviderConfig(
+        "apollo",
+        { apiKey: process.env.APOLLO_API_KEY },
+        { source: "environment" },
       );
     }
   }
@@ -336,6 +356,16 @@ export async function getProviderStatus() {
           process.env.ELEVENLABS_MODEL_ID ?? "eleven_multilingual_v2",
         source: "environment",
       },
+      updatedAt: new Date(),
+      lastTestAt: null,
+      lastTestStatus: null,
+      lastTestError: null,
+    };
+  }
+  if (!result.apollo && process.env.APOLLO_API_KEY) {
+    result.apollo = {
+      configured: true,
+      publicConfig: { source: "environment" },
       updatedAt: new Date(),
       lastTestAt: null,
       lastTestStatus: null,

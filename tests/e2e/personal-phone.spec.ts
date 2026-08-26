@@ -532,12 +532,19 @@ test.describe.serial("Personal Phone complete UI", () => {
     await expect(page.locator('select[name="provider"]')).toHaveValue("46elks");
     await expect(page.locator('input[name="accountSid"]')).toBeVisible();
     await expect(page.getByText("Alternativ adapter för SMS och MMS.")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Apollo" })).toBeVisible();
+    await expect(page.locator('textarea[name="defaultTitles"]')).toBeVisible();
+    await expect(page.locator('input[name="defaultPersonLocations"]')).toBeVisible();
+    await expect(page.locator('input[name="masterKey"]')).toBeVisible();
     await autosaveInput(page, "username", "u_e2e");
     await autosaveInput(page, "password", "p_e2e");
     await autosaveInput(page, "fromNumber", "+46701112233");
     await autosaveInput(page, "apiKey", "xi_e2e");
     await autosaveInput(page, "voiceId", "voice_e2e");
     await autosaveInput(page, "modelId", "eleven_multilingual_v2");
+    await autosaveInput(page, "masterKey", "apollo_e2e");
+    await autosaveInput(page, "defaultTitles", "VD, CEO");
+    await autosaveInput(page, "defaultPersonLocations", "Sverige");
     await expect(
       page.getByRole("heading", { name: "Skapa “Min röst”" }),
     ).toBeVisible();
@@ -562,6 +569,26 @@ test.describe.serial("Personal Phone complete UI", () => {
     await expect(page.locator('input[name="voiceId"]')).toHaveValue("voice_e2e");
     await expect(page.locator('input[name="password"]')).toHaveValue("");
     await expect(page.locator('input[name="apiKey"]')).toHaveValue("");
+    await expect(page.locator('input[name="defaultPersonLocations"]')).toHaveValue(
+      "Sverige",
+    );
+    await expect(page.locator('textarea[name="defaultTitles"]')).toHaveValue(
+      "VD, CEO",
+    );
+    await page.goto("/apollo");
+    await expect(page.getByRole("heading", { name: "Apollo" })).toBeVisible();
+    await expect(page.getByText("Målgrupp / titel")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Hämta telefonnummer" })).toBeVisible();
+    await expect(page.locator('input[name="titles"]')).toHaveValue(/VD/);
+    await expect(page.locator('input[name="personLocations"]')).toHaveValue(
+      "Sverige",
+    );
+    await page.screenshot({
+      path: `${ARTIFACTS}/apollo-search.png`,
+      fullPage: true,
+      caret: "initial",
+    });
+    await page.goto("/settings?section=integrations");
     await page
       .getByRole("heading", { name: "46elks" })
       .locator("xpath=../../..")
@@ -628,6 +655,11 @@ test.describe.serial("Personal Phone complete UI", () => {
         path: "/calendar/new",
         label: "Back to Calendar",
         expected: "/calendar",
+      },
+      {
+        path: "/apollo",
+        label: "Back to Contacts",
+        expected: "/people",
       },
     ];
     for (const route of deepRoutes) {

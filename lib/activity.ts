@@ -7,6 +7,7 @@ export type Actor =
   | "SYSTEM"
   | "46ELKS"
   | "TWILIO"
+  | "APOLLO"
   | "AUTOMATION";
 
 export interface LogActivityInput {

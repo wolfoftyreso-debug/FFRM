@@ -7,7 +7,7 @@ import {
   InsetSection,
   SegmentedLinks,
 } from "@/components/apple-ui";
-import { Plus, Search } from "lucide-react";
+import { Plus, Radar, Search } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "People" };
@@ -60,13 +60,22 @@ export default async function PeoplePage({
           </p>
           <h1 className="text-[34px] font-bold tracking-tight">Contacts</h1>
         </div>
-        <Link
-          href="/people/new"
-          aria-label="Add contact"
-          className="flex h-11 w-11 items-center justify-center rounded-full text-[var(--system-blue)]"
-        >
-          <Plus className="h-7 w-7" />
-        </Link>
+        <div className="flex items-center gap-1">
+          <Link
+            href="/apollo"
+            aria-label="Hämta från Apollo"
+            className="flex h-11 w-11 items-center justify-center rounded-full text-[var(--system-blue)]"
+          >
+            <Radar className="h-7 w-7" />
+          </Link>
+          <Link
+            href="/people/new"
+            aria-label="Add contact"
+            className="flex h-11 w-11 items-center justify-center rounded-full text-[var(--system-blue)]"
+          >
+            <Plus className="h-7 w-7" />
+          </Link>
+        </div>
       </div>
 
       <form method="get" className="relative mb-3">

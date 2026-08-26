@@ -184,6 +184,33 @@ export interface ContactProfile {
   freeformFacts?: string[];
 }
 
+export interface ApolloSearchFilters {
+  titles: string[];
+  seniorities: string[];
+  industries: string[];
+  personLocations: string[];
+  organizationLocations: string[];
+  keywords: string;
+  includeSimilarTitles: boolean;
+  requirePhone: boolean;
+  limit: number;
+}
+
+export type ApolloListStatus =
+  | "SEARCHED"
+  | "ENRICHING"
+  | "READY"
+  | "IMPORTED"
+  | "FAILED";
+
+export type ApolloProspectStatus =
+  | "FOUND"
+  | "ENRICHING"
+  | "READY"
+  | "IMPORTED"
+  | "FAILED"
+  | "SKIPPED";
+
 export const contacts = pgTable(
   "contacts",
   {
@@ -835,7 +862,7 @@ export const systemSecrets = pgTable("system_secrets", {
 
 /** Encrypted runtime provider credentials + non-secret configuration/status. */
 export const providerSettings = pgTable("provider_settings", {
-  provider: text("provider").primaryKey(), // 46elks | elevenlabs
+  provider: text("provider").primaryKey(), // 46elks | elevenlabs | twilio | apollo
   encryptedSecrets: text("encrypted_secrets").notNull(),
   publicConfig: jsonb("public_config").$type<Record<string, unknown>>(),
   configuredAt: createdAt(),
@@ -844,6 +871,86 @@ export const providerSettings = pgTable("provider_settings", {
   lastTestStatus: text("last_test_status"), // OK | FAILED
   lastTestError: text("last_test_error"),
 });
+
+/** Saved Apollo target-group + geography presets. */
+export const apolloAudiences = pgTable(
+  "apollo_audiences",
+  {
+    id: id(),
+    name: text("name").notNull(),
+    filters: jsonb("filters").$type<ApolloSearchFilters>().notNull(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index("apollo_audiences_updated_idx").on(t.updatedAt)],
+);
+
+/** One Apollo search/enrichment batch. */
+export const apolloLists = pgTable(
+  "apollo_lists",
+  {
+    id: id(),
+    name: text("name").notNull(),
+    audienceId: text("audience_id").references(() => apolloAudiences.id, {
+      onDelete: "set null",
+    }),
+    filters: jsonb("filters").$type<ApolloSearchFilters>().notNull(),
+    status: text("status").$type<ApolloListStatus>().notNull().default("SEARCHED"),
+    totalFound: integer("total_found").notNull().default(0),
+    enrichedCount: integer("enriched_count").notNull().default(0),
+    phoneCount: integer("phone_count").notNull().default(0),
+    importedCount: integer("imported_count").notNull().default(0),
+    skippedCount: integer("skipped_count").notNull().default(0),
+    creditsConsumed: real("credits_consumed").notNull().default(0),
+    requestIds: jsonb("request_ids").$type<string[]>(),
+    lastError: text("last_error"),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index("apollo_lists_status_idx").on(t.status, t.createdAt)],
+);
+
+/** People returned by Apollo for a list, optionally enriched with phones. */
+export const apolloProspects = pgTable(
+  "apollo_prospects",
+  {
+    id: id(),
+    listId: text("list_id")
+      .notNull()
+      .references(() => apolloLists.id, { onDelete: "cascade" }),
+    apolloPersonId: text("apollo_person_id").notNull(),
+    firstName: text("first_name"),
+    lastName: text("last_name"),
+    title: text("title"),
+    organizationName: text("organization_name"),
+    organizationDomain: text("organization_domain"),
+    city: text("city"),
+    state: text("state"),
+    country: text("country"),
+    email: text("email"),
+    phoneNumber: text("phone_number"),
+    phoneType: text("phone_type"),
+    hasDirectPhone: boolean("has_direct_phone").notNull().default(false),
+    status: text("status")
+      .$type<ApolloProspectStatus>()
+      .notNull()
+      .default("FOUND"),
+    contactId: text("contact_id").references(() => contacts.id, {
+      onDelete: "set null",
+    }),
+    requestId: text("request_id"),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    uniqueIndex("apollo_prospects_list_person_unique").on(
+      t.listId,
+      t.apolloPersonId,
+    ),
+    index("apollo_prospects_person_idx").on(t.apolloPersonId),
+    index("apollo_prospects_status_idx").on(t.status),
+  ],
+);
 
 /** Saved multi-recipient SMS batch. Recipients are queued and sent by the dispatcher. */
 export const messageCampaigns = pgTable(
@@ -927,6 +1034,9 @@ export type ConversationInsight = typeof conversationInsights.$inferSelect;
 export type Reminder = typeof reminders.$inferSelect;
 export type ActivityEntry = typeof activityLog.$inferSelect;
 export type ProviderSetting = typeof providerSettings.$inferSelect;
+export type ApolloAudience = typeof apolloAudiences.$inferSelect;
+export type ApolloList = typeof apolloLists.$inferSelect;
+export type ApolloProspect = typeof apolloProspects.$inferSelect;
 export type AudioAsset = typeof audioAssets.$inferSelect;
 export type MessageCampaign = typeof messageCampaigns.$inferSelect;
 export type CampaignRecipient = typeof campaignRecipients.$inferSelect;

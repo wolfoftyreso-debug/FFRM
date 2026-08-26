@@ -16,6 +16,7 @@ production. Never commit real values. See `.env.example` for a template.
 | `ELEVENLABS_API_KEY` | no | Optional environment fallback for ElevenLabs. Prefer encrypted Settings UI for private/self-hosted use. |
 | `ELEVENLABS_VOICE_ID` | no | Optional ElevenLabs voice-id fallback. |
 | `ELEVENLABS_MODEL_ID` | no | Optional model fallback; default `eleven_multilingual_v2`. |
+| `APOLLO_API_KEY` | no | Optional environment fallback for Apollo. Prefer encrypted Settings UI. |
 | `VOICE_GREETING_URL` | no | mp3/wav URL played before voicemail recording starts. Without it, recording starts immediately. |
 | `SCREEN_GREETING_URL` | no | Separate greeting for AI screening of unknown callers (falls back to `VOICE_GREETING_URL`). |
 | `ELKS46_USERNAME` | yes | 46elks API username. |
@@ -23,8 +24,8 @@ production. Never commit real values. See `.env.example` for a template.
 | `ELKS46_FROM_NUMBER` | yes | Your SMS/MMS/voice-enabled 46elks number (E.164), the system's communication identity. |
 | `OWNER_PHONE_NUMBER` | recommended | Your own phone (E.164). Escalation/missed-call/voicemail notifications go here, and it is the default ring-through target for incoming calls (can be overridden in Settings). |
 | `CRON_SECRET` | yes | Shared secret for `/api/cron/dispatcher`. Vercel Cron sends it as `Authorization: Bearer <value>` automatically when set in project env. |
-| `WEBHOOK_TOKEN` | recommended | When set, 46elks webhook URLs must include `?token=<value>`. |
-| `APP_URL` | recommended | Public base URL (e.g. `https://agent.example.com`). Used in escalation SMS links and to request 46elks delivery reports. |
+| `WEBHOOK_TOKEN` | recommended | When set, 46elks/Twilio/Apollo webhook URLs must include `?token=<value>`. |
+| `APP_URL` | recommended | Public base URL (e.g. `https://agent.example.com`). Used in escalation SMS links, delivery reports, and Apollo phone webhooks. |
 | `DEFAULT_TIMEZONE` | no | IANA timezone used when a contact has none. Default `Europe/Stockholm`. |
 | `ESCALATION_PREVIEW` | no | `true` to include a short message preview in owner escalation SMS. Default `false` (privacy). |
 

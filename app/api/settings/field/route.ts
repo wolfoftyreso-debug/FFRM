@@ -21,6 +21,7 @@ const inputSchema = z.object({
     "46elks",
     "twilio",
     "elevenlabs",
+    "apollo",
   ]),
   field: z.string().min(1).max(64),
   value: z.string().max(10_000),
@@ -49,7 +50,9 @@ export async function POST(req: Request) {
       await saveElksField(input.field, input.value);
     else if (input.section === "twilio")
       await saveTwilioField(input.field, input.value);
-    else await saveElevenField(input.field, input.value);
+    else if (input.section === "elevenlabs")
+      await saveElevenField(input.field, input.value);
+    else await saveApolloField(input.field, input.value);
     return NextResponse.json({ ok: true, savedAt: new Date().toISOString() });
   } catch (error) {
     return NextResponse.json(
@@ -338,4 +341,45 @@ async function saveElevenField(field: string, value: string) {
     publicConfig[field] = value.trim();
   }
   await saveProviderConfig("elevenlabs", secrets, publicConfig);
+}
+
+async function saveApolloField(field: string, value: string) {
+  const allowed = new Set([
+    "apiKey",
+    "masterKey",
+    "defaultTitles",
+    "defaultSeniorities",
+    "defaultIndustries",
+    "defaultPersonLocations",
+    "defaultOrganizationLocations",
+    "defaultKeywords",
+    "defaultLimit",
+    "revealPhoneNumbers",
+    "requirePhone",
+    "includeSimilarTitles",
+  ]);
+  if (!allowed.has(field)) throw new Error("Unsupported Apollo field");
+  const current = (await getProviderStatus()).apollo?.publicConfig ?? {};
+  const publicConfig = { ...current };
+  const secrets: Record<string, string> = {};
+  if (field === "apiKey" || field === "masterKey") {
+    if (!value.trim()) return;
+    secrets.apiKey = value.trim();
+  } else if (field === "defaultLimit") {
+    const limit = Number(value);
+    if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+      throw new Error("Use 1–100 people per fetch");
+    }
+    publicConfig.defaultLimit = limit;
+  } else if (
+    field === "revealPhoneNumbers" ||
+    field === "requirePhone" ||
+    field === "includeSimilarTitles"
+  ) {
+    if (!["true", "false"].includes(value)) throw new Error("Invalid setting");
+    publicConfig[field] = value === "true";
+  } else {
+    publicConfig[field] = value;
+  }
+  await saveProviderConfig("apollo", secrets, publicConfig);
 }

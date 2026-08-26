@@ -26,6 +26,11 @@ const badgeStyles: Record<string, string> = {
   // misc
   ENABLED: "bg-emerald-50 text-emerald-700 border-emerald-200",
   DISABLED: "bg-stone-100 text-stone-500 border-stone-200",
+  SEARCHED: "bg-stone-100 text-stone-600 border-stone-200",
+  ENRICHING: "bg-blue-50 text-blue-700 border-blue-200",
+  READY: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  IMPORTED: "bg-violet-50 text-violet-700 border-violet-200",
+  FOUND: "bg-stone-100 text-stone-600 border-stone-200",
   SUGGESTED: "bg-amber-50 text-amber-700 border-amber-200",
   CONFIRMED: "bg-emerald-50 text-emerald-700 border-emerald-200",
 };

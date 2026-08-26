@@ -127,6 +127,19 @@ No model strings are hardcoded — switch vendors by changing the env vars.
    environment fallbacks.
 3. Set `OWNER_PHONE_NUMBER` (your own phone, E.164) for escalation notifications.
 
+## Configure Apollo
+
+1. Create an API key in [Apollo](https://docs.apollo.io/docs/create-api-key)
+   with people search and people enrichment access.
+2. Enter the key under **Settings → Integrations → Apollo**, plus default
+   titles, seniorities and geography. Values are encrypted at rest.
+3. Open **Apollo** to search a target group, preview matches, then fetch
+   phone numbers. Mobile/direct-dial numbers arrive on
+   `/api/webhooks/apollo/phone?token=<WEBHOOK_TOKEN>` (requires `APP_URL`).
+4. Import people with numbers as work contacts, or copy them into a broadcast.
+
+`APOLLO_API_KEY` remains an optional environment fallback.
+
 ## Configure ElevenLabs
 
 1. Enter API key, Voice ID and model under **Settings → ElevenLabs**.
