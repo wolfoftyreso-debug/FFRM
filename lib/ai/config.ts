@@ -10,11 +10,11 @@ import { optionalEnv } from "@/lib/env";
  */
 
 export function fastModel(): string {
-  return optionalEnv("AI_MODEL_FAST") ?? "minimax/minimax-m3";
+  return optionalEnv("AI_MODEL_FAST") ?? "poolside/laguna-s-2.1-free";
 }
 
 export function smartModel(): string {
-  return optionalEnv("AI_MODEL_SMART") ?? "minimax/minimax-m3";
+  return optionalEnv("AI_MODEL_SMART") ?? "poolside/laguna-s-2.1-free";
 }
 
 /** Confidence below which fast-model triage is re-run with the smart model. */

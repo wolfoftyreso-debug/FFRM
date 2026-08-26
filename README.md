@@ -104,8 +104,8 @@ pnpm db:seed
 3. Choose models (any Gateway `provider/model` IDs):
 
 ```
-AI_MODEL_FAST=minimax/minimax-m3      # free-tier tool/structured model
-AI_MODEL_SMART=minimax/minimax-m3     # free-tier reasoning/tool model
+AI_MODEL_FAST=poolside/laguna-s-2.1-free # explicit zero-cost tool model
+AI_MODEL_SMART=poolside/laguna-s-2.1-free # explicit zero-cost reasoning model
 AI_MODEL_VISION=minimax/minimax-m3    # free-tier vision model
 AI_MODEL_TRANSCRIBE=fish-audio/transcribe-1 # free-tier transcription
 ```

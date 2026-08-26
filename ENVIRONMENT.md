@@ -9,8 +9,8 @@ production. Never commit real values. See `.env.example` for a template.
 | `APP_PASSWORD` | yes | Password for the single-user login. |
 | `AUTH_SECRET` | yes | ≥16 random chars; signs the session cookie (HS256). |
 | `AI_GATEWAY_API_KEY` | yes* | Vercel AI Gateway key. *On Vercel you may instead rely on OIDC (`VERCEL_OIDC_TOKEN`), which the AI SDK picks up automatically. |
-| `AI_MODEL_FAST` | no | Gateway model for classification/extraction/simple generation. Default `minimax/minimax-m3` (current free-tier tool model). |
-| `AI_MODEL_SMART` | no | Gateway model for ambiguous conversations, style extraction and Assistant. Default `minimax/minimax-m3`. |
+| `AI_MODEL_FAST` | no | Gateway model for classification/extraction/simple generation. Default `poolside/laguna-s-2.1-free` (explicit zero-cost tool model). |
+| `AI_MODEL_SMART` | no | Gateway model for ambiguous conversations, style extraction and Assistant. Default `poolside/laguna-s-2.1-free`. |
 | `AI_MODEL_VISION` | no | Vision-capable Gateway model for MMS understanding/drafts. Default `minimax/minimax-m3`. |
 | `AI_MODEL_TRANSCRIBE` | no | Gateway transcription model for voicemail. Default `fish-audio/transcribe-1`. |
 | `ELEVENLABS_API_KEY` | no | Optional environment fallback for ElevenLabs. Prefer encrypted Settings UI for private/self-hosted use. |
