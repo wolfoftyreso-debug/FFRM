@@ -7,7 +7,9 @@ export type SystemStateKey =
   | "lastWebhookAt"
   | "lastAiAt"
   | "lastSmsSentAt"
-  | "lastInsightSweepAt";
+  | "lastInsightSweepAt"
+  /** A provider callback that failed authentication — see Diagnostics. */
+  | "lastRejectedWebhookAt";
 
 export async function setSystemState(
   key: SystemStateKey,

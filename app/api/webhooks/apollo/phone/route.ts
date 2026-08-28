@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { optionalEnv } from "@/lib/env";
 import { applyApolloPhonePayload } from "@/lib/apollo/service";
 import { cleanErrorMessage } from "@/lib/errors";
+import { webhookRequestIsAuthorized } from "@/lib/webhooks/auth";
+import { touchSystemState } from "@/lib/system-state";
 
 /**
  * Apollo delivers mobile/direct-dial numbers asynchronously after
  * reveal_phone_number enrichment. Retries are idempotent by person id.
  */
 export async function POST(req: NextRequest) {
-  const expected = optionalEnv("WEBHOOK_TOKEN");
-  if (expected && req.nextUrl.searchParams.get("token") !== expected) {
+  if (!webhookRequestIsAuthorized(req)) {
+    await touchSystemState("lastRejectedWebhookAt");
     return new NextResponse("unauthorized", { status: 401 });
   }
   try {

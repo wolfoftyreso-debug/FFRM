@@ -9,7 +9,7 @@ import { getOrCreateConversation } from "@/lib/sms/send-message";
 import { processInboundSmsEvent } from "@/lib/automations/events";
 import { logActivity } from "@/lib/activity";
 import { touchSystemState } from "@/lib/system-state";
-import { optionalEnv } from "@/lib/env";
+import { webhookRequestIsAuthorized } from "@/lib/webhooks/auth";
 
 const inboundSchema = z.object({
   id: z.string().min(1),
@@ -32,12 +32,9 @@ const inboundSchema = z.object({
  *   to the contact as an SMS reply by 46elks.
  */
 export async function POST(req: NextRequest) {
-  const expectedToken = optionalEnv("WEBHOOK_TOKEN");
-  if (expectedToken) {
-    const token = req.nextUrl.searchParams.get("token");
-    if (token !== expectedToken) {
-      return new NextResponse("unauthorized", { status: 401 });
-    }
+  if (!webhookRequestIsAuthorized(req)) {
+    await touchSystemState("lastRejectedWebhookAt");
+    return new NextResponse("unauthorized", { status: 401 });
   }
 
   let parsed: z.infer<typeof inboundSchema>;

@@ -497,6 +497,35 @@ stricter setting always wins.
   of contact conversations, deduplicated per escalation episode, and exclude
   message content unless `ESCALATION_PREVIEW=true`.
 
+## Webhook authentication
+
+`/api/webhooks/*` is deliberately outside the session guard — 46elks and
+Apollo have to reach it. The `?token=` shared secret is therefore the only
+thing between the internet and a system that answers SMS on the owner's
+behalf and routes real calls. A forged inbound SMS is not a cosmetic problem:
+a contact at autonomy 4 gets a real AI reply, at the owner's cost and in the
+owner's name.
+
+One helper (`lib/webhooks/auth.ts`) implements the check for all ten routes;
+it used to be ten copies in two spellings, which is how a new route ships with
+no check at all. The comparison is constant-time — a shared secret compared
+with `===` leaks its prefix through response timing, and anyone can call these
+endpoints.
+
+When `WEBHOOK_TOKEN` is unset the endpoints stay open. A phone that stops
+accepting calls because an environment variable is missing is its own outage,
+so the choice is deliberate — but it is no longer invisible: **System health**
+reports webhooks as *Oskyddade* with the exact remedy, and every rejected
+callback stamps `lastRejectedWebhookAt`, so a misconfigured token shows up as
+a diagnosable event instead of a silent inbound outage.
+
+Twilio's callbacks are authenticated by signature instead, which is verified
+against Twilio's published algorithm: the exact request URL including query
+string, plus form parameters sorted by name and appended as name+value,
+HMAC-SHA1 with the auth token, base64. The URL must be the one Twilio signed;
+behind a proxy a mismatched public URL is the usual cause of a rejected
+signature, which is why rejections are now recorded.
+
 ## Security
 
 - Single-user password login (`APP_PASSWORD`) with an HMAC-signed session

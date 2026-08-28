@@ -831,6 +831,14 @@ export default async function SettingsPage({
           <h2 className="mb-3 text-sm font-semibold text-stone-700">
             Systemhälsa
           </h2>
+          {health.webhooksProtected ? null : (
+            <p className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
+              Webhookarna är oskyddade. Vem som helst som känner till adressen
+              kan lägga in SMS, samtal och röstmeddelanden i systemet — och AI:n
+              kan svara på dem. Sätt <code>WEBHOOK_TOKEN</code> i miljön och
+              lägg till <code>?token=…</code> i webhook-adresserna hos 46elks.
+            </p>
+          )}
           <dl className="grid gap-x-8 gap-y-1.5 text-sm sm:grid-cols-2">
             <div className="flex justify-between">
               <dt className="text-stone-400">Senaste cron-körning</dt>
@@ -852,6 +860,22 @@ export default async function SettingsPage({
               <dt className="text-stone-400">Misslyckade schemalagda jobb</dt>
               <dd className={health.failedJobs > 0 ? "text-red-600" : ""}>
                 {health.failedJobs}
+              </dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-stone-400">Senast avvisad webhook</dt>
+              <dd
+                className={
+                  state.lastRejectedWebhookAt ? "text-amber-700" : ""
+                }
+              >
+                {healthValue(state.lastRejectedWebhookAt)}
+              </dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-stone-400">Webhookar</dt>
+              <dd className={health.webhooksProtected ? "" : "text-red-600"}>
+                {health.webhooksProtected ? "Skyddade" : "Oskyddade"}
               </dd>
             </div>
             <div className="flex justify-between">

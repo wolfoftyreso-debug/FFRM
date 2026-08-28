@@ -44,6 +44,10 @@ export async function POST(request: NextRequest) {
       signature: request.headers.get("x-twilio-signature"),
     })
   ) {
+    // A rejected signature is usually a configuration problem (the public URL
+    // Twilio signs must match the one this handler sees), and used to be a
+    // silent 401. Diagnostics now shows when it last happened.
+    await touchSystemState("lastRejectedWebhookAt");
     return new Response("unauthorized", { status: 401 });
   }
 

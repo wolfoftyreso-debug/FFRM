@@ -9,7 +9,7 @@ import { getOrCreateConversation } from "@/lib/sms/send-message";
 import { processInboundMms } from "@/lib/mms/process-inbound";
 import { logActivity } from "@/lib/activity";
 import { touchSystemState } from "@/lib/system-state";
-import { optionalEnv } from "@/lib/env";
+import { webhookRequestIsAuthorized } from "@/lib/webhooks/auth";
 
 const mmsSchema = z
   .object({
@@ -29,8 +29,8 @@ const mmsSchema = z
 
 /** Inbound 46elks MMS webhook (`mms_url`). Persist metadata before media/AI. */
 export async function POST(req: NextRequest) {
-  const expectedToken = optionalEnv("WEBHOOK_TOKEN");
-  if (expectedToken && req.nextUrl.searchParams.get("token") !== expectedToken) {
+  if (!webhookRequestIsAuthorized(req)) {
+    await touchSystemState("lastRejectedWebhookAt");
     return new NextResponse("unauthorized", { status: 401 });
   }
 

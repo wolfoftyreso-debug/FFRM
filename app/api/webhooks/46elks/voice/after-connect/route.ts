@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { handleAfterConnect } from "@/lib/voice/service";
-import { optionalEnv } from "@/lib/env";
+import { webhookRequestIsAuthorized } from "@/lib/webhooks/auth";
+import { touchSystemState } from "@/lib/system-state";
 
 const schema = z.object({
   callid: z.string().min(1),
@@ -13,8 +14,8 @@ const schema = z.object({
  * failed = no answer/busy → fall through to voicemail.
  */
 export async function POST(req: NextRequest) {
-  const expectedToken = optionalEnv("WEBHOOK_TOKEN");
-  if (expectedToken && req.nextUrl.searchParams.get("token") !== expectedToken) {
+  if (!webhookRequestIsAuthorized(req)) {
+    await touchSystemState("lastRejectedWebhookAt");
     return new NextResponse("unauthorized", { status: 401 });
   }
 

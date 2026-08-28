@@ -24,6 +24,7 @@ import { defaultTimezone } from "@/lib/env";
 import { cleanErrorMessage } from "@/lib/errors";
 import { isCalendarSmsJob } from "@/lib/calendar-activities";
 import { contactPhotoUrl } from "@/lib/photo-url";
+import { webhooksAreProtected } from "@/lib/webhooks/auth";
 
 export async function getOwner() {
   const db = await getDb();
@@ -772,6 +773,9 @@ export async function getSystemHealth() {
   return {
     failedJobs: Number(failedJobs[0]?.count ?? 0),
     pendingEscalations,
+    // An unset WEBHOOK_TOKEN leaves the provider callbacks open to anyone.
+    // Nothing used to say so; System health does now.
+    webhooksProtected: webhooksAreProtected(),
   };
 }
 

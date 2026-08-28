@@ -3,7 +3,7 @@ import { z } from "zod";
 import { handleIncomingCall } from "@/lib/voice/service";
 import { voicemailAction } from "@/lib/voice/actions";
 import { touchSystemState } from "@/lib/system-state";
-import { optionalEnv } from "@/lib/env";
+import { webhookRequestIsAuthorized } from "@/lib/webhooks/auth";
 
 const schema = z.object({
   callid: z.string().min(1),
@@ -17,8 +17,8 @@ const schema = z.object({
  * The response body is the next call action (JSON).
  */
 export async function POST(req: NextRequest) {
-  const expectedToken = optionalEnv("WEBHOOK_TOKEN");
-  if (expectedToken && req.nextUrl.searchParams.get("token") !== expectedToken) {
+  if (!webhookRequestIsAuthorized(req)) {
+    await touchSystemState("lastRejectedWebhookAt");
     return new NextResponse("unauthorized", { status: 401 });
   }
 

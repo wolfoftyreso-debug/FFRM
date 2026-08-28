@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { optionalEnv } from "@/lib/env";
 import { decideGateAction } from "@/lib/voice/receptionist";
+import { webhookRequestIsAuthorized } from "@/lib/webhooks/auth";
+import { touchSystemState } from "@/lib/system-state";
 
 const schema = z.object({ callid: z.string().min(1) });
 
 export async function POST(req: NextRequest) {
-  const expected = optionalEnv("WEBHOOK_TOKEN");
-  if (expected && req.nextUrl.searchParams.get("token") !== expected) {
+  if (!webhookRequestIsAuthorized(req)) {
+    await touchSystemState("lastRejectedWebhookAt");
     return new NextResponse("unauthorized", { status: 401 });
   }
   try {

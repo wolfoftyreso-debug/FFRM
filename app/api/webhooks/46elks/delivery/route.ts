@@ -4,7 +4,8 @@ import { getDb } from "@/lib/db";
 import { messages } from "@/lib/db/schema";
 import { and, eq, ne, sql } from "drizzle-orm";
 import { logActivity } from "@/lib/activity";
-import { optionalEnv } from "@/lib/env";
+import { webhookRequestIsAuthorized } from "@/lib/webhooks/auth";
+import { touchSystemState } from "@/lib/system-state";
 
 const deliverySchema = z.object({
   id: z.string().min(1),
@@ -14,12 +15,9 @@ const deliverySchema = z.object({
 
 /** Delivery report webhook from 46elks ("whendelivered"). */
 export async function POST(req: NextRequest) {
-  const expectedToken = optionalEnv("WEBHOOK_TOKEN");
-  if (expectedToken) {
-    const token = req.nextUrl.searchParams.get("token");
-    if (token !== expectedToken) {
-      return new NextResponse("unauthorized", { status: 401 });
-    }
+  if (!webhookRequestIsAuthorized(req)) {
+    await touchSystemState("lastRejectedWebhookAt");
+    return new NextResponse("unauthorized", { status: 401 });
   }
 
   let parsed: z.infer<typeof deliverySchema>;

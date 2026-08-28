@@ -5,8 +5,9 @@ import { getDb } from "@/lib/db";
 import { calls } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { processCallRecording } from "@/lib/voice/process-recording";
-import { optionalEnv } from "@/lib/env";
 import { processGateRecording } from "@/lib/voice/receptionist";
+import { webhookRequestIsAuthorized } from "@/lib/webhooks/auth";
+import { touchSystemState } from "@/lib/system-state";
 
 export const maxDuration = 60;
 
@@ -22,8 +23,8 @@ const schema = z.object({
  * (recordings are downloadable for 72 hours).
  */
 export async function POST(req: NextRequest) {
-  const expectedToken = optionalEnv("WEBHOOK_TOKEN");
-  if (expectedToken && req.nextUrl.searchParams.get("token") !== expectedToken) {
+  if (!webhookRequestIsAuthorized(req)) {
+    await touchSystemState("lastRejectedWebhookAt");
     return new NextResponse("unauthorized", { status: 401 });
   }
 

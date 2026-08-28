@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { optionalEnv } from "@/lib/env";
 import { connectScreenedCall } from "@/lib/voice/receptionist";
+import { webhookRequestIsAuthorized } from "@/lib/webhooks/auth";
+import { touchSystemState } from "@/lib/system-state";
 
 export async function POST(req: NextRequest) {
-  const expected = optionalEnv("WEBHOOK_TOKEN");
-  if (expected && req.nextUrl.searchParams.get("token") !== expected) {
+  if (!webhookRequestIsAuthorized(req)) {
+    await touchSystemState("lastRejectedWebhookAt");
     return new NextResponse("unauthorized", { status: 401 });
   }
   const form = await req.formData().catch(() => new FormData());
