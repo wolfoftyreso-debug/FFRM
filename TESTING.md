@@ -34,6 +34,11 @@ it cannot collide with a running dev server's embedded database.
   arbitrary-byte/oversize rejection, outbound compression below MMS limit
 
 ### Integration tests (`tests/integration/`, real SQL via in-memory PGlite)
+- `live.test.ts` — the live-update change signal: stable while nothing
+  happens, and moving for an arriving message, a delivery report, an in-place
+  escalation, a read receipt, a recorded and then transcribed call, and a
+  reminder that becomes due without any write; plus the endpoint the client
+  polls and the single-query inbox previews
 - `webhook.test.ts` — inbound 46elks webhook: persistence before AI,
   provider-id deduplication across retries, contact resolution, unknown
   senders, phone normalization, malformed payloads
@@ -77,6 +82,12 @@ it cannot collide with a running dev server's embedded database.
   cloning and automatic “Min röst” selection
 
 ### Browser E2E (`tests/e2e/`)
+
+`live-updates.spec.ts` drives the live surfaces the way the network does: it
+posts a real inbound SMS to the webhook while a thread is open in the browser
+and asserts the message appears with no reload and no interaction, that a
+half-written reply in the composer survives the refresh, and that a message
+from an unknown number shows up in the inbox on its own.
 
 `personal-phone.spec.ts` runs serially against the real Next.js app and local
 PGlite database:

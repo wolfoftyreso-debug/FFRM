@@ -17,7 +17,7 @@ export default async function MorePage() {
     getAttentionSummary(),
   ]);
   const badges = {
-    messages: attention.escalated.length + attention.draftCount,
+    messages: attention.escalatedCount + attention.draftCount,
     phone: attention.voicemailNeedsYou,
     notifications,
   };

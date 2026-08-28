@@ -138,6 +138,41 @@ blocked by the schema, but has no specialized V1 UI.
   `BIRTHDAY` / `NAME_DAY` recurrence is timezone-aware and contact automation
   shortcuts preconfigure the matching yearly trigger.
 
+## Live updates
+
+Every operational surface is server-rendered, so keeping it current is a
+question of *when to re-render*, not of a second client-side data model.
+
+`GET /api/live` returns one fingerprint of the whole operational state
+(`lib/live.ts`). Append-only tables contribute their newest timestamp;
+mutable rows also contribute the counters the badges are derived from, so an
+in-place change — a delivery report, an AI escalation, a voicemail marked
+handled — moves the fingerprint even though no row was inserted. Reminder
+due-ness is counted against the database clock, so a reminder that simply
+becomes due surfaces with no write at all. Deletions are always owner
+actions, which revalidate their own paths, so the fingerprint deliberately
+does not pay for a `count(*)` per table.
+
+`components/live-refresh.tsx` is mounted once in the app layout. The layout
+passes it the fingerprint of the render the browser is looking at; when a poll
+returns a different one it calls `router.refresh()`, which re-renders the
+Server Components of the current route while preserving client state and
+scroll position. A half-written reply, an open disclosure, an in-progress
+recording all survive an incoming SMS.
+
+- Cadence: 5 s while the app is being used, 20 s once untouched for two
+  minutes, exponential backoff to 60 s on errors.
+- A hidden tab polls nothing; returning to the app checks immediately.
+- The thread's read receipt re-fires when new activity arrives while the
+  thread is open, so a live message does not leave the inbox row bold.
+- The inbox is a two-query surface (conversations + one `DISTINCT ON` preview
+  per conversation) and the layout badges are counts, not materialized lists,
+  because both now run on every refresh.
+
+The fingerprint is a change signal only — no message content leaves the
+authenticated app through it, and the endpoint sits behind the same session
+guard as every other `/api` route.
+
 ## MMS/media pipeline
 
 1. **`mms_url`** (`/api/webhooks/46elks/mms`) receives form-urlencoded

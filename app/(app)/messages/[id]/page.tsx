@@ -37,7 +37,10 @@ export default async function ConversationPage({
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
-      <ConversationReadReceipt conversationId={conversation.id} />
+      <ConversationReadReceipt
+        conversationId={conversation.id}
+        activityKey={conversation.lastMessageAt?.toISOString() ?? ""}
+      />
       <div>
         <header className="sticky top-0 z-10 mb-3 flex items-center justify-between gap-3 border-b border-black/10 bg-[var(--system-gray-6)]/90 py-2 backdrop-blur-xl">
           <div className="flex min-w-0 items-center gap-3">

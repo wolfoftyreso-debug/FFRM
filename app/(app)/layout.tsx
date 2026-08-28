@@ -6,6 +6,8 @@ import { NotificationBell } from "@/components/notification-bell";
 import { ensureOwner } from "@/lib/auth/owner";
 import { ContextBackBar } from "@/components/context-back-bar";
 import { PresenceHeartbeat } from "@/components/presence-heartbeat";
+import { LiveRefresh } from "@/components/live-refresh";
+import { getLiveVersion } from "@/lib/live";
 
 export const dynamic = "force-dynamic";
 
@@ -19,14 +21,17 @@ export default async function AppLayout({
   let notificationCount = 0;
   let ownerName = "Personal Phone";
   let ownerPhotoUrl: string | null = null;
+  let liveVersion = "";
   try {
     await ensureOwner();
-    const [attention, reviewCount, owner] = await Promise.all([
+    const [attention, reviewCount, owner, version] = await Promise.all([
       getAttentionSummary(),
       getNotificationCount(),
       getOwner(),
+      getLiveVersion(),
     ]);
-    messageBadge = attention.escalated.length + attention.draftCount;
+    liveVersion = version;
+    messageBadge = attention.escalatedCount + attention.draftCount;
     phoneBadge = attention.voicemailNeedsYou;
     notificationCount = reviewCount;
     if (owner?.name) ownerName = owner.name;
@@ -38,6 +43,7 @@ export default async function AppLayout({
   return (
     <div className="flex min-h-screen">
       <PresenceHeartbeat />
+      <LiveRefresh version={liveVersion} />
       <Suspense fallback={null}>
         <AppNavigation
           messageBadge={messageBadge}

@@ -102,20 +102,26 @@ export async function listConversations(): Promise<ConversationListItem[]> {
     .leftJoin(contacts, eq(conversations.contactId, contacts.id))
     .orderBy(desc(conversations.lastMessageAt));
 
-  const result: ConversationListItem[] = [];
-  for (const row of rows) {
-    const lastMessage = await db
-      .select({
-        text: messages.text,
-        contentType: messages.contentType,
-        sender: messages.sender,
-        channel: messages.channel,
-      })
-      .from(messages)
-      .where(eq(messages.conversationId, row.conversation.id))
-      .orderBy(desc(messages.createdAt))
-      .limit(1);
-    result.push({
+  // One row per conversation instead of a query per conversation: the inbox is
+  // re-rendered on every live update, so this stays a two-query surface.
+  const previewRows = await db
+    .selectDistinctOn([messages.conversationId], {
+      conversationId: messages.conversationId,
+      text: messages.text,
+      contentType: messages.contentType,
+      sender: messages.sender,
+      channel: messages.channel,
+    })
+    .from(messages)
+    .where(isNotNull(messages.conversationId))
+    .orderBy(messages.conversationId, desc(messages.createdAt));
+  const previews = new Map(
+    previewRows.map((row) => [row.conversationId!, row]),
+  );
+
+  return rows.map((row) => {
+    const lastMessage = previews.get(row.conversation.id);
+    return {
       id: row.conversation.id,
       contactId: row.contact?.id ?? null,
       contactName: row.contact
@@ -125,20 +131,19 @@ export async function listConversations(): Promise<ConversationListItem[]> {
       aiControlState: row.conversation.aiControlState,
       status: row.conversation.status,
       lastMessageAt: row.conversation.lastMessageAt,
-      lastMessageText: humanizeConversationPreview(lastMessage[0]),
+      lastMessageText: humanizeConversationPreview(lastMessage),
       escalationReason: row.conversation.escalationReason,
       unread:
         !!row.conversation.lastMessageAt &&
         (!row.conversation.lastReadAt ||
           row.conversation.lastMessageAt > row.conversation.lastReadAt),
       isAutomated:
-        lastMessage[0]?.sender === "AI" ||
-        lastMessage[0]?.sender === "AUTOMATION" ||
-        lastMessage[0]?.channel === "AUTOMATION",
-      lastChannel: lastMessage[0]?.channel ?? null,
-    });
-  }
-  return result;
+        lastMessage?.sender === "AI" ||
+        lastMessage?.sender === "AUTOMATION" ||
+        lastMessage?.channel === "AUTOMATION",
+      lastChannel: lastMessage?.channel ?? null,
+    };
+  });
 }
 
 function humanizeConversationPreview(
@@ -702,9 +707,7 @@ export async function getAssistantHistory(limit = 40) {
 
 export async function getAttentionSummary() {
   const db = await getDb();
-  const escalated = (await listConversations()).filter(
-    (c) => c.aiControlState === "ESCALATED" && c.status === "OPEN",
-  );
+  const escalatedCount = await getPendingEscalationCount();
   const drafts = await db
     .select({ count: sql<number>`count(*)` })
     .from(reminders)
@@ -724,7 +727,7 @@ export async function getAttentionSummary() {
     .from(calls)
     .where(and(eq(calls.state, "VOICEMAIL"), eq(calls.aiRequiresUser, true)));
   return {
-    escalated,
+    escalatedCount,
     draftCount: Number(drafts[0]?.count ?? 0),
     dueReminderCount: Number(dueReminders[0]?.count ?? 0),
     voicemailNeedsYou: Number(unheardVoicemail[0]?.count ?? 0),

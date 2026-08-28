@@ -47,6 +47,10 @@ Your Swedish number → 46elks → this app → relationship/context/policy → 
   dates live on the contact card; one tap creates a yearly automation.
   Custom cron/interval/incoming-SMS rules are listed and managed under that
   contact.
+- **Live surfaces** — the inbox, the open thread, Phone and every badge update
+  themselves while the app is open. A lightweight change signal is polled and
+  only a real change triggers a re-render, so an arriving SMS never disturbs a
+  half-written reply. Hidden tabs poll nothing.
 - **iPhone-style inbox semantics** — conversations sort by the latest SMS,
   MMS, call, voicemail or automation activity; opening a thread records
   `lastReadAt`; unread rows use the native blue dot/bold style. Automation

@@ -141,6 +141,7 @@ own-voice consent. Raw training audio remains unretained.
 ### KEEP
 
 - unified conversation model and transparent AI events;
+- live surfaces that refresh without disturbing in-progress input;
 - persist-first idempotent communication pipelines;
 - policy/envelope restraint;
 - Apple list shell and professional contact hero;
@@ -162,7 +163,6 @@ own-voice consent. Raw training audio remains unretained.
 
 ### REPLACE later
 
-- polling/manual refresh with live inbox updates;
 - `window.confirm` with an accessible native-styled alert dialog;
 - single-owner password auth when multi-user support becomes real.
 
@@ -205,7 +205,7 @@ own-voice consent. Raw training audio remains unretained.
 | Settings tiering | P1 | High confidence across web integrations |
 | Human-readable automation results | P1 | High confidence |
 | Search/filter continuity | P1 | High confidence |
-| Real-time inbox | P1 | Medium confidence; technical/product trade-off |
+| Real-time inbox | P1 | Done — server-rendered surfaces refresh on a polled change signal |
 | Contact detail further decomposition | P2 | Medium confidence |
 | Dark mode | P3 | Experiment / preference-dependent |
 

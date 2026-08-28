@@ -105,9 +105,12 @@ test.describe.serial("Personal Phone complete UI", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     const tabBar = page.getByRole("navigation", { name: "Tab bar" });
     for (const label of ["Phone", "Messages", "Contacts", "More"]) {
-      await expect(tabBar.getByText(label, { exact: true })).toBeVisible();
+      // Not an exact match: a tab carrying an unread badge reads "Messages 3".
+      await expect(
+        tabBar.getByRole("link", { name: label, exact: false }),
+      ).toBeVisible();
     }
-    await tabBar.getByText("More", { exact: true }).click();
+    await tabBar.getByRole("link", { name: "More", exact: false }).click();
     await expect(page).toHaveURL(/\/more/);
     await expect(page.getByRole("heading", { name: "Kommunikation" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Personer" })).toBeVisible();
