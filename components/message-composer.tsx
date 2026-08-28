@@ -44,7 +44,7 @@ export function MessageComposer({
     }
     const reader = new FileReader();
     reader.onload = () => setPreview(String(reader.result));
-    reader.onerror = () => setError("Could not preview this image");
+    reader.onerror = () => setError("Bilden kunde inte visas. Välj en annan bild.");
     reader.readAsDataURL(file);
   }
 
@@ -61,10 +61,14 @@ export function MessageComposer({
         body: form,
       });
       const data = (await res.json()) as { message?: string; error?: string };
-      if (!res.ok || !data.message) throw new Error(data.error ?? "Could not draft");
+      if (!res.ok || !data.message) throw new Error(data.error ?? "AI:n kunde inte skriva något förslag.");
       setText(data.message);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not draft");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "AI:n kunde inte skriva något förslag. Bilden är kvar — försök igen eller skriv själv.",
+      );
     } finally {
       setDrafting(false);
     }
@@ -82,10 +86,14 @@ export function MessageComposer({
       });
       const data = (await res.json()) as { text?: string; error?: string };
       if (!res.ok || !data.text)
-        throw new Error(data.error ?? "Could not improve text");
+        throw new Error(data.error ?? "AI:n kunde inte förbättra texten.");
       setText(data.text);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not improve text");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "AI:n kunde inte förbättra texten. Din text är oförändrad.",
+      );
     } finally {
       setPolishing(false);
     }
@@ -126,13 +134,15 @@ export function MessageComposer({
             error?: string;
           };
           if (!response.ok || !data.text)
-            throw new Error(data.error ?? "Could not transcribe");
+            throw new Error(data.error ?? "Ljudet kunde inte tolkas.");
           setText((current) =>
             current.trim() ? `${current.trim()} ${data.text}` : data.text!,
           );
         } catch (err) {
           setError(
-            err instanceof Error ? err.message : "Could not transcribe",
+            err instanceof Error
+              ? err.message
+              : "Ljudet kunde inte tolkas. Spela in igen eller skriv själv.",
           );
         } finally {
           setTranscribing(false);
@@ -142,7 +152,9 @@ export function MessageComposer({
       setRecording(true);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Microphone is unavailable",
+        err instanceof Error
+          ? err.message
+          : "Mikrofonen är inte tillgänglig. Kontrollera behörigheten i webbläsaren.",
       );
     }
   }
@@ -162,7 +174,11 @@ export function MessageComposer({
         onFile(null);
         if (fileRef.current) fileRef.current.value = "";
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Could not send");
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Meddelandet kunde inte skickas. Det ligger kvar här — försök igen.",
+        );
       }
     });
   }
@@ -178,7 +194,7 @@ export function MessageComposer({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={preview}
-            alt="Attachment preview"
+            alt="Förhandsvisning av bilagan"
             className="h-24 w-24 rounded-md border border-stone-200 object-cover"
           />
           <button
@@ -189,7 +205,7 @@ export function MessageComposer({
             }}
             className="text-xs text-stone-400 hover:text-red-600"
           >
-            Remove
+            Ta bort
           </button>
         </div>
       ) : null}
@@ -198,7 +214,7 @@ export function MessageComposer({
         rows={3}
         value={text}
         onChange={(e) => setText(e.target.value)}
-        placeholder="Message… (sending takes over the conversation)"
+        placeholder="Skriv ett SMS… (du tar över konversationen när du skickar)"
         className="w-full resize-none rounded-xl border-0 bg-black/[0.045] px-3 py-2 text-[16px] focus:outline-none"
       />
       <input
@@ -216,8 +232,8 @@ export function MessageComposer({
           <label
             htmlFor={`image-${conversationId}`}
             className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-full text-[var(--system-blue)] hover:bg-black/[0.04]"
-            aria-label="Attach image"
-            title="Attach image"
+            aria-label="Bifoga bild"
+            title="Bifoga bild"
           >
             <ImagePlus className="h-4 w-4" />
           </label>
@@ -230,7 +246,7 @@ export function MessageComposer({
                 ? "bg-[var(--system-red)] text-white"
                 : "text-[var(--system-blue)] hover:bg-black/[0.04]"
             } disabled:opacity-50`}
-            aria-label={recording ? "Stop dictation" : "Dictate message"}
+            aria-label={recording ? "Stoppa diktering" : "Diktera meddelande"}
           >
             {recording ? (
               <Square className="h-4 w-4 fill-current" />
@@ -238,10 +254,10 @@ export function MessageComposer({
               <Mic className="h-4 w-4" />
             )}
             {recording
-              ? "Stop"
+              ? "Stoppa"
               : transcribing
-                ? "Transcribing…"
-                : "Dictate"}
+                ? "Tolkar…"
+                : "Diktera"}
           </button>
           {text.trim() ? (
             <button
@@ -249,10 +265,10 @@ export function MessageComposer({
               onClick={polishText}
               disabled={polishing || recording || transcribing}
               className="flex h-11 items-center gap-1.5 rounded-full px-3 text-xs font-semibold text-violet-700 hover:bg-violet-50 disabled:opacity-50"
-              aria-label="Improve text with AI"
+              aria-label="Förbättra texten med AI"
             >
               <Sparkles className="h-4 w-4" />
-              {polishing ? "Improving…" : "Improve"}
+              {polishing ? "Förbättrar…" : "Förbättra"}
             </button>
           ) : null}
           {image && contactId ? (
@@ -263,7 +279,7 @@ export function MessageComposer({
               className="flex h-11 items-center gap-1 rounded-full border border-violet-200 px-3 text-xs text-violet-700 hover:bg-violet-50 disabled:opacity-50"
             >
               <Sparkles className="h-3.5 w-3.5" />
-              {drafting ? "Looking…" : "AI write text"}
+              {drafting ? "Tittar på bilden…" : "Låt AI skriva texten"}
             </button>
           ) : null}
         </div>
@@ -271,12 +287,12 @@ export function MessageComposer({
           disabled={sending || (!text.trim() && !image)}
           className="rounded-full bg-[var(--system-blue)] px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {sending ? "Sending…" : `Send ${image ? "MMS" : "SMS"}`}
+          {sending ? "Skickar…" : `Skicka ${image ? "MMS" : "SMS"}`}
         </button>
       </div>
       {image ? (
         <p className="mt-1 text-[10px] text-stone-400">
-          Images are sanitized and compressed below the 320kB MMS limit.
+          Bilder rensas på metadata och komprimeras under MMS-gränsen på 320 kB.
         </p>
       ) : null}
     </form>

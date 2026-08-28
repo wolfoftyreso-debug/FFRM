@@ -3,9 +3,10 @@ import { format } from "date-fns";
 import { listAutomations, displayName } from "@/lib/queries";
 import { Badge, EmptyState, LinkButton, PageHeader } from "@/components/ui";
 import { AppleRow, InsetSection } from "@/components/apple-ui";
+import { TERMS } from "@/lib/terminology";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Automations" };
+export const metadata = { title: TERMS.automations };
 
 export default async function AutomationsPage() {
   const rows = await listAutomations();
@@ -13,9 +14,9 @@ export default async function AutomationsPage() {
   return (
     <>
       <PageHeader
-        title="Automations"
-        subtitle="Rules the system runs for you"
-        action={<LinkButton href="/automations/new">New automation</LinkButton>}
+        title={TERMS.automations}
+        subtitle="Regler som körs åt dig"
+        action={<LinkButton href="/automations/new">Ny automation</LinkButton>}
       />
       {rows.length === 0 ? (
         <EmptyState text="No automations yet. Create one to get started." />
@@ -28,7 +29,7 @@ export default async function AutomationsPage() {
                 key={automation.id}
                 href={`/automations/${automation.id}`}
                 title={<span className="font-semibold">{automation.name}</span>}
-                subtitle={`${contact ? displayName(contact) : "All contacts"} · ${automation.triggerType.replaceAll("_", " ")} → ${automation.actionType.replaceAll("_", " ")}`}
+                subtitle={`${contact ? displayName(contact) : "Alla kontakter"} · ${automation.triggerType.replaceAll("_", " ")} → ${automation.actionType.replaceAll("_", " ")}`}
                 trailing={
                   <span
                     className={`h-2.5 w-2.5 rounded-full ${
@@ -47,12 +48,12 @@ export default async function AutomationsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-stone-200 text-left text-xs uppercase tracking-wide text-stone-400">
-                <th className="px-4 py-2.5 font-medium">Name</th>
-                <th className="px-4 py-2.5 font-medium">Contact</th>
-                <th className="px-4 py-2.5 font-medium">Trigger</th>
-                <th className="px-4 py-2.5 font-medium">Action</th>
-                <th className="px-4 py-2.5 font-medium">Next run</th>
-                <th className="px-4 py-2.5 font-medium">Last run</th>
+                <th className="px-4 py-2.5 font-medium">Namn</th>
+                <th className="px-4 py-2.5 font-medium">Kontakt</th>
+                <th className="px-4 py-2.5 font-medium">Utlösare</th>
+                <th className="px-4 py-2.5 font-medium">Åtgärd</th>
+                <th className="px-4 py-2.5 font-medium">Nästa körning</th>
+                <th className="px-4 py-2.5 font-medium">Senaste körning</th>
                 <th className="px-4 py-2.5 font-medium">Status</th>
               </tr>
             </thead>
@@ -87,7 +88,10 @@ export default async function AutomationsPage() {
                       : "never"}
                   </td>
                   <td className="px-4 py-2.5">
-                    <Badge label={automation.enabled ? "ENABLED" : "DISABLED"} />
+                    <Badge
+                      label={automation.enabled ? "Aktiv" : "Avstängd"}
+                      tone={automation.enabled ? "positive" : "neutral"}
+                    />
                   </td>
                 </tr>
               ))}

@@ -14,9 +14,10 @@ import {
 } from "@/app/actions";
 import { Badge, Card, PageHeader } from "@/components/ui";
 import { AssistantComposer } from "@/components/assistant-composer";
+import { TERMS } from "@/lib/terminology";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Assistant" };
+export const metadata = { title: TERMS.assistant };
 
 export default async function ChatPage() {
   const [history, data, drafts] = await Promise.all([
@@ -37,8 +38,8 @@ export default async function ChatPage() {
   return (
     <>
       <PageHeader
-        title="Assistant"
-        subtitle="Your assistant — ask about people, calls, birthdays, promises"
+        title={TERMS.assistant}
+        subtitle="Fråga om personer, samtal, födelsedagar och löften"
       />
 
       {hasAttention && (
@@ -52,7 +53,7 @@ export default async function ChatPage() {
                     {c.escalationReason ?? c.lastMessageText ?? ""}
                   </p>
                 </div>
-                <Badge label="NEEDS YOU" />
+                <Badge label={TERMS.needsYou} tone="critical" />
               </Card>
             </Link>
           ))}
@@ -62,26 +63,26 @@ export default async function ChatPage() {
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-sm font-medium">
-                    Draft for{" "}
+                    Utkast till{" "}
                     {contact
                       ? `${contact.firstName} ${contact.lastName ?? ""}`.trim()
-                      : "unknown"}
+                      : "okänd"}
                   </p>
                   <p className="mt-1 whitespace-pre-wrap rounded-md bg-stone-50 p-2 text-sm text-stone-700">
                     {reminder.draftText}
                   </p>
                 </div>
-                <Badge label="DRAFT" />
+                <Badge label={TERMS.drafts} tone="attention" />
               </div>
               <div className="mt-2 flex gap-2">
                 <form action={approveDraft.bind(null, reminder.id)}>
                   <button className="rounded-md bg-stone-900 px-3 py-1 text-xs font-medium text-white hover:bg-stone-700">
-                    Send
+                    Skicka
                   </button>
                 </form>
                 <form action={dismissReminder.bind(null, reminder.id)}>
                   <button className="rounded-md border border-stone-300 px-3 py-1 text-xs text-stone-700 hover:bg-stone-50">
-                    Discard
+                    Släng
                   </button>
                 </form>
               </div>
@@ -107,12 +108,12 @@ export default async function ChatPage() {
               <div className="flex shrink-0 gap-2">
                 <form action={completeReminder.bind(null, reminder.id)}>
                   <button className="rounded-md border border-stone-300 px-2.5 py-1 text-xs text-stone-700 hover:bg-stone-50">
-                    Done
+                    Klart
                   </button>
                 </form>
                 <form action={dismissReminder.bind(null, reminder.id)}>
                   <button className="px-1 py-1 text-xs text-stone-400 hover:text-stone-600">
-                    Dismiss
+                    Avfärda
                   </button>
                 </form>
               </div>
@@ -133,7 +134,7 @@ export default async function ChatPage() {
               <div className="flex shrink-0 gap-2">
                 <form action={reviewFact.bind(null, fact.id, "CONFIRMED")}>
                   <button className="rounded-md border border-emerald-300 px-2.5 py-1 text-xs text-emerald-700 hover:bg-emerald-50">
-                    Keep
+                    Behåll
                   </button>
                 </form>
                 <form action={reviewFact.bind(null, fact.id, "DISMISSED")}>
@@ -153,7 +154,7 @@ export default async function ChatPage() {
               <p className="min-w-0 text-sm">
                 <span className="font-medium">
                   {commitment.madeBy === "USER"
-                    ? "You promised"
+                    ? "Du lovade"
                     : `${contact.firstName} promised`}
                   :
                 </span>{" "}
@@ -165,7 +166,7 @@ export default async function ChatPage() {
                   action={reviewCommitment.bind(null, commitment.id, "CONFIRMED")}
                 >
                   <button className="rounded-md border border-emerald-300 px-2.5 py-1 text-xs text-emerald-700 hover:bg-emerald-50">
-                    Keep
+                    Behåll
                   </button>
                 </form>
                 <form
@@ -184,7 +185,7 @@ export default async function ChatPage() {
       <Card className="space-y-3">
         {history.length === 0 ? (
           <div className="py-8 text-center text-sm text-stone-400">
-            <p>Ask me anything about your relationships.</p>
+            <p>Fråga mig vad som helst om dina relationer.</p>
             <p className="mt-2 text-xs">
               &quot;Vem behöver uppmärksamhet?&quot; · &quot;När pratade jag
               med Johan senast?&quot; · &quot;Vilka födelsedagar kommer?&quot;

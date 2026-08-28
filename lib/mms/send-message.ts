@@ -116,7 +116,7 @@ export async function sendMediaMessage(input: {
     await logActivity({
       actor: input.sender,
       action: "MMS_SENT",
-      summary: `MMS sent to ${input.to}`,
+      summary: `MMS skickat till ${input.to}`,
       contactId: input.contactId,
       conversationId,
       entityType: "message",

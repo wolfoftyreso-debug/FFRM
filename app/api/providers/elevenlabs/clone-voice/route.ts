@@ -26,7 +26,7 @@ export async function POST(req: Request) {
     const consent = form.get("consent");
     if (consent !== "own-voice-confirmed") {
       throw new Error(
-        "You must confirm that this is your own voice and that you consent to cloning it",
+        "Du måste bekräfta att det är din egen röst och att du samtycker till att klona den.",
       );
     }
     if (!audio || typeof audio === "string" || audio.size === 0) {

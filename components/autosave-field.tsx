@@ -54,7 +54,7 @@ export function AutosaveField({
         error?: string;
       };
       if (!response.ok || !result.ok) {
-        throw new Error(result.error ?? "Could not save");
+        throw new Error(result.error ?? "Kunde inte sparas");
       }
       setLastSaved(next);
       setStatus("saved");
@@ -65,7 +65,7 @@ export function AutosaveField({
     } catch (saveError) {
       setStatus("error");
       setError(
-        saveError instanceof Error ? saveError.message : "Could not save",
+        saveError instanceof Error ? saveError.message : "Kunde inte sparas",
       );
     }
   }
@@ -137,7 +137,7 @@ function SaveState({
     return (
       <span className="flex items-center gap-1 text-xs font-medium text-stone-400">
         <LoaderCircle className="h-4 w-4 animate-spin" />
-        Saving
+        Sparar
       </span>
     );
   }
@@ -145,7 +145,7 @@ function SaveState({
     return (
       <span className="flex items-center gap-1 text-xs font-semibold text-green-600">
         <CheckCircle2 className="h-4 w-4" />
-        Saved
+        Sparat
       </span>
     );
   }

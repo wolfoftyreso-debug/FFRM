@@ -6,19 +6,19 @@ import { AUTONOMY_LABELS } from "@/lib/autonomy";
 import { useState } from "react";
 
 const TRIGGERS = [
-  { id: "BIRTHDAY", label: "On the contact's birthday" },
-  { id: "NAME_DAY", label: "On the contact's name day" },
+  { id: "BIRTHDAY", label: "På kontaktens födelsedag" },
+  { id: "NAME_DAY", label: "På kontaktens namnsdag" },
   { id: "ANNIVERSARY", label: "On an anniversary (yearly date)" },
   { id: "DATE", label: "On a specific date (once)" },
   { id: "INTERVAL", label: "Every N days" },
-  { id: "NO_CONTACT_FOR", label: "When no contact for N days" },
-  { id: "INCOMING_SMS", label: "When an SMS arrives" },
-  { id: "MANUAL", label: "Manually (run from this page)" },
+  { id: "NO_CONTACT_FOR", label: "När ni inte haft kontakt på N dagar" },
+  { id: "INCOMING_SMS", label: "När ett SMS kommer in" },
+  { id: "MANUAL", label: "Manuellt (körs från den här sidan)" },
   { id: "CRON", label: "Advanced: cron expression" },
 ];
 
 const ACTIONS = [
-  { id: "GENERATE_SMS", label: "Generate a personal SMS with AI" },
+  { id: "GENERATE_SMS", label: "Skapa ett personligt SMS med AI" },
   { id: "SEND_SMS", label: "Send a fixed SMS text" },
   { id: "REMIND_USER", label: "Remind me" },
   { id: "AI_EVALUATE", label: "AI: evaluate whether I should reach out" },
@@ -55,13 +55,13 @@ export function AutomationFormFields({
         <input
           name="name"
           required
-          placeholder="Johan's birthday greeting"
+          placeholder="Johans födelsedagshälsning"
           defaultValue={automation?.name ?? ""}
           className={inputClass}
         />
       </label>
       <label className={labelClass}>
-        Description
+        Beskrivning
         <input
           name="description"
           defaultValue={automation?.description ?? ""}
@@ -71,7 +71,7 @@ export function AutomationFormFields({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <label className={labelClass}>
-          When (trigger)
+          När (utlösare)
           <select
             name="triggerType"
             value={triggerType}
@@ -88,7 +88,7 @@ export function AutomationFormFields({
           </select>
         </label>
         <label className={labelClass}>
-          Contact
+          Kontakt
           <select
             name="contactId"
             defaultValue={automation?.contactId ?? defaultContactId ?? ""}
@@ -104,7 +104,7 @@ export function AutomationFormFields({
         </label>
         {["DATE", "ANNIVERSARY"].includes(triggerType) ? (
         <label className={labelClass}>
-          Date (for date/anniversary triggers)
+          Datum (för datum- och årsdagsutlösare)
           <input
             name="triggerDate"
             type="date"
@@ -115,7 +115,7 @@ export function AutomationFormFields({
         ) : null}
         {["DATE", "ANNIVERSARY", "BIRTHDAY", "NAME_DAY", "INTERVAL"].includes(triggerType) ? (
         <label className={labelClass}>
-          At (local time)
+          Klockslag (lokal tid)
           <input
             name="triggerTime"
             type="time"
@@ -126,7 +126,7 @@ export function AutomationFormFields({
         ) : null}
         {["INTERVAL", "NO_CONTACT_FOR"].includes(triggerType) ? (
         <label className={labelClass}>
-          Days (for interval / no-contact triggers)
+          Dagar (för intervall och tystnadsutlösare)
           <input
             name="triggerDays"
             type="number"
@@ -138,7 +138,7 @@ export function AutomationFormFields({
         ) : null}
         {triggerType === "CRON" ? (
         <label className={labelClass}>
-          Cron expression (advanced)
+          Cron-uttryck (avancerat)
           <input
             name="triggerCron"
             placeholder="0 9 * * 1"
@@ -151,7 +151,7 @@ export function AutomationFormFields({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <label className={labelClass}>
-          Do (action)
+          Gör (åtgärd)
           <select
             name="actionType"
             value={actionType}
@@ -168,7 +168,7 @@ export function AutomationFormFields({
           </select>
         </label>
         <label className={labelClass}>
-          Permission (autonomy)
+          Behörighet (självständighet)
           <select
             name="autonomyLevel"
             defaultValue={String(automation?.autonomyLevel ?? 1)}
@@ -184,7 +184,7 @@ export function AutomationFormFields({
         {actionType === "GENERATE_SMS" ? (
         <>
         <label className={labelClass}>
-          Message purpose (for AI generation)
+          Meddelandets syfte (för AI-generering)
           <select
             name="actionPurpose"
             defaultValue={
@@ -197,17 +197,17 @@ export function AutomationFormFields({
             }
             className={inputClass}
           >
-            <option value="birthday">Birthday greeting</option>
-            <option value="name_day">Name-day greeting</option>
-            <option value="checkin">Friendly check-in</option>
-            <option value="holiday">Holiday greeting</option>
+            <option value="birthday">Födelsedagshälsning</option>
+            <option value="name_day">Namnsdagshälsning</option>
+            <option value="checkin">Vänlig avstämning</option>
+            <option value="holiday">Högtidshälsning</option>
           </select>
         </label>
         <label className={labelClass}>
-          Extra instruction for the AI
+          Extra instruktion till AI:n
           <input
             name="actionInstruction"
-            placeholder="Mention the fishing trip if relevant"
+            placeholder="Nämn fisketuren om det passar"
             defaultValue={ac.instruction ?? ""}
             className={inputClass}
           />
@@ -227,7 +227,7 @@ export function AutomationFormFields({
         ) : null}
         {["REMIND_USER", "CREATE_TASK", "CREATE_CALENDAR_EVENT", "ESCALATE", "LOG_EVENT"].includes(actionType) ? (
         <label className={labelClass}>
-          Title (for reminders/tasks/events)
+          Rubrik (för påminnelser, uppgifter och händelser)
           <input
             name="actionTitle"
             defaultValue={ac.title ?? ""}
@@ -237,7 +237,7 @@ export function AutomationFormFields({
         ) : null}
         {["REMIND_USER", "CREATE_TASK", "CREATE_CALENDAR_EVENT", "ESCALATE", "LOG_EVENT"].includes(actionType) ? (
         <label className={labelClass}>
-          Details
+          Detaljer
           <input
             name="actionDescription"
             defaultValue={ac.description ?? ""}
@@ -247,7 +247,7 @@ export function AutomationFormFields({
         ) : null}
         {actionType === "UPDATE_CONTACT" ? (
         <label className={labelClass}>
-          Contact field (for update action)
+          Kontaktfält (för uppdateringsåtgärd)
           <select
             name="actionField"
             defaultValue={
@@ -257,15 +257,15 @@ export function AutomationFormFields({
             }
             className={inputClass}
           >
-            <option value="notes">Notes</option>
-            <option value="importance">Importance</option>
-            <option value="relationshipType">Relationship type</option>
+            <option value="notes">Anteckningar</option>
+            <option value="importance">Betydelse</option>
+            <option value="relationshipType">Relationstyp</option>
           </select>
         </label>
         ) : null}
         {actionType === "UPDATE_CONTACT" ? (
         <label className={labelClass}>
-          New field value
+          Nytt värde
           <input
             name="actionValue"
             defaultValue={

@@ -86,7 +86,7 @@ export function VoiceCloneRecorder({
       );
     } catch {
       setStatus("error");
-      setMessage("Microphone access is required. Allow it in your browser.");
+      setMessage("Mikrofonen behöver tillåtas i webbläsaren.");
     }
   }
 
@@ -163,7 +163,7 @@ export function VoiceCloneRecorder({
             className="flex min-h-11 items-center gap-2 rounded-full bg-[var(--system-red)] px-4 text-sm font-semibold text-white"
           >
             <Mic className="h-4 w-4" />
-            {blob ? "Record again" : "Start recording"}
+            {blob ? "Spela in igen" : "Starta inspelning"}
           </button>
         ) : (
           <button
@@ -172,7 +172,7 @@ export function VoiceCloneRecorder({
             className="flex min-h-11 items-center gap-2 rounded-full bg-black px-4 text-sm font-semibold text-white"
           >
             <Square className="h-4 w-4 fill-current" />
-            Stop · {formatTime(seconds)}
+            Stoppa · {formatTime(seconds)}
           </button>
         )}
         {blob ? (
@@ -182,7 +182,7 @@ export function VoiceCloneRecorder({
             className="flex min-h-11 items-center gap-2 px-2 text-sm font-semibold text-[var(--system-blue)]"
           >
             <RotateCcw className="h-4 w-4" />
-            Re-record
+            Spela in igen
           </button>
         ) : null}
       </div>
@@ -192,7 +192,7 @@ export function VoiceCloneRecorder({
       ) : null}
       {blob && seconds < 30 ? (
         <p className="mt-2 text-xs text-[var(--system-orange)]">
-          Record at least 30 seconds. 60–120 seconds gives a better result.
+          Spela in minst 30 sekunder. 60–120 sekunder ger bättre resultat.
         </p>
       ) : null}
 

@@ -1,6 +1,6 @@
 export default function AppLoading() {
   return (
-    <div aria-busy="true" aria-label="Loading" className="animate-pulse">
+    <div aria-busy="true" aria-label="Laddar" className="animate-pulse">
       <div className="h-4 w-24 rounded bg-black/10" />
       <div className="mt-2 h-10 w-56 rounded bg-black/10" />
       <div className="mt-8 space-y-px overflow-hidden rounded-[14px] border border-black/10 bg-white">

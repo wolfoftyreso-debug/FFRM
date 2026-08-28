@@ -13,6 +13,7 @@ import {
 } from "@/lib/app-menu";
 import { AppMenuGlyph, AppMenuIconBadge } from "@/components/app-menu-icons";
 import { ContactAvatar } from "@/components/apple-ui";
+import { TERMS } from "@/lib/terminology";
 
 function tabIcon(name: AppMenuIcon, selected: boolean) {
   return (
@@ -64,7 +65,7 @@ export function AppNavigation({
               </p>
             </div>
           </Link>
-          <nav aria-label="Main navigation" className="space-y-5">
+          <nav aria-label="Huvudnavigering" className="space-y-5">
             <div className="space-y-1">
               {PRIMARY_TABS.map((item) => {
                 const selected =
@@ -142,12 +143,17 @@ export function AppNavigation({
       </aside>
 
       <nav
-        aria-label="Tab bar"
+        aria-label="Flikfält"
         className="ios-safe-bottom fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-black/10 bg-white/90 px-2 pt-2 backdrop-blur-xl md:hidden"
       >
         {[
           ...PRIMARY_TABS,
-          { href: "/more", label: "More", icon: "settings" as const, badge: null },
+          {
+            href: "/more",
+            label: TERMS.more,
+            icon: "settings" as const,
+            badge: null,
+          },
         ].map((item) => {
           const selected =
             item.href === "/more"

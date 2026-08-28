@@ -147,7 +147,7 @@ export async function sendMessage(
     await logActivity({
       actor: input.sender,
       action: "SMS_SENT",
-      summary: `SMS sent to ${input.to}`,
+      summary: `SMS skickat till ${input.to}`,
       contactId: input.contactId,
       conversationId,
       entityType: "message",

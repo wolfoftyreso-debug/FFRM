@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { TERMS, conversationState } from "@/lib/terminology";
 import sharp from "sharp";
 
 const ARTIFACTS = "/opt/cursor/artifacts/screenshots";
@@ -6,8 +7,8 @@ const ARTIFACTS = "/opt/cursor/artifacts/screenshots";
 async function login(page: Page) {
   await page.goto("/login");
   if (page.url().includes("/login")) {
-    await page.getByLabel("Password").fill("local-test-password");
-    await page.getByRole("button", { name: "Sign in" }).click();
+    await page.getByLabel("Lösenord").fill("local-test-password");
+    await page.getByRole("button", { name: "Logga in" }).click();
     await page.waitForURL(/\/messages/);
   }
 }
@@ -36,11 +37,11 @@ async function autosaveInput(page: Page, name: string, value: string) {
           : `${value} temp`;
     await input.fill(temporary);
     await input.blur();
-    await expect(input.locator("xpath=..").getByText("Saved")).toBeVisible();
+    await expect(input.locator("xpath=..").getByText("Sparat")).toBeVisible();
   }
   await input.fill(value);
   await input.blur();
-  await expect(input.locator("xpath=..").getByText("Saved")).toBeVisible();
+  await expect(input.locator("xpath=..").getByText("Sparat")).toBeVisible();
 }
 
 async function autosaveSelect(page: Page, name: string, value: string) {
@@ -55,11 +56,11 @@ async function autosaveSelect(page: Page, name: string, value: string) {
     );
     if (alternative) {
       await select.selectOption(alternative);
-      await expect(select.locator("xpath=..").getByText("Saved")).toBeVisible();
+      await expect(select.locator("xpath=..").getByText("Sparat")).toBeVisible();
     }
   }
   await select.selectOption(value);
-  await expect(select.locator("xpath=..").getByText("Saved")).toBeVisible();
+  await expect(select.locator("xpath=..").getByText("Sparat")).toBeVisible();
 }
 
 test.describe.serial("Personal Phone complete UI", () => {
@@ -86,47 +87,52 @@ test.describe.serial("Personal Phone complete UI", () => {
     await page.goto("/");
     await expect(page).toHaveURL(/\/messages/);
     for (const label of [
-      "Phone",
-      "Messages",
-      "Contacts",
-      "Assistant",
-      "Calendar",
-      "Activity",
-      "Settings",
+      TERMS.phone,
+      TERMS.messages,
+      TERMS.contacts,
+      TERMS.assistant,
+      TERMS.calendar,
+      TERMS.activity,
+      TERMS.settings,
     ]) {
       await expect(
-        page.getByRole("navigation", { name: "Main navigation" }).getByText(label),
+        page.getByRole("navigation", { name: "Huvudnavigering" }).getByText(label),
       ).toBeVisible();
     }
     await expect(
-      page.getByRole("link", { name: "Messages" }).first(),
+      page.getByRole("link", { name: TERMS.messages }).first(),
     ).toHaveAttribute("aria-current", "page");
 
     await page.setViewportSize({ width: 390, height: 844 });
-    const tabBar = page.getByRole("navigation", { name: "Tab bar" });
-    for (const label of ["Phone", "Messages", "Contacts", "More"]) {
-      // Not an exact match: a tab carrying an unread badge reads "Messages 3".
+    const tabBar = page.getByRole("navigation", { name: "Flikfält" });
+    for (const label of [
+      TERMS.phone,
+      TERMS.messages,
+      TERMS.contacts,
+      TERMS.more,
+    ]) {
+      // Not an exact match: a tab carrying an unread badge reads "Meddelanden 3".
       await expect(
         tabBar.getByRole("link", { name: label, exact: false }),
       ).toBeVisible();
     }
-    await tabBar.getByRole("link", { name: "More", exact: false }).click();
+    await tabBar.getByRole("link", { name: TERMS.more, exact: false }).click();
     await expect(page).toHaveURL(/\/more/);
     await expect(page.getByRole("heading", { name: "Kommunikation" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Personer" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Planering" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "AI och system" })).toBeVisible();
-    await expect(page.getByRole("link", { name: /Massmeddelande/ })).toBeVisible();
-    await expect(page.getByRole("link", { name: /Olästa/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: new RegExp(TERMS.broadcast) })).toBeVisible();
+    await expect(page.getByRole("link", { name: new RegExp(TERMS.unread) })).toBeVisible();
     await expect(page.getByRole("link", { name: /Min kontakt/ })).toBeVisible();
     await expect(
       page.getByRole("link", { name: "Apollo Målgrupp och geografi" }),
     ).toBeVisible();
-    await expect(page.getByRole("link", { name: /Automations/ })).toBeVisible();
-    await expect(page.getByRole("link", { name: /Quotes/ })).toBeVisible();
-    await expect(page.getByRole("link", { name: /Notiser/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: new RegExp(TERMS.automations) })).toBeVisible();
+    await expect(page.getByRole("link", { name: new RegExp(TERMS.insights) })).toBeVisible();
+    await expect(page.getByRole("link", { name: new RegExp(TERMS.notifications) })).toBeVisible();
     await expect(page.getByRole("link", { name: /AI-växel/ })).toBeVisible();
-    await expect(page.getByRole("link", { name: /Settings/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: new RegExp(TERMS.settings) })).toBeVisible();
     await page.screenshot({
       path: `${ARTIFACTS}/apple-mobile-shell.png`,
       fullPage: true,
@@ -190,47 +196,47 @@ test.describe.serial("Personal Phone complete UI", () => {
   }) => {
     await page.goto("/people");
     await page.getByText("Johan Testsson").first().click();
-    await page.getByRole("button", { name: "Message", exact: true }).click();
+    await page.getByRole("button", { name: "Meddela", exact: true }).click();
     await page.waitForURL(/\/messages\//);
     await page.goto("/messages");
-    await expect(page.getByRole("heading", { name: "Messages" })).toBeVisible();
-    await page.getByRole("tab", { name: "Needs You", exact: true }).click();
+    await expect(page.getByRole("heading", { name: TERMS.messages })).toBeVisible();
+    await page.getByRole("tab", { name: TERMS.needsYou, exact: true }).click();
     await expect(page).toHaveURL(/view=needs-you/);
-    await page.getByRole("tab", { name: "Unread", exact: true }).click();
+    await page.getByRole("tab", { name: TERMS.unread, exact: true }).click();
     await expect(page).toHaveURL(/view=unread/);
     await page.getByRole("tab", { name: "AI", exact: true }).click();
     await expect(page).toHaveURL(/view=ai/);
-    await page.getByRole("tab", { name: "Closed", exact: true }).click();
+    await page.getByRole("tab", { name: "Avslutade", exact: true }).click();
     await expect(page).toHaveURL(/view=closed/);
-    await page.getByRole("tab", { name: "All", exact: true }).click();
+    await page.getByRole("tab", { name: "Alla", exact: true }).click();
     await expect(page).toHaveURL(/view=all/);
-    await page.getByLabel("Search conversations").fill("Johan");
-    await page.getByLabel("Search conversations").press("Enter");
+    await page.getByLabel("Sök konversationer").fill("Johan");
+    await page.getByLabel("Sök konversationer").press("Enter");
     await expect(page.getByText("Johan Testsson").first()).toBeVisible();
     await page.getByText("Johan Testsson").first().click();
 
     await expect(page.getByRole("heading", { name: "Johan Testsson" })).toBeVisible();
-    if ((await page.getByText(/AI saw this/).count()) > 0) {
-      await expect(page.getByText(/AI saw this/)).toBeVisible();
+    if ((await page.getByText(/Så här såg AI:n bilden/).count()) > 0) {
+      await expect(page.getByText(/Så här såg AI:n bilden/)).toBeVisible();
     }
-    if ((await page.getByText(/Incoming call ·/).count()) > 0) {
-      await expect(page.getByText(/Incoming call ·/).first()).toBeVisible();
+    if ((await page.getByText(/Inkommande samtal ·/).count()) > 0) {
+      await expect(page.getByText(/Inkommande samtal ·/).first()).toBeVisible();
     }
 
-    const takeOver = page.getByRole("button", { name: "Take over" });
+    const takeOver = page.getByRole("button", { name: "Ta över" });
     if (await takeOver.isVisible()) {
       await takeOver.click();
-      await expect(page.getByText("YOU HANDLING", { exact: true })).toBeVisible();
+      await expect(page.getByText(conversationState("USER", "OPEN").label, { exact: true })).toBeVisible();
     }
-    const pause = page.getByRole("button", { name: "Pause AI" });
+    const pause = page.getByRole("button", { name: "Pausa AI" });
     if (await pause.isVisible()) {
       await pause.click();
-      await expect(page.getByText("PAUSED", { exact: true })).toBeVisible();
+      await expect(page.getByText(conversationState("PAUSED", "OPEN").label, { exact: true })).toBeVisible();
     }
-    const returnAi = page.getByRole("button", { name: "Return to AI" });
+    const returnAi = page.getByRole("button", { name: "Låt AI svara" });
     if (await returnAi.isVisible()) {
       await returnAi.click();
-      await expect(page.getByText("AI HANDLING", { exact: true })).toBeVisible();
+      await expect(page.getByText(conversationState("AI", "OPEN").label, { exact: true })).toBeVisible();
     }
 
     const imageInput = page.locator('input[type="file"][name="image"]');
@@ -247,20 +253,20 @@ test.describe.serial("Personal Phone complete UI", () => {
         (element) => (element as HTMLInputElement).files?.length,
       ),
     ).toBe(1);
-    await expect(page.getByRole("button", { name: /Send MMS/ })).toBeVisible();
-    await expect(page.getByRole("button", { name: "AI write text" })).toBeVisible();
-    await page.getByRole("button", { name: "Remove" }).click();
-    await expect(page.getByRole("button", { name: /Send SMS/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: /Skicka MMS/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Låt AI skriva texten" })).toBeVisible();
+    await page.getByRole("button", { name: "Ta bort" }).click();
+    await expect(page.getByRole("button", { name: /Skicka SMS/ })).toBeVisible();
     const conversationUrl = page.url();
-    await page.getByRole("button", { name: "Close", exact: true }).click();
+    await page.getByRole("button", { name: "Avsluta", exact: true }).click();
     await page.waitForURL(/\/messages$/);
     await page.goto(conversationUrl);
     await expect(
-      page.getByText("This conversation is closed. Reopen it before sending a message."),
+      page.getByText("Konversationen är avslutad. Öppna den igen innan du skickar något."),
     ).toBeVisible();
-    await expect(page.getByPlaceholder(/Message/)).toHaveCount(0);
-    await page.getByRole("button", { name: "Reopen" }).click();
-    await expect(page.getByPlaceholder(/Message/)).toBeVisible();
+    await expect(page.getByPlaceholder(/Skriv ett SMS/)).toHaveCount(0);
+    await page.getByRole("button", { name: "Öppna igen" }).click();
+    await expect(page.getByPlaceholder(/Skriv ett SMS/)).toBeVisible();
 
     await page.screenshot({
       path: `${ARTIFACTS}/apple-messages-thread.png`,
@@ -273,8 +279,11 @@ test.describe.serial("Personal Phone complete UI", () => {
     page,
   }) => {
     await page.goto("/messages");
-    await page.getByRole("link", { name: "Send to many" }).click();
-    await expect(page.getByRole("heading", { name: "Send to many" })).toBeVisible();
+    await page
+      .getByRole("main")
+      .getByRole("link", { name: TERMS.broadcast })
+      .click();
+    await expect(page.getByRole("heading", { name: TERMS.broadcast })).toBeVisible();
     await page.locator('textarea[name="text"]').fill("Hej *namn*, lunch imorgon?");
     await page.getByRole("button", { name: /Personligt/ }).click();
     await expect(page.getByText(/uses \*namn\*/)).toBeVisible();
@@ -283,9 +292,9 @@ test.describe.serial("Personal Phone complete UI", () => {
     await page
       .locator('textarea[name="importedList"]')
       .fill("+46701112233, Anna");
-    await page.getByRole("button", { name: /Save batch/ }).click();
+    await page.getByRole("button", { name: /Skicka till/ }).click();
     await page.waitForURL(/\/messages\/broadcast\//);
-    await expect(page.getByRole("heading", { name: "Saved batch" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Sparat utskick" })).toBeVisible();
     await expect(page.getByText("Hej *namn*, lunch imorgon?")).toBeVisible();
     await expect(page.getByText("Anna").first()).toBeVisible();
     await page.screenshot({
@@ -300,23 +309,23 @@ test.describe.serial("Personal Phone complete UI", () => {
   }) => {
     test.setTimeout(90_000);
     await page.goto("/people");
-    await expect(page.getByRole("heading", { name: "Contacts" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: TERMS.contacts })).toBeVisible();
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.getByRole("button", { name: "Show contacts: All contacts" }).click();
-    await expect(page.getByRole("dialog", { name: "Show" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Relationship" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Focus" })).toBeVisible();
+    await page.getByRole("button", { name: "Show contacts: Alla kontakter" }).click();
+    await expect(page.getByRole("dialog", { name: "Visa" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Relation" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Fokus" })).toBeVisible();
     await page.screenshot({
       path: `${ARTIFACTS}/contacts-filter-menu.png`,
       fullPage: true,
       caret: "initial",
     });
-    await page.getByRole("link", { name: "Family", exact: true }).click();
+    await page.getByRole("link", { name: "Familj", exact: true }).click();
     await expect(page).toHaveURL(/filter=family/);
     await expect(
-      page.getByRole("button", { name: "Show contacts: Family" }),
+      page.getByRole("button", { name: "Show contacts: Familj" }),
     ).toBeVisible();
-    await page.getByRole("link", { name: "Clear contact filter" }).click();
+    await page.getByRole("link", { name: "Rensa kontaktfiltret" }).click();
     await expect(page).not.toHaveURL(/filter=/);
     await page.setViewportSize({ width: 1280, height: 800 });
     for (const tab of ["Name", "Recent", "Priority"]) {
@@ -326,8 +335,8 @@ test.describe.serial("Personal Phone complete UI", () => {
         "true",
       );
     }
-    await page.getByLabel("Search contacts").fill("Johan");
-    await page.getByLabel("Search contacts").press("Enter");
+    await page.getByLabel("Sök kontakter").fill("Johan");
+    await page.getByLabel("Sök kontakter").press("Enter");
     const johanLink = page
       .getByText("Johan Testsson")
       .first()
@@ -337,18 +346,18 @@ test.describe.serial("Personal Phone complete UI", () => {
     await johanLink.click();
 
     await expect(page.getByRole("heading", { name: "Johan Testsson" })).toBeVisible();
-    for (const action of ["Call", "Message", "Remind", "AirDrop / Dela"]) {
+    for (const action of ["Ring", "Meddela", "Påminn", "AirDrop / Dela"]) {
       await expect(page.getByText(action, { exact: true }).first()).toBeVisible();
     }
     for (const filter of [
-      "All",
-      "Messages",
-      "Photos",
-      "Calls",
-      "Voicemail",
+      "Allt",
+      "Meddelanden",
+      "Bilder",
+      "Samtal",
+      "Röstbrevlåda",
       "SMS-jobb",
-      "Facts",
-      "Reminders",
+      "Fakta",
+      "Påminnelser",
       "System",
     ]) {
       await page.getByRole("tab", { name: filter, exact: true }).click();
@@ -357,21 +366,21 @@ test.describe.serial("Personal Phone complete UI", () => {
         "true",
       );
     }
-    await page.getByRole("tab", { name: "All", exact: true }).click();
+    await page.getByRole("tab", { name: "Allt", exact: true }).click();
 
     const fact = `E2E fact ${Date.now()}`;
-    await page.getByPlaceholder("Add a fact…").fill(fact);
-    await page.getByRole("button", { name: "Add", exact: true }).click();
+    await page.getByPlaceholder("Lägg till ett faktum…").fill(fact);
+    await page.getByRole("button", { name: "Lägg till", exact: true }).click();
     await expect(page.getByText(fact, { exact: true })).toBeVisible();
 
     const reminder = `E2E contact reminder ${Date.now()}`;
-    await page.getByPlaceholder("Remind me to…").fill(reminder);
+    await page.getByPlaceholder("Påminn mig om att…").fill(reminder);
     await page
       .locator('form#reminder input[name="dueAt"]')
       .fill("2026-08-26T12:00");
-    await page.getByRole("button", { name: "Create reminder" }).click();
+    await page.getByRole("button", { name: "Skapa påminnelse" }).click();
 
-    await page.getByRole("link", { name: "Edit" }).click();
+    await page.getByRole("link", { name: "Redigera" }).click();
     const contactPhoto = await sharp({
       create: {
         width: 180,
@@ -406,8 +415,8 @@ test.describe.serial("Personal Phone complete UI", () => {
     await page.locator('select[name="emojiStyle"]').selectOption("light");
     await page.locator('select[name="nameDayMonth"]').selectOption("6");
     await page.locator('select[name="nameDayDay"]').selectOption("24");
-    await page.getByRole("button", { name: "Save changes" }).click();
-    await page.getByRole("link", { name: "Edit" }).click();
+    await page.getByRole("button", { name: "Spara ändringar" }).click();
+    await page.getByRole("link", { name: "Redigera" }).click();
     await expect(page.locator('input[name="company"]')).toHaveValue("E2E AB");
     await expect(page.locator('input[name="jobTitle"]')).toHaveValue("Test Lead");
     await expect(page.locator('input[name="interests"]')).toHaveValue(
@@ -427,14 +436,14 @@ test.describe.serial("Personal Phone complete UI", () => {
       page.getByRole("link", { name: /\+ Namnsdag/ }),
     ).toBeVisible();
 
-    await expect(page.getByText("Teach AI how we talk")).toBeVisible();
+    await expect(page.getByText("Lär AI:n hur ni pratar")).toBeVisible();
     await page
       .locator("details")
-      .filter({ hasText: "Teach AI how we talk" })
+      .filter({ hasText: "Lär AI:n hur ni pratar" })
       .evaluate((node) => {
         (node as HTMLDetailsElement).open = true;
       });
-    await expect(page.getByRole("button", { name: "Analyze style" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Analysera stilen" })).toBeVisible();
     const conversationScreenshot = await sharp({
       create: {
         width: 320,
@@ -450,7 +459,7 @@ test.describe.serial("Personal Phone complete UI", () => {
       mimeType: "image/png",
       buffer: conversationScreenshot,
     });
-    await page.getByRole("button", { name: "Analyze style" }).click();
+    await page.getByRole("button", { name: "Analysera stilen" }).click();
     await page.reload();
     await expect(
       page
@@ -466,17 +475,17 @@ test.describe.serial("Personal Phone complete UI", () => {
     await page.goto("/people/new");
     await page.locator('input[name="firstName"]').fill("Duplicate Phone");
     await page.locator('input[name="phoneNumber"]').fill("+46700000001");
-    await page.getByRole("button", { name: "Create contact" }).click();
+    await page.getByRole("button", { name: "Skapa kontakt" }).click();
     await expect(
-      page.getByText("A contact with this phone number already exists."),
+      page.getByText("Det finns redan en kontakt med det numret. Öppna den i stället för att skapa en till."),
     ).toBeVisible();
 
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(johanPath!);
-    await page.getByText("Advanced relationship").click();
-    await expect(page.getByText("Relationship dimensions")).toBeVisible();
-    await expect(page.getByText("What AI may do")).toBeVisible();
-    await expect(page.getByText("Small talk")).not.toBeVisible();
+    await page.getByText("Avancerad relation").click();
+    await expect(page.getByText("Relationens dimensioner")).toBeVisible();
+    await expect(page.getByText("Vad AI:n får göra")).toBeVisible();
+    await expect(page.getByText("Småprat")).not.toBeVisible();
     const mobileWidth = await page.evaluate(() => ({
       viewport: document.documentElement.clientWidth,
       content: document.documentElement.scrollWidth,
@@ -494,21 +503,26 @@ test.describe.serial("Personal Phone complete UI", () => {
   }) => {
     test.setTimeout(90_000);
     await page.goto("/phone");
-    for (const tab of ["Recents", "Missed", "Voicemail", "Callback"]) {
+    for (const tab of [
+      "Senaste",
+      "Missade",
+      "Röstbrevlåda",
+      "Återuppringning",
+    ]) {
       await page.getByRole("tab", { name: tab, exact: true }).click();
       await expect(page.getByRole("tab", { name: tab, exact: true })).toHaveAttribute(
         "aria-selected",
         "true",
       );
     }
-    await page.getByRole("tab", { name: "Recents", exact: true }).click();
+    await page.getByRole("tab", { name: "Senaste", exact: true }).click();
     await expect(page.getByText("AI-växel").first()).toBeVisible();
-    if (!(await page.getByText("No calls here").isVisible())) {
-      await expect(page.getByText(/Incoming|Outgoing/).first()).toBeVisible();
+    if (!(await page.getByText("Inga samtal här").isVisible())) {
+      await expect(page.getByText(/Inkommande|Utgående/).first()).toBeVisible();
       await expect(
-        page.getByRole("link", { name: "Conversation" }).first(),
+        page.getByRole("link", { name: "Konversation" }).first(),
       ).toBeVisible();
-      const handled = page.getByRole("button", { name: "Mark handled" }).first();
+      const handled = page.getByRole("button", { name: "Markera som hanterat" }).first();
       if (await handled.isVisible()) {
         await handled.click();
         await expect(handled).not.toBeVisible();
@@ -523,11 +537,11 @@ test.describe.serial("Personal Phone complete UI", () => {
     await page.goto("/calendar");
     const reminder = `E2E global reminder ${Date.now()}`;
     await page.getByText("Lägg till vanlig påminnelse").click();
-    await page.getByPlaceholder("What should I remember?").fill(reminder);
+    await page.getByPlaceholder("Vad ska jag komma ihåg?").fill(reminder);
     await page
       .locator('details input[name="dueAt"]')
       .fill("2026-08-26T13:00");
-    await page.getByRole("button", { name: "Save" }).click();
+    await page.getByRole("button", { name: "Spara" }).click();
 
     await page.getByRole("link", { name: "Skapa aktivitet" }).click();
     await expect(
@@ -550,16 +564,16 @@ test.describe.serial("Personal Phone complete UI", () => {
     await expect(
       page.getByText(/AI skapar ett personligt SMS-utkast/),
     ).toBeVisible();
-    await page.getByRole("button", { name: "Back to Calendar" }).click();
+    await page.getByRole("button", { name: `Tillbaka till ${TERMS.calendar}` }).click();
     await expect(page).toHaveURL(/\/calendar$/);
 
     await page.goto("/activity");
     await expect(
-      page.getByText(/Calendar activity created/).first(),
+      page.getByText(/Aktivitet skapad/).first(),
     ).toBeVisible();
 
     await page.goto("/settings");
-    await page.getByRole("tab", { name: "Profile" }).click();
+    await page.getByRole("tab", { name: "Profil" }).click();
     await autosaveInput(page, "name", "Owner");
     await autosaveInput(page, "company", "Landvex");
     await autosaveInput(page, "jobTitle", "Grundare");
@@ -600,7 +614,7 @@ test.describe.serial("Personal Phone complete UI", () => {
       "dialogueClosings",
       "Vi hörs!\nHa det fint.",
     );
-    await page.getByRole("tab", { name: "Calls" }).click();
+    await page.getByRole("tab", { name: "Samtal" }).click();
     await expect(page.locator('select[name="enabled"]')).toBeVisible();
     await expect(page.locator('select[name="availabilityMode"]')).toBeVisible();
     await expect(page.locator('textarea[name="greetingText"]')).toBeVisible();
@@ -617,10 +631,10 @@ test.describe.serial("Personal Phone complete UI", () => {
     await expect(page.locator('select[name="unknownCallers"]')).toHaveValue(
       "VOICEMAIL",
     );
-    await page.getByRole("tab", { name: "Diagnostics" }).click();
-    await expect(page.getByText("System health")).toBeVisible();
-    await expect(page.getByText("AI models")).toBeVisible();
-    await page.getByRole("tab", { name: "Integrations" }).click();
+    await page.getByRole("tab", { name: "Diagnostik" }).click();
+    await expect(page.getByText("Systemhälsa")).toBeVisible();
+    await expect(page.getByText("AI-modeller")).toBeVisible();
+    await page.getByRole("tab", { name: "Integrationer" }).click();
     await expect(page.locator('select[name="provider"]')).toHaveValue("46elks");
     await expect(page.locator('input[name="accountSid"]')).toBeVisible();
     await expect(page.getByText("Alternativ adapter för SMS och MMS.")).toBeVisible();
@@ -643,11 +657,11 @@ test.describe.serial("Personal Phone complete UI", () => {
     await expect(
       page.getByText(/Detta är min egen röst/).first(),
     ).toBeVisible();
-    await page.getByRole("button", { name: "Start recording" }).click();
+    await page.getByRole("button", { name: "Starta inspelning" }).click();
     await page.waitForTimeout(1_500);
-    await page.getByRole("button", { name: /Stop/ }).click();
+    await page.getByRole("button", { name: /Stoppa/ }).click();
     await expect(page.locator("audio").last()).toBeVisible();
-    await expect(page.getByText(/Record at least 30 seconds/)).toBeVisible();
+    await expect(page.getByText(/Spela in minst 30 sekunder/)).toBeVisible();
     await expect(page.getByRole("button", { name: "Skapa Min röst" })).toBeDisabled();
     await page.screenshot({
       path: `${ARTIFACTS}/apple-settings-autosave.png`,
@@ -688,8 +702,8 @@ test.describe.serial("Personal Phone complete UI", () => {
         path: `${ARTIFACTS}/apple-provider-settings.png`,
         caret: "initial",
       });
-    await page.getByRole("tab", { name: "Profile" }).click();
-    await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
+    await page.getByRole("tab", { name: "Profil" }).click();
+    await expect(page.getByRole("button", { name: "Logga ut" })).toBeVisible();
     await page.screenshot({
       path: `${ARTIFACTS}/apple-settings.png`,
       fullPage: true,
@@ -708,49 +722,49 @@ test.describe.serial("Personal Phone complete UI", () => {
       .getAttribute("href");
     expect(contactHref).toBeTruthy();
     await page.goto(contactHref!);
-    await page.getByRole("button", { name: "Message" }).click();
+    await page.getByRole("button", { name: "Meddela" }).click();
     await page.waitForURL(/\/messages\/[^/]+$/);
     const conversationPath = new URL(page.url()).pathname;
 
     const deepRoutes = [
       {
         path: "/people/new",
-        label: "Back to Contacts",
+        label: `Tillbaka till ${TERMS.contacts}`,
         expected: "/people",
       },
       {
         path: contactHref!,
-        label: "Back to Contacts",
+        label: `Tillbaka till ${TERMS.contacts}`,
         expected: "/people",
       },
       {
         path: `${contactHref}/edit`,
-        label: "Back to Contact",
+        label: `Tillbaka till ${TERMS.contact}`,
         expected: contactHref!,
       },
       {
         path: conversationPath,
-        label: "Back to Messages",
+        label: `Tillbaka till ${TERMS.messages}`,
         expected: "/messages",
       },
       {
         path: "/messages/broadcast",
-        label: "Back to Messages",
+        label: `Tillbaka till ${TERMS.messages}`,
         expected: "/messages",
       },
       {
         path: "/messages/new",
-        label: "Back to Messages",
+        label: `Tillbaka till ${TERMS.messages}`,
         expected: "/messages",
       },
       {
         path: "/calendar/new",
-        label: "Back to Calendar",
+        label: `Tillbaka till ${TERMS.calendar}`,
         expected: "/calendar",
       },
       {
         path: "/apollo",
-        label: "Back to Contacts",
+        label: `Tillbaka till ${TERMS.contacts}`,
         expected: "/people",
       },
     ];
@@ -771,7 +785,7 @@ test.describe.serial("Personal Phone complete UI", () => {
     ]) {
       await page.goto("about:blank");
       await page.goto(path);
-      await page.getByRole("button", { name: "Back to More" }).click();
+      await page.getByRole("button", { name: `Tillbaka till ${TERMS.more}` }).click();
       await expect(page).toHaveURL(/\/more$/);
     }
   });

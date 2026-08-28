@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     await ensureOwner();
     const form = await request.formData();
     const file = form.get("photo");
-    if (!(file instanceof File)) throw new Error("Choose a photo");
+    if (!(file instanceof File)) throw new Error("Välj en bild.");
     const photo = await normalizeContactPhoto(file);
     const db = await getDb();
     await db

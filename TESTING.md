@@ -83,6 +83,10 @@ it cannot collide with a running dev server's embedded database.
 
 ### Browser E2E (`tests/e2e/`)
 
+The browser tests import the product glossary (`lib/terminology.ts`) rather
+than repeating its strings, so renaming a concept updates the assertions with
+it instead of leaving them asserting words the app no longer says.
+
 `live-updates.spec.ts` drives the live surfaces the way the network does: it
 posts a real inbound SMS to the webhook while a thread is open in the browser
 and asserts the message appears with no reload and no interaction, that a

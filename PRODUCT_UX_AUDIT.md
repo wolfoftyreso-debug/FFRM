@@ -142,6 +142,7 @@ own-voice consent. Raw training audio remains unretained.
 
 - unified conversation model and transparent AI events;
 - live surfaces that refresh without disturbing in-progress input;
+- one glossary (`lib/terminology.ts`) owning every domain name and state word;
 - persist-first idempotent communication pipelines;
 - policy/envelope restraint;
 - Apple list shell and professional contact hero;
@@ -151,7 +152,9 @@ own-voice consent. Raw training audio remains unretained.
 ### REFINE
 
 - secondary surfaces toward the same Apple interaction grammar;
-- user-facing copy (hide operator/provider internals);
+- remaining operator internals in system-generated audit summaries
+  (`lib/ai/*`, `lib/automations/*`) and the raw-enum badges on Apollo and
+  campaign rows;
 - Assistant pending feedback;
 - automation execution readability;
 - filter/search continuity.
@@ -199,6 +202,8 @@ own-voice consent. Raw training audio remains unretained.
 
 | Finding | Priority | Evidence |
 |---|---|---|
+| One name per concept; UI speaks the owner's language | P0 | Done — `lib/terminology.ts`; drift was measurable across nav, titles, schema and tests |
+| Consequential actions state their consequence | P0 | Done — "Save batch" queued real SMS to N people; now "Skicka till N" |
 | Closed thread must not send | P0 | High confidence, convergent messaging model |
 | Destructive block needs confirmation | P0 | High confidence |
 | Route/action loading and recovery | P1 | High confidence |

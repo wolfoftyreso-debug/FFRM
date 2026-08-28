@@ -1,11 +1,13 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import type { Tone } from "@/lib/terminology";
 
+/**
+ * Legacy text-keyed styles for badges that still render a stored enum
+ * directly (Apollo list states, campaign states, calendar kinds). Anything
+ * with a name of its own passes a `tone` instead — see lib/terminology.ts.
+ */
 const badgeStyles: Record<string, string> = {
-  // conversation / AI states
-  "AI HANDLING": "bg-emerald-50 text-emerald-700 border-emerald-200",
-  "NEEDS YOU": "bg-red-50 text-red-700 border-red-200",
-  "YOU HANDLING": "bg-blue-50 text-blue-700 border-blue-200",
   PAUSED: "bg-stone-100 text-stone-600 border-stone-200",
   CLOSED: "bg-stone-100 text-stone-500 border-stone-200",
   // execution states
@@ -35,9 +37,24 @@ const badgeStyles: Record<string, string> = {
   CONFIRMED: "bg-emerald-50 text-emerald-700 border-emerald-200",
 };
 
-export function Badge({ label }: { label: string }) {
-  const style =
-    badgeStyles[label] ?? "bg-stone-100 text-stone-600 border-stone-200";
+const toneStyles: Record<Tone, string> = {
+  positive: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  critical: "bg-red-50 text-red-700 border-red-200",
+  attention: "bg-amber-50 text-amber-700 border-amber-200",
+  info: "bg-blue-50 text-blue-700 border-blue-200",
+  neutral: "bg-stone-100 text-stone-600 border-stone-200",
+  automatic: "bg-violet-50 text-violet-700 border-violet-200",
+};
+
+/**
+ * `tone` states what the badge means; `label` only says it in words. Callers
+ * without a tone still match on text, which keeps the many raw-enum badges
+ * (Apollo list states, calendar kinds) rendering as before.
+ */
+export function Badge({ label, tone }: { label: string; tone?: Tone }) {
+  const style = tone
+    ? toneStyles[tone]
+    : (badgeStyles[label] ?? "bg-stone-100 text-stone-600 border-stone-200");
   return (
     <span
       className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium tracking-wide ${style}`}

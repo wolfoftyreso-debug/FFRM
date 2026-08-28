@@ -1,5 +1,5 @@
 import { format } from "date-fns";
-import { listConversations, conversationStateLabel } from "@/lib/queries";
+import { listConversations } from "@/lib/queries";
 import {
   AppleRow,
   ContactAvatar,
@@ -9,9 +9,10 @@ import {
 import { Search } from "lucide-react";
 import { SquarePen } from "lucide-react";
 import Link from "next/link";
+import { TERMS, conversationState } from "@/lib/terminology";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Messages" };
+export const metadata = { title: TERMS.messages };
 
 export default async function MessagesPage({
   searchParams,
@@ -64,21 +65,21 @@ export default async function MessagesPage({
           <p className="text-sm font-medium text-[var(--system-blue)]">
             Personal Phone
           </p>
-          <h1 className="text-[34px] font-bold tracking-tight">Messages</h1>
+          <h1 className="text-[34px] font-bold tracking-tight">{TERMS.messages}</h1>
         </div>
         <div className="flex gap-2">
           <Link
             href="/messages/broadcast"
             className="flex min-h-11 items-center rounded-full bg-black/[0.05] px-4 text-sm font-semibold"
           >
-            Send to many
+            {TERMS.broadcast}
           </Link>
           <Link
             href="/messages/new"
             className="flex min-h-11 items-center gap-2 rounded-full bg-[var(--system-blue)] px-4 text-sm font-semibold text-white"
           >
             <SquarePen className="h-4 w-4" />
-            New
+            Nytt SMS
           </Link>
         </div>
       </div>
@@ -88,8 +89,8 @@ export default async function MessagesPage({
           type="search"
           name="q"
           defaultValue={params.q ?? ""}
-          aria-label="Search conversations"
-          placeholder="Search"
+          aria-label="Sök konversationer"
+          placeholder="Sök"
           className="h-9 w-full rounded-xl border-0 bg-black/[0.06] pl-9 pr-3 text-[15px] outline-none placeholder:text-[var(--system-gray)]"
         />
         <input type="hidden" name="view" value={view} />
@@ -100,17 +101,17 @@ export default async function MessagesPage({
           items={[
             {
               id: "all",
-              label: "All",
+              label: "Alla",
               href: `/messages?view=all${searchSuffix}`,
             },
             {
               id: "needs-you",
-              label: "Needs You",
+              label: TERMS.needsYou,
               href: `/messages?view=needs-you${searchSuffix}`,
             },
             {
               id: "unread",
-              label: "Unread",
+              label: TERMS.unread,
               href: `/messages?view=unread${searchSuffix}`,
             },
             {
@@ -120,7 +121,7 @@ export default async function MessagesPage({
             },
             {
               id: "closed",
-              label: "Closed",
+              label: "Avslutade",
               href: `/messages?view=closed${searchSuffix}`,
             },
           ]}
@@ -132,29 +133,29 @@ export default async function MessagesPage({
           <MessageCircleIcon />
           <p className="mt-3 text-lg font-semibold">
             {q
-              ? "No search results"
+              ? "Inga träffar"
               : view === "needs-you"
-                ? "Nothing needs you"
+                ? "Inget behöver dig"
                 : view === "unread"
-                  ? "You’re all caught up"
+                  ? "Du är ikapp"
                   : view === "ai"
-                    ? "No AI-handled conversations"
+                    ? "Inga konversationer som AI:n sköter"
                     : view === "closed"
-                      ? "No closed conversations"
-                      : "No conversations"}
+                      ? "Inga avslutade konversationer"
+                      : "Inga konversationer"}
           </p>
           <p className="mt-1 text-sm text-[var(--secondary-label)]">
             {q
-              ? `No conversation matches “${params.q}”.`
+              ? `Ingen konversation matchar ”${params.q}”.`
               : view === "all"
-                ? "Messages to your 46elks number will appear here."
-                : "Conversations appear here when they match this filter."}
+                ? "Meddelanden till ditt 46elks-nummer dyker upp här."
+                : "Konversationer visas här när de matchar det här filtret."}
           </p>
         </div>
       ) : (
         <InsetSection>
           {conversations.map((c) => {
-            const state = conversationStateLabel(c.aiControlState, c.status);
+            const state = conversationState(c.aiControlState, c.status);
             return (
               <AppleRow
                 key={c.id}
@@ -164,7 +165,7 @@ export default async function MessagesPage({
                   <span className="flex items-center gap-2">
                     {c.unread ? (
                       <span
-                        aria-label="Unread"
+                        aria-label="Oläst"
                         className="h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--system-blue)]"
                       />
                     ) : null}
@@ -175,14 +176,14 @@ export default async function MessagesPage({
                     >
                       {c.contactName}
                     </span>
-                    {state === "NEEDS YOU" ? (
+                    {state.tone === "critical" ? (
                       <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--system-red)]" />
                     ) : null}
                     {c.isAutomated ? (
                       <span className="shrink-0 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-700">
-                        AUTOMATIC
+                        AUTOMATISKT
                       </span>
-                    ) : state === "AI HANDLING" ? (
+                    ) : state.tone === "positive" ? (
                       <span className="shrink-0 rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-700">
                         AI
                       </span>

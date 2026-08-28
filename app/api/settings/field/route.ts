@@ -102,7 +102,7 @@ async function saveReceptionistField(field: string, value: string) {
         !config.connectAudioId ||
         !config.callbackAudioId)
     ) {
-      throw new Error("Generate the receptionist voice prompts first");
+      throw new Error("Skapa AI-växelns röstfraser först.");
     }
     config.enabled = value === "true";
   } else if (field === "availabilityMode") {
@@ -196,7 +196,7 @@ async function saveOwnerField(field: string, value: string) {
     return;
   }
   if (["name", "preferredLanguage", "timezone"].includes(field)) {
-    if (!value.trim()) throw new Error("This field cannot be empty");
+    if (!value.trim()) throw new Error("Fältet får inte vara tomt.");
     await db
       .update(users)
       .set({ [field]: value.trim(), updatedAt: sql`now()` })
@@ -263,7 +263,7 @@ async function saveCallPolicyField(field: string, value: string) {
   } else if (field === "nightPriorityThreshold") {
     const number = Number(value);
     if (!Number.isFinite(number) || number < 0 || number > 100) {
-      throw new Error("Priority must be between 0 and 100");
+      throw new Error("Prioriteten måste vara mellan 0 och 100.");
     }
     policy[field] = number;
   } else {
@@ -345,7 +345,7 @@ async function saveElevenField(field: string, value: string) {
     secrets.apiKey = value;
   } else {
     if (["voiceId", "modelId"].includes(field) && !value.trim()) {
-      throw new Error("This field cannot be empty");
+      throw new Error("Fältet får inte vara tomt.");
     }
     publicConfig[field] = value.trim();
   }

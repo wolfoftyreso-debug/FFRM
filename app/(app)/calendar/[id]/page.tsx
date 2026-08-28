@@ -10,6 +10,7 @@ import { Badge, Card, PageHeader, SecondaryButton } from "@/components/ui";
 import { isCalendarSmsJob } from "@/lib/calendar-activities";
 import { displayName, getAutomationDetail, listContacts } from "@/lib/queries";
 import { defaultTimezone } from "@/lib/env";
+import { executionStatusLabel } from "@/lib/terminology";
 
 export const dynamic = "force-dynamic";
 
@@ -43,7 +44,12 @@ export default async function CalendarActivityPage({
         ]
           .filter(Boolean)
           .join(" · ")}
-        action={<Badge label={automation.enabled ? "ENABLED" : "DISABLED"} />}
+        action={
+          <Badge
+            label={automation.enabled ? "Aktiv" : "Avstängd"}
+            tone={automation.enabled ? "positive" : "neutral"}
+          />
+        }
       />
 
       <div className="mb-5 flex flex-wrap gap-2">
@@ -86,7 +92,7 @@ export default async function CalendarActivityPage({
                     contact?.timezone ?? defaultTimezone(),
                   )}
                 </span>
-                <Badge label={execution.status} />
+                <Badge {...executionStatusLabel(execution.status)} />
               </div>
             ))}
           </div>

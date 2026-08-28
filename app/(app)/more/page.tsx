@@ -6,9 +6,10 @@ import { APP_MENU_GROUPS } from "@/lib/app-menu";
 import { getOwner } from "@/lib/queries";
 import { getNotificationCount } from "@/lib/review";
 import { getAttentionSummary } from "@/lib/queries";
+import { TERMS } from "@/lib/terminology";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "More" };
+export const metadata = { title: TERMS.more };
 
 export default async function MorePage() {
   const [owner, notifications, attention] = await Promise.all([
@@ -24,7 +25,7 @@ export default async function MorePage() {
 
   return (
     <>
-      <h1 className="mb-6 text-[34px] font-bold tracking-tight">More</h1>
+      <h1 className="mb-6 text-[34px] font-bold tracking-tight">{TERMS.more}</h1>
       {owner ? (
         <Link
           href="/me/share"

@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
   try {
     credentials = await getTwilioCredentials();
   } catch {
-    return new Response("Twilio is not configured", { status: 503 });
+    return new Response("Twilio är inte konfigurerat.", { status: 503 });
   }
   const rawBody = await request.text();
   const params = new URLSearchParams(rawBody);

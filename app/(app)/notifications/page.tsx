@@ -3,9 +3,10 @@ import { listPendingInsights } from "@/lib/review";
 import { listCampaigns } from "@/lib/queries";
 import { AppleRow, InsetSection } from "@/components/apple-ui";
 import { PageHeader } from "@/components/ui";
+import { TERMS } from "@/lib/terminology";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Notifications" };
+export const metadata = { title: TERMS.notifications };
 
 export default async function NotificationsPage() {
   const [insights, campaigns] = await Promise.all([
@@ -15,11 +16,14 @@ export default async function NotificationsPage() {
 
   return (
     <>
-      <PageHeader title="Notifications" subtitle="Quotes and batches that need you." />
-      <InsetSection title="Quotes">
+      <PageHeader
+        title={TERMS.notifications}
+        subtitle={`${TERMS.insights} och ${TERMS.broadcast.toLowerCase()} som behöver dig.`}
+      />
+      <InsetSection title={TERMS.insights}>
         {insights.length === 0 ? (
           <p className="px-4 py-5 text-sm text-[var(--secondary-label)]">
-            Nothing waiting.
+            Inget väntar.
           </p>
         ) : (
           insights.map(({ insight, contact }) => {
@@ -39,7 +43,7 @@ export default async function NotificationsPage() {
         )}
       </InsetSection>
       <div className="mt-6">
-        <InsetSection title="Batches">
+        <InsetSection title={TERMS.broadcast}>
           {campaigns.map((campaign) => (
             <AppleRow
               key={campaign.id}
@@ -54,7 +58,7 @@ export default async function NotificationsPage() {
         href="/review"
         className="mt-4 block text-center text-sm font-semibold text-[var(--system-blue)]"
       >
-        Open all quotes
+        Öppna alla förslag
       </Link>
     </>
   );

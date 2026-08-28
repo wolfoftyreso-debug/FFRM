@@ -24,9 +24,10 @@ import {
 import { ConfirmForm } from "@/components/confirm-form";
 import { Card, PrimaryButton, inputClass } from "@/components/ui";
 import { getReceptionistState } from "@/lib/voice/receptionist-config";
+import { TERMS } from "@/lib/terminology";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Phone" };
+export const metadata = { title: TERMS.phone };
 
 function stateIcon(state: string, direction: string) {
   if (state === "MISSED") return <PhoneMissed className="h-4 w-4 text-red-500" />;
@@ -77,9 +78,9 @@ export default async function PhonePage({
       <div className="mb-4 flex items-end justify-between gap-3">
         <div>
           <p className="text-sm font-medium text-[var(--system-blue)]">
-            Your 46elks number
+            Ditt 46elks-nummer
           </p>
-          <h1 className="text-[34px] font-bold tracking-tight">Phone</h1>
+          <h1 className="text-[34px] font-bold tracking-tight">{TERMS.phone}</h1>
         </div>
         <Link
           href={params.dial ? "/phone" : "/phone?dial=1"}
@@ -91,7 +92,7 @@ export default async function PhonePage({
       </div>
       {params.started ? (
         <p className="mb-4 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
-          Calling your phone now. Answer to connect the outbound call.
+          Ringer din telefon nu. Svara så kopplas det utgående samtalet.
         </p>
       ) : null}
       <Link
@@ -118,7 +119,7 @@ export default async function PhonePage({
         <Card className="mb-5">
           <form action={callNumber} className="flex flex-col gap-3 sm:flex-row sm:items-end">
             <label className="min-w-0 flex-1 text-sm font-medium">
-              Number to call
+              Nummer att ringa
               <input
                 name="phoneNumber"
                 type="tel"
@@ -129,11 +130,11 @@ export default async function PhonePage({
                 className={inputClass}
               />
             </label>
-            <PrimaryButton>Call via 46elks</PrimaryButton>
+            <PrimaryButton>Ring via 46elks</PrimaryButton>
           </form>
           {params.error ? (
             <p className="mt-2 text-sm text-[var(--system-red)]">
-              Enter a valid phone number including country code.
+              Ange ett giltigt telefonnummer med landskod.
             </p>
           ) : null}
           <p className="mt-2 text-xs text-[var(--secondary-label)]">
@@ -146,16 +147,16 @@ export default async function PhonePage({
         <SegmentedLinks
           active={view}
           items={[
-            { id: "recents", label: "Recents", href: "/phone?view=recents" },
-            { id: "missed", label: "Missed", href: "/phone?view=missed" },
+            { id: "recents", label: "Senaste", href: "/phone?view=recents" },
+            { id: "missed", label: "Missade", href: "/phone?view=missed" },
             {
               id: "voicemail",
-              label: "Voicemail",
+              label: "Röstbrevlåda",
               href: "/phone?view=voicemail",
             },
             {
               id: "callback",
-              label: "Callback",
+              label: "Återuppringning",
               href: "/phone?view=callback",
             },
           ]}
@@ -164,9 +165,9 @@ export default async function PhonePage({
       {rows.length === 0 ? (
         <div className="ios-inset-group px-6 py-12 text-center">
           <Phone className="mx-auto h-10 w-10 text-[var(--system-blue)]" />
-          <p className="mt-3 text-lg font-semibold">No calls here</p>
+          <p className="mt-3 text-lg font-semibold">Inga samtal här</p>
           <p className="mt-1 text-sm text-[var(--secondary-label)]">
-            Calls to your number will appear automatically.
+            Samtal till ditt nummer dyker upp här automatiskt.
           </p>
         </div>
       ) : (
@@ -203,7 +204,7 @@ export default async function PhonePage({
                       </p>
                     </div>
                     <p className="mt-0.5 text-[14px] text-[var(--secondary-label)]">
-                      {call.direction === "INBOUND" ? "Incoming" : "Outgoing"} ·{" "}
+                      {call.direction === "INBOUND" ? "Inkommande" : "Utgående"} ·{" "}
                       {call.state.toLowerCase()}
                       {call.durationSeconds
                         ? ` · ${Math.floor(call.durationSeconds / 60)}:${String(call.durationSeconds % 60).padStart(2, "0")}`
@@ -225,7 +226,7 @@ export default async function PhonePage({
                         ) : null}
                         {call.aiRequiresUser ? (
                           <p className="mt-1 text-xs font-semibold text-[var(--system-red)]">
-                            Requires you
+                            Kräver dig
                           </p>
                         ) : null}
                       </div>
@@ -252,7 +253,7 @@ export default async function PhonePage({
                   {contact?.phoneNumber ? (
                     <form action={callContact.bind(null, contact.id)}>
                       <button className="min-h-11 rounded-lg px-3 text-sm font-medium text-[var(--system-blue)]">
-                        Call
+                        Ring
                       </button>
                     </form>
                   ) : null}
@@ -260,14 +261,14 @@ export default async function PhonePage({
                     href={`/phone/${call.id}`}
                     className="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-[var(--system-blue)]"
                   >
-                    Details
+                    Detaljer
                   </Link>
                   {call.conversationId ? (
                     <Link
                       href={`/messages/${call.conversationId}`}
                       className="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-[var(--system-blue)]"
                     >
-                      Conversation
+                      Konversation
                     </Link>
                   ) : null}
                   {contact ? (
@@ -275,7 +276,7 @@ export default async function PhonePage({
                       href={`/people/${contact.id}`}
                       className="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-[var(--system-blue)]"
                     >
-                      Contact
+                      Kontakt
                     </Link>
                   ) : (
                     <>
@@ -283,19 +284,19 @@ export default async function PhonePage({
                         href={`/people/new?phone=${encodeURIComponent(call.direction === "INBOUND" ? call.fromNumber : call.toNumber)}`}
                         className="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-[var(--system-blue)]"
                       >
-                        Create contact
+                        Skapa kontakt
                       </Link>
                       {isBlocked ? (
                         <form action={unblockNumber.bind(null, number)}>
                           <button className="rounded-lg px-3 text-sm font-medium text-[var(--system-blue)]">
-                            Unblock
+                            Avblockera
                           </button>
                         </form>
                       ) : (
                         <ConfirmForm
                           action={blockNumber.bind(null, number)}
-                          label="Block"
-                          confirmText={`Block ${number}? Incoming calls will be rejected.`}
+                          label="Blockera"
+                          confirmText={`Blockera ${number}? Inkommande samtal avvisas då.`}
                         />
                       )}
                     </>
@@ -303,7 +304,7 @@ export default async function PhonePage({
                   {call.aiRequiresUser ? (
                     <form action={markCallHandled.bind(null, call.id)}>
                       <button className="min-h-11 rounded-lg px-3 text-sm font-medium text-[var(--system-green)]">
-                        Mark handled
+                        Markera som hanterat
                       </button>
                     </form>
                   ) : null}

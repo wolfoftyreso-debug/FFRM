@@ -113,7 +113,7 @@ describe("voice pipeline", () => {
     );
     expect(events).toHaveLength(1);
     expect(events[0].conversationId).toBe(call.conversationId);
-    expect(events[0].text).toContain("Incoming call");
+    expect(events[0].text).toContain("Inkommande samtal");
   });
 
   it("is idempotent for retried voice_start webhooks", async () => {

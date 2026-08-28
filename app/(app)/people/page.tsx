@@ -9,9 +9,10 @@ import {
 } from "@/components/apple-ui";
 import { ContactCriteriaMenu } from "@/components/contact-criteria-menu";
 import { Plus, Radar, Search } from "lucide-react";
+import { TERMS, relationshipTypeLabel } from "@/lib/terminology";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "People" };
+export const metadata = { title: TERMS.contacts };
 
 export default async function PeoplePage({
   searchParams,
@@ -49,7 +50,7 @@ export default async function PeoplePage({
           <p className="text-sm font-medium text-[var(--system-blue)]">
             {contacts.length} contacts
           </p>
-          <h1 className="text-[34px] font-bold tracking-tight">Contacts</h1>
+          <h1 className="text-[34px] font-bold tracking-tight">{TERMS.contacts}</h1>
         </div>
         <div className="flex items-center gap-1">
           <Link
@@ -61,7 +62,7 @@ export default async function PeoplePage({
           </Link>
           <Link
             href="/people/new"
-            aria-label="Add contact"
+            aria-label="Lägg till kontakt"
             className="flex h-11 w-11 items-center justify-center rounded-full text-[var(--system-blue)]"
           >
             <Plus className="h-7 w-7" />
@@ -75,8 +76,8 @@ export default async function PeoplePage({
           type="search"
           name="q"
           defaultValue={q}
-          aria-label="Search contacts"
-          placeholder="Search"
+          aria-label="Sök kontakter"
+          placeholder="Sök"
           className="h-9 w-full rounded-xl border-0 bg-black/[0.06] pl-9 pr-3 text-[15px] outline-none"
         />
         <input type="hidden" name="filter" value={filter} />
@@ -101,7 +102,7 @@ export default async function PeoplePage({
 
       {contacts.length === 0 ? (
         <div className="ios-inset-group px-6 py-12 text-center text-[var(--secondary-label)]">
-          No contacts found.
+          Inga kontakter hittades.
         </div>
       ) : (
         <div className="space-y-5">
@@ -128,12 +129,12 @@ export default async function PeoplePage({
                         {displayName(c)}
                         {c.importance === "HIGH" ? (
                           <span className="ml-2 text-[11px] font-bold text-[var(--system-orange)]">
-                            PRIORITY
+                            PRIORITET
                           </span>
                         ) : null}
                       </span>
                     }
-                    subtitle={`${c.relationshipLabel ?? c.relationshipType}${
+                    subtitle={`${c.relationshipLabel ?? relationshipTypeLabel(c.relationshipType)}${
                       c.lastInteractionAt
                         ? ` · ${formatDistanceToNow(c.lastInteractionAt, { addSuffix: true })}`
                         : " · No history"

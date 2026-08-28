@@ -97,7 +97,7 @@ export async function processInboundMms(messageId: string): Promise<void> {
         await logActivity({
           actor: "AI",
           action: "IMAGE_UNDERSTOOD",
-          summary: `AI analyzed an MMS image: ${understood.analysis.caption ?? "image"}`,
+          summary: `AI:n tolkade en MMS-bild: ${understood.analysis.caption ?? "bild"}`,
           contactId: contact.id,
           conversationId: message.conversationId,
           entityType: "mediaAsset",
@@ -123,7 +123,7 @@ export async function processInboundMms(messageId: string): Promise<void> {
       await logActivity({
         actor: "SYSTEM",
         action: "MEDIA_PROCESSING_FAILED",
-        summary: `MMS image processing failed: ${error.slice(0, 180)}`,
+        summary: `MMS-bilden kunde inte behandlas: ${error.slice(0, 180)}`,
         contactId: message.contactId,
         conversationId: message.conversationId,
         entityType: "mediaAsset",

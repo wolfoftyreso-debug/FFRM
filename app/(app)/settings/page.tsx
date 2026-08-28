@@ -34,19 +34,20 @@ import {
   isOwnerAjour,
 } from "@/lib/voice/receptionist-config";
 import { parseApolloPublicConfig } from "@/lib/apollo/config";
+import { TERMS } from "@/lib/terminology";
 
 const DISPOSITIONS = [
-  { value: "RING_THROUGH", label: "Ring through to my phone" },
-  { value: "VOICEMAIL", label: "Voicemail" },
-  { value: "SCREEN", label: "AI screening" },
-  { value: "REJECT", label: "Reject" },
+  { value: "RING_THROUGH", label: "Koppla fram till min telefon" },
+  { value: "VOICEMAIL", label: "Röstbrevlåda" },
+  { value: "SCREEN", label: "AI-växel" },
+  { value: "REJECT", label: "Avvisa" },
 ];
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Settings" };
+export const metadata = { title: TERMS.settings };
 
 function healthValue(value: string | undefined): string {
-  if (!value) return "never";
+  if (!value) return "aldrig";
   try {
     return format(new Date(value), "d MMM yyyy HH:mm:ss");
   } catch {
@@ -95,21 +96,21 @@ export default async function SettingsPage({
 
   return (
     <>
-      <PageHeader title="Settings" />
+      <PageHeader title={TERMS.settings} />
       <div className="mb-6">
         <SegmentedLinks
           active={section}
           items={[
-            { id: "profile", label: "Profile", href: "/settings?section=profile" },
+            { id: "profile", label: "Profil", href: "/settings?section=profile" },
             {
               id: "integrations",
-              label: "Integrations",
+              label: "Integrationer",
               href: "/settings?section=integrations",
             },
-            { id: "calls", label: "Calls", href: "/settings?section=calls" },
+            { id: "calls", label: "Samtal", href: "/settings?section=calls" },
             {
               id: "diagnostics",
-              label: "Diagnostics",
+              label: "Diagnostik",
               href: "/settings?section=diagnostics",
             },
           ]}
@@ -118,7 +119,7 @@ export default async function SettingsPage({
       <div className="space-y-6">
         <Card className={section === "profile" ? "" : "hidden"}>
           <h2 className="mb-4 text-sm font-semibold text-stone-700">
-            Your profile and voice
+            Din profil och röst
           </h2>
           {owner ? (
             <>
@@ -137,24 +138,24 @@ export default async function SettingsPage({
               }
             />
             <div className="grid gap-4 sm:grid-cols-2">
-              <AutosaveField section="owner" field="name" label="Name" defaultValue={owner.name} />
-              <AutosaveField section="owner" field="phoneNumber" label="Mobile number" type="tel" defaultValue={owner.phoneNumber ?? ""} />
-              <AutosaveField section="owner" field="email" label="Email" type="email" defaultValue={owner.email ?? ""} />
-              <AutosaveField section="owner" field="company" label="Company" defaultValue={owner.company ?? ""} />
-              <AutosaveField section="owner" field="jobTitle" label="Job title" defaultValue={owner.jobTitle ?? ""} />
-              <AutosaveField section="owner" field="preferredLanguage" label="Preferred language" defaultValue={owner.preferredLanguage} />
-              <AutosaveField section="owner" field="timezone" label="Timezone" defaultValue={owner.timezone} />
-              <AutosaveField section="owner" field="defaultTone" label="Default tone" placeholder="warm, informal" defaultValue={owner.voiceProfile?.defaultTone ?? ""} />
-              <AutosaveField section="owner" field="emojiUsage" label="Emoji usage" placeholder="light" defaultValue={owner.voiceProfile?.emojiUsage ?? ""} />
-              <AutosaveField section="owner" field="formality" label="Formality" placeholder="casual" defaultValue={owner.voiceProfile?.formality ?? ""} />
+              <AutosaveField section="owner" field="name" label="Namn" defaultValue={owner.name} />
+              <AutosaveField section="owner" field="phoneNumber" label="Mobilnummer" type="tel" defaultValue={owner.phoneNumber ?? ""} />
+              <AutosaveField section="owner" field="email" label="E-post" type="email" defaultValue={owner.email ?? ""} />
+              <AutosaveField section="owner" field="company" label="Företag" defaultValue={owner.company ?? ""} />
+              <AutosaveField section="owner" field="jobTitle" label="Titel" defaultValue={owner.jobTitle ?? ""} />
+              <AutosaveField section="owner" field="preferredLanguage" label="Språk" defaultValue={owner.preferredLanguage} />
+              <AutosaveField section="owner" field="timezone" label="Tidszon" defaultValue={owner.timezone} />
+              <AutosaveField section="owner" field="defaultTone" label="Ton som standard" placeholder="varm, informell" defaultValue={owner.voiceProfile?.defaultTone ?? ""} />
+              <AutosaveField section="owner" field="emojiUsage" label="Emojianvändning" placeholder="light" defaultValue={owner.voiceProfile?.emojiUsage ?? ""} />
+              <AutosaveField section="owner" field="formality" label="Formalitetsnivå" placeholder="casual" defaultValue={owner.voiceProfile?.formality ?? ""} />
               <div className="sm:col-span-2">
-                <AutosaveField section="owner" field="commonExpressions" label="Common expressions (comma-separated)" defaultValue={(owner.voiceProfile?.commonExpressions ?? []).join(", ")} />
+                <AutosaveField section="owner" field="commonExpressions" label="Vanliga uttryck (kommaseparerade)" defaultValue={(owner.voiceProfile?.commonExpressions ?? []).join(", ")} />
               </div>
               <div className="sm:col-span-2">
                 <AutosaveField
                   section="owner"
                   field="dialogueOpenings"
-                  label="Dialogue openings (one per line)"
+                  label="Inledningar (en per rad)"
                   multiline
                   placeholder={"Hej! Hur är läget?\nTjena! Hoppas allt är bra.\nHallå där!"}
                   defaultValue={(owner.voiceProfile?.dialogueOpenings ?? []).join(
@@ -166,7 +167,7 @@ export default async function SettingsPage({
                 <AutosaveField
                   section="owner"
                   field="dialogueClosings"
-                  label="Dialogue closings (one per line)"
+                  label="Avslutningar (en per rad)"
                   multiline
                   placeholder={"Vi hörs!\nHa det fint.\nHör av dig när du kan."}
                   defaultValue={(owner.voiceProfile?.dialogueClosings ?? []).join(
@@ -178,7 +179,7 @@ export default async function SettingsPage({
             </>
           ) : (
             <p className="text-sm text-stone-500">
-              No owner profile found — run the seed script (`pnpm db:seed`).
+              Ingen ägarprofil hittades — kör seed-skriptet (`pnpm db:seed`).
             </p>
           )}
         </Card>
@@ -186,10 +187,10 @@ export default async function SettingsPage({
         {section === "calls" && blockedNumbers.length > 0 ? (
           <Card>
             <h2 className="mb-1 text-sm font-semibold text-stone-700">
-              Blocked numbers
+              Blockerade nummer
             </h2>
             <p className="mb-3 text-sm text-stone-500">
-              These callers are rejected before call policy runs.
+              De här numren avvisas innan samtalspolicyn körs.
             </p>
             <div className="divide-y divide-stone-100">
               {blockedNumbers.map((blocked) => (
@@ -205,7 +206,7 @@ export default async function SettingsPage({
                   </div>
                   <form action={unblockNumber.bind(null, blocked.phoneNumber)}>
                     <button className="px-3 text-sm font-medium text-[var(--system-red)]">
-                      Unblock
+                      Avblockera
                     </button>
                   </form>
                 </div>
@@ -241,7 +242,7 @@ export default async function SettingsPage({
             <div>
               <h2 className="text-sm font-semibold text-stone-700">46elks</h2>
               <p className="mt-1 text-sm text-stone-500">
-                Your SMS, MMS and voice number. Secrets are encrypted at rest.
+                Ditt nummer för SMS, MMS och röst. Uppgifterna lagras krypterade.
               </p>
             </div>
             <ProviderStatus status={elks?.lastTestStatus} />
@@ -250,13 +251,13 @@ export default async function SettingsPage({
             <AutosaveField
               section="46elks"
               field="username"
-              label="API username"
+              label="API-användarnamn"
               placeholder={elks ? "Saved — leave blank to keep" : "u_..."}
             />
             <AutosaveField
               section="46elks"
               field="password"
-              label="API password"
+              label="API-lösenord"
               type="password"
               placeholder={elks ? "•••••••• (saved)" : "API password"}
             />
@@ -264,7 +265,7 @@ export default async function SettingsPage({
               <AutosaveField
                 section="46elks"
                 field="fromNumber"
-                label="MMS/SMS/voice-enabled number"
+                label="Nummer med SMS, MMS och röst"
                 placeholder="+467..."
                 defaultValue={String(elks?.publicConfig.fromNumber ?? "")}
               />
@@ -273,14 +274,14 @@ export default async function SettingsPage({
           {elks ? (
             <div className="mt-2 flex flex-wrap gap-3">
               <form action={testElksSettings}>
-                <PendingActionButton pendingText="Testing 46elks…">
-                  Test 46elks connection
+                <PendingActionButton pendingText="Testar 46elks…">
+                  Testa 46elks-anslutningen
                 </PendingActionButton>
               </form>
               <ConfirmForm
                 action={removeProviderConfig.bind(null, "46elks")}
-                label="Remove 46elks configuration"
-                confirmText="Remove the encrypted 46elks credentials?"
+                label="Ta bort 46elks-konfigurationen"
+                confirmText="Ta bort de krypterade 46elks-uppgifterna?"
               />
             </div>
           ) : null}
@@ -363,7 +364,7 @@ export default async function SettingsPage({
                 ElevenLabs
               </h2>
               <p className="mt-1 text-sm text-stone-500">
-                Generates the voicemail and caller-screening voice.
+                Skapar rösten för röstbrevlådan och AI-växeln.
               </p>
             </div>
             <ProviderStatus status={eleven?.lastTestStatus} />
@@ -372,21 +373,21 @@ export default async function SettingsPage({
             <AutosaveField
               section="elevenlabs"
               field="apiKey"
-              label="API key"
+              label="API-nyckel"
               type="password"
               placeholder={eleven ? "•••••••• (saved)" : "sk_..."}
             />
             <AutosaveField
               section="elevenlabs"
               field="voiceId"
-              label="Voice ID"
-              placeholder="Voice ID from ElevenLabs"
+              label="Röst-ID"
+              placeholder="Röst-ID från ElevenLabs"
               defaultValue={String(eleven?.publicConfig.voiceId ?? "")}
             />
             <AutosaveField
               section="elevenlabs"
               field="modelId"
-              label="Model"
+              label="Modell"
               defaultValue={String(
                 eleven?.publicConfig.modelId ?? "eleven_multilingual_v2",
               )}
@@ -396,7 +397,7 @@ export default async function SettingsPage({
               <AutosaveField
                 section="elevenlabs"
                 field="voicemailText"
-                label="Voicemail greeting"
+                label="Hälsning i röstbrevlådan"
                 multiline
                 defaultValue={String(
                   eleven?.publicConfig.voicemailText ??
@@ -408,7 +409,7 @@ export default async function SettingsPage({
               <AutosaveField
                 section="elevenlabs"
                 field="screeningText"
-                label="Unknown-caller screening greeting"
+                label="Hälsning när AI:n växlar okända"
                 multiline
                 defaultValue={String(
                   eleven?.publicConfig.screeningText ??
@@ -420,19 +421,19 @@ export default async function SettingsPage({
           {eleven ? (
             <div className="mt-2 flex flex-wrap gap-3">
               <form action={testElevenLabsSettings}>
-                <PendingActionButton pendingText="Testing ElevenLabs…">
-                  Test ElevenLabs connection
+                <PendingActionButton pendingText="Testar ElevenLabs…">
+                  Testa ElevenLabs-anslutningen
                 </PendingActionButton>
               </form>
               <form action={generateElevenLabsGreetings}>
-                <PendingActionButton pendingText="Generating greetings…">
-                  Generate both greetings
+                <PendingActionButton pendingText="Skapar hälsningar…">
+                  Skapa båda hälsningarna
                 </PendingActionButton>
               </form>
               <ConfirmForm
                 action={removeProviderConfig.bind(null, "elevenlabs")}
-                label="Remove ElevenLabs configuration"
-                confirmText="Remove ElevenLabs credentials and generated greetings?"
+                label="Ta bort ElevenLabs-konfigurationen"
+                confirmText="Ta bort ElevenLabs-uppgifter och genererade hälsningar?"
               />
             </div>
           ) : null}
@@ -739,7 +740,7 @@ export default async function SettingsPage({
 
         <Card className={section === "calls" ? "" : "hidden"}>
           <h2 className="mb-1 text-sm font-semibold text-stone-700">
-            Call policy
+            Samtalspolicy
           </h2>
           <p className="mb-4 text-sm text-stone-500">
             How incoming calls to your number are handled. Per-contact
@@ -750,7 +751,7 @@ export default async function SettingsPage({
               <AutosaveField
                 section="callPolicy"
                 field="ownerPhone"
-                label="Your real phone (ring-through target)"
+                label="Din riktiga telefon (dit samtal kopplas)"
                 placeholder="+46701234567"
                 defaultValue={owner.phoneNumber ?? ""}
               />
@@ -758,7 +759,7 @@ export default async function SettingsPage({
               <AutosaveField
                 section="callPolicy"
                 field="knownContacts"
-                label="Known contacts"
+                label="Kända kontakter"
                 options={DISPOSITIONS}
                 defaultValue={
                   owner.callPolicy?.knownContacts ??
@@ -768,7 +769,7 @@ export default async function SettingsPage({
               <AutosaveField
                 section="callPolicy"
                 field="unknownCallers"
-                label="Unknown callers"
+                label="Okända som ringer"
                 options={DISPOSITIONS}
                 defaultValue={
                   owner.callPolicy?.unknownCallers ??
@@ -778,7 +779,7 @@ export default async function SettingsPage({
               <AutosaveField
                 section="callPolicy"
                 field="nightStart"
-                label="Night starts"
+                label="Natten börjar"
                 type="time"
                 defaultValue={
                   owner.callPolicy?.nightStart ??
@@ -788,7 +789,7 @@ export default async function SettingsPage({
               <AutosaveField
                 section="callPolicy"
                 field="nightEnd"
-                label="Night ends"
+                label="Natten slutar"
                 type="time"
                 defaultValue={
                   owner.callPolicy?.nightEnd ??
@@ -798,7 +799,7 @@ export default async function SettingsPage({
               <AutosaveField
                 section="callPolicy"
                 field="nightAction"
-                label="At night"
+                label="Nattetid"
                 options={DISPOSITIONS.filter(
                   (disposition) => disposition.value !== "RING_THROUGH",
                 )}
@@ -810,7 +811,7 @@ export default async function SettingsPage({
               <AutosaveField
                 section="callPolicy"
                 field="nightPriorityThreshold"
-                label="Ring through at night when call-through priority ≥"
+                label="Koppla fram nattetid när samtalsprioritet ≥"
                 type="number"
                 defaultValue={String(
                   owner.callPolicy?.nightPriorityThreshold ??
@@ -823,33 +824,33 @@ export default async function SettingsPage({
 
         <Card className={section === "diagnostics" ? "" : "hidden"}>
           <h2 className="mb-3 text-sm font-semibold text-stone-700">
-            System health
+            Systemhälsa
           </h2>
           <dl className="grid gap-x-8 gap-y-1.5 text-sm sm:grid-cols-2">
             <div className="flex justify-between">
-              <dt className="text-stone-400">Last cron execution</dt>
+              <dt className="text-stone-400">Senaste cron-körning</dt>
               <dd>{healthValue(state.lastCronAt)}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-stone-400">Last 46elks webhook</dt>
+              <dt className="text-stone-400">Senaste 46elks-webhook</dt>
               <dd>{healthValue(state.lastWebhookAt)}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-stone-400">Last successful AI request</dt>
+              <dt className="text-stone-400">Senaste lyckade AI-anrop</dt>
               <dd>{healthValue(state.lastAiAt)}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-stone-400">Last SMS sent</dt>
+              <dt className="text-stone-400">Senast skickade SMS</dt>
               <dd>{healthValue(state.lastSmsSentAt)}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-stone-400">Failed scheduled jobs</dt>
+              <dt className="text-stone-400">Misslyckade schemalagda jobb</dt>
               <dd className={health.failedJobs > 0 ? "text-red-600" : ""}>
                 {health.failedJobs}
               </dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-stone-400">Pending escalations</dt>
+              <dt className="text-stone-400">Väntande eskaleringar</dt>
               <dd className={health.pendingEscalations > 0 ? "text-red-600" : ""}>
                 {health.pendingEscalations}
               </dd>
@@ -859,7 +860,7 @@ export default async function SettingsPage({
 
         <Card className={section === "diagnostics" ? "" : "hidden"}>
           <h2 className="mb-3 text-sm font-semibold text-stone-700">
-            AI models
+            AI-modeller
           </h2>
           <dl className="space-y-1.5 text-sm">
             <div className="flex justify-between">
@@ -874,7 +875,7 @@ export default async function SettingsPage({
           {aiCalls.length > 0 && (
             <>
               <h3 className="mb-1.5 mt-4 text-xs font-semibold uppercase tracking-wide text-stone-400">
-                Recent AI calls
+                Senaste AI-anrop
               </h3>
               <div className="divide-y divide-stone-100 text-xs text-stone-600">
                 {aiCalls.map((call) => (
@@ -901,7 +902,7 @@ export default async function SettingsPage({
           className={section === "profile" ? "" : "hidden"}
         >
           <button className="text-sm text-stone-400 hover:text-stone-600">
-            Sign out
+            Logga ut
           </button>
         </form>
       </div>
@@ -913,20 +914,20 @@ function ProviderStatus({ status }: { status?: string | null }) {
   if (status === "OK") {
     return (
       <span className="rounded-full bg-green-50 px-2 py-1 text-xs font-semibold text-green-700">
-        CONNECTED
+        Ansluten
       </span>
     );
   }
   if (status === "FAILED") {
     return (
       <span className="rounded-full bg-red-50 px-2 py-1 text-xs font-semibold text-red-700">
-        FAILED
+        Fungerar inte
       </span>
     );
   }
   return (
     <span className="rounded-full bg-stone-100 px-2 py-1 text-xs font-semibold text-stone-500">
-      NOT TESTED
+      Inte testad
     </span>
   );
 }
@@ -958,13 +959,13 @@ function ProviderTestDetail({
 
 function friendlyProviderError(error: string) {
   if (/\b401\b|authentication|unauthorized/i.test(error)) {
-    return "Credentials were rejected. Re-enter the username/key and password.";
+    return "Uppgifterna avvisades. Skriv in användarnamn/nyckel och lösenord igen.";
   }
   if (/\b403\b|forbidden/i.test(error)) {
-    return "This account does not have access to the requested feature.";
+    return "Kontot saknar behörighet till den här funktionen.";
   }
   if (/not configured/i.test(error)) {
-    return "Complete the required fields above.";
+    return "Fyll i fälten ovan först.";
   }
-  return "Connection failed. Check the provider settings and try again.";
+  return "Anslutningen misslyckades. Kontrollera uppgifterna och försök igen.";
 }

@@ -2,9 +2,10 @@ import { listCampaigns, listContactOptions } from "@/lib/queries";
 import { BroadcastComposer } from "@/components/broadcast-composer";
 import { AppleRow, InsetSection } from "@/components/apple-ui";
 import { Badge, PageHeader } from "@/components/ui";
+import { TERMS } from "@/lib/terminology";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Send to many" };
+export const metadata = { title: TERMS.broadcast };
 
 export default async function BroadcastPage() {
   const [contacts, campaigns] = await Promise.all([
@@ -14,8 +15,8 @@ export default async function BroadcastPage() {
   return (
     <>
       <PageHeader
-        title="Send to many"
-        subtitle="Write one SMS, pick people, save the batch. Sending continues in the background."
+        title={TERMS.broadcast}
+        subtitle="Skriv ett SMS, välj mottagare, spara utskicket. Sändningen fortsätter i bakgrunden."
       />
       <BroadcastComposer
         contacts={contacts.map((contact) => ({
@@ -29,7 +30,7 @@ export default async function BroadcastPage() {
       />
       {campaigns.length > 0 ? (
         <div className="mt-8">
-          <InsetSection title="Saved batches">
+          <InsetSection title="Sparade utskick">
             {campaigns.map((campaign) => (
               <AppleRow
                 key={campaign.id}

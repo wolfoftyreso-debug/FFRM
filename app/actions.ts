@@ -68,7 +68,7 @@ function parseContactForm(formData: FormData) {
   let phoneNumber: string | null = null;
   if (data.phoneNumber?.trim()) {
     phoneNumber = normalizePhoneNumber(data.phoneNumber);
-    if (!phoneNumber) throw new Error("Invalid phone number");
+    if (!phoneNumber) throw new Error("Numret ser inte giltigt ut. Ange det med landskod, till exempel +46701234567.");
   }
   const nameDayMonth = Number(data.nameDayMonth);
   const nameDayDay = Number(data.nameDayDay);
@@ -82,7 +82,7 @@ function parseContactForm(formData: FormData) {
       nameDayDay <= 31 &&
       nameDayDate.getMonth() === nameDayMonth - 1 &&
       nameDayDate.getDate() === nameDayDay);
-  if (!validNameDay) throw new Error("Choose a valid name day");
+  if (!validNameDay) throw new Error("Välj en giltig namnsdag.");
   return {
     firstName: data.firstName.trim(),
     lastName: data.lastName?.trim() || null,
@@ -138,7 +138,7 @@ export async function createContact(formData: FormData): Promise<void> {
     redirect("/people/new?error=invalid");
   }
   const [owner] = await db.select().from(users).limit(1);
-  if (!owner) throw new Error("No owner user exists; run the seed script");
+  if (!owner) throw new Error("Ingen ägarprofil finns ännu. Kör seed-skriptet (pnpm db:seed).");
   if (values.phoneNumber) {
     const [duplicate] = await db
       .select({ id: contacts.id })
@@ -164,7 +164,7 @@ export async function createContact(formData: FormData): Promise<void> {
   await logActivity({
     actor: "USER",
     action: "CONTACT_CREATED",
-    summary: `Contact created: ${created.firstName}`,
+    summary: `Kontakt skapad: ${created.firstName}`,
     contactId: created.id,
   });
   revalidatePath("/people");
@@ -208,7 +208,7 @@ export async function updateContact(
   await logActivity({
     actor: "USER",
     action: "CONTACT_UPDATED",
-    summary: `Contact updated: ${values.firstName}`,
+    summary: `Kontakt uppdaterad: ${values.firstName}`,
     contactId,
   });
   revalidatePath(`/people/${contactId}`);
@@ -224,7 +224,7 @@ export async function archiveContact(contactId: string): Promise<void> {
   await logActivity({
     actor: "USER",
     action: "CONTACT_ARCHIVED",
-    summary: "Contact archived",
+    summary: "Kontakt arkiverad",
     contactId,
   });
   revalidatePath("/people");
@@ -243,7 +243,7 @@ export async function takeOverConversation(conversationId: string): Promise<void
   await logActivity({
     actor: "USER",
     action: "TAKEOVER",
-    summary: "User took over the conversation; AI disabled",
+    summary: "Du tog över konversationen; AI:n svarar inte",
     contactId: conv?.contactId,
     conversationId,
   });
@@ -266,7 +266,7 @@ export async function returnConversationToAi(
   await logActivity({
     actor: "USER",
     action: "RETURNED_TO_AI",
-    summary: "User returned the conversation to AI",
+    summary: "Du lämnade tillbaka konversationen till AI:n",
     contactId: conv?.contactId,
     conversationId,
   });
@@ -283,7 +283,7 @@ export async function pauseConversation(conversationId: string): Promise<void> {
   await logActivity({
     actor: "USER",
     action: "CONVERSATION_PAUSED",
-    summary: "Conversation paused; nobody responds automatically",
+    summary: "Konversationen pausad; ingen svarar automatiskt",
     contactId: conv?.contactId,
     conversationId,
   });
@@ -300,7 +300,7 @@ export async function closeConversation(conversationId: string): Promise<void> {
   await logActivity({
     actor: "USER",
     action: "CONVERSATION_CLOSED",
-    summary: "Conversation closed",
+    summary: "Konversationen avslutad",
     contactId: conv?.contactId,
     conversationId,
   });
@@ -335,7 +335,7 @@ export async function reopenConversation(conversationId: string): Promise<void> 
   await logActivity({
     actor: "USER",
     action: "CONVERSATION_REOPENED",
-    summary: "Conversation reopened",
+    summary: "Konversationen öppnad igen",
     contactId: conversation.contactId,
     conversationId,
   });
@@ -344,7 +344,7 @@ export async function reopenConversation(conversationId: string): Promise<void> 
 
 export async function messageContact(contactId: string): Promise<void> {
   const contact = await getContact(contactId);
-  if (!contact?.phoneNumber) throw new Error("Contact has no phone number");
+  if (!contact?.phoneNumber) throw new Error("Kontakten saknar telefonnummer. Lägg till ett nummer på kontaktkortet först.");
   const { getOrCreateConversation } = await import("@/lib/sms/send-message");
   const conversationId = await getOrCreateConversation(
     contact.id,
@@ -382,11 +382,11 @@ async function sendManualReply(
     .select()
     .from(conversations)
     .where(eq(conversations.id, conversationId));
-  if (!conv) throw new Error("Conversation not found");
+  if (!conv) throw new Error("Konversationen hittades inte. Den kan ha tagits bort.");
 
   const contact = conv.contactId ? await getContact(conv.contactId) : null;
   const to = contact?.phoneNumber ?? conv.peerNumber;
-  if (!to) throw new Error("Conversation has no recipient number");
+  if (!to) throw new Error("Konversationen saknar mottagarnummer, så inget kan skickas.");
 
   // A manual reply always transfers control to the user. This guarantees the
   // AI can never send a competing response.
@@ -398,7 +398,7 @@ async function sendManualReply(
     await logActivity({
       actor: "USER",
       action: "TAKEOVER",
-      summary: "User took over by replying manually",
+      summary: "Du tog över genom att svara själv",
       contactId: conv.contactId,
       conversationId,
     });
@@ -436,10 +436,10 @@ export async function sendConversationMessage(
     .select()
     .from(conversations)
     .where(eq(conversations.id, conversationId));
-  if (!conv) throw new Error("Conversation not found");
+  if (!conv) throw new Error("Konversationen hittades inte. Den kan ha tagits bort.");
   const contact = conv.contactId ? await getContact(conv.contactId) : null;
   const to = contact?.phoneNumber ?? conv.peerNumber;
-  if (!to) throw new Error("Conversation has no recipient number");
+  if (!to) throw new Error("Konversationen saknar mottagarnummer, så inget kan skickas.");
 
   // Sending anything manually transfers control to the user first.
   if (conv.aiControlState !== "USER") {
@@ -450,7 +450,7 @@ export async function sendConversationMessage(
     await logActivity({
       actor: "USER",
       action: "TAKEOVER",
-      summary: "User took over by sending an MMS",
+      summary: "Du tog över genom att skicka ett MMS",
       contactId: conv.contactId,
       conversationId,
     });
@@ -527,7 +527,7 @@ export async function reviewInsight(
     await logActivity({
       actor: "USER",
       action: `INSIGHT_${decision}`,
-      summary: `${decision === "HANDLED" ? "Handled" : "Dismissed"} quote: ${row.summary.slice(0, 80)}`,
+      summary: `${decision === "HANDLED" ? "Hanterade" : "Avfärdade"} förslag: ${row.summary.slice(0, 80)}`,
       contactId: row.contactId,
       conversationId: row.conversationId,
       entityType: "conversationInsight",
@@ -578,7 +578,7 @@ export async function createTicketFromInsight(
   await logActivity({
     actor: "USER",
     action: "TICKET_CREATED",
-    summary: `Ticket created: ${title}`,
+    summary: `Uppgift skapad: ${title}`,
     contactId: insight.contactId,
     entityType: "reminder",
     entityId: ticket.id,
@@ -601,7 +601,7 @@ export async function createCalendarFromInsight(
   if (!insight) return;
   const title = String(formData.get("title") ?? "").trim() || insight.summary;
   const dueRaw = String(formData.get("dueAt") ?? "").trim();
-  if (!dueRaw) throw new Error("Choose a date and time");
+  if (!dueRaw) throw new Error("Välj datum och tid.");
   const [event] = await db
     .insert(reminders)
     .values({
@@ -630,7 +630,7 @@ export async function createCalendarFromInsight(
 
 export async function addTask(formData: FormData): Promise<void> {
   const title = String(formData.get("title") ?? "").trim();
-  if (!title) throw new Error("Write a task title");
+  if (!title) throw new Error("Skriv en rubrik för uppgiften.");
   const db = await getDb();
   const dueRaw = String(formData.get("dueAt") ?? "").trim();
   await db.insert(reminders).values({
@@ -688,8 +688,8 @@ export async function createCalendarActivity(
   const db = await getDb();
   const parsed = parseCalendarActivity(formData);
   const contact = await getContact(parsed.input.contactId);
-  if (!contact) throw new Error("Choose a contact");
-  if (!contact.phoneNumber) throw new Error("Contact needs a phone number");
+  if (!contact) throw new Error("Välj en kontakt.");
+  if (!contact.phoneNumber) throw new Error("Kontakten behöver ett telefonnummer för det här.");
   await syncContactSpecialDate(
     contact.id,
     parsed.input.eventKind,
@@ -704,7 +704,7 @@ export async function createCalendarActivity(
     contact,
     after: new Date(),
   });
-  if (!nextRunAt) throw new Error("Choose a future date");
+  if (!nextRunAt) throw new Error("Välj en tidpunkt i framtiden.");
   const [created] = await db
     .insert(automations)
     .values({
@@ -725,7 +725,7 @@ export async function createCalendarActivity(
   await logActivity({
     actor: "USER",
     action: "CALENDAR_ACTIVITY_CREATED",
-    summary: `Calendar activity created: ${name}`,
+    summary: `Aktivitet skapad: ${name}`,
     contactId: contact.id,
     entityType: "automation",
     entityId: created.id,
@@ -745,15 +745,15 @@ export async function updateCalendarActivity(
     .where(eq(automations.id, automationId))
     .limit(1);
   if (!existing || !isCalendarSmsJob(existing)) {
-    throw new Error("Calendar activity not found");
+    throw new Error("Aktiviteten hittades inte. Den kan ha tagits bort.");
   }
   const parsed = parseCalendarActivity(
     formData,
     existing.triggerConfig.randomMinuteSeed,
   );
   const contact = await getContact(parsed.input.contactId);
-  if (!contact) throw new Error("Choose a contact");
-  if (!contact.phoneNumber) throw new Error("Contact needs a phone number");
+  if (!contact) throw new Error("Välj en kontakt.");
+  if (!contact.phoneNumber) throw new Error("Kontakten behöver ett telefonnummer för det här.");
   await syncContactSpecialDate(
     contact.id,
     parsed.input.eventKind,
@@ -768,7 +768,7 @@ export async function updateCalendarActivity(
     contact,
     after: new Date(),
   });
-  if (!nextRunAt) throw new Error("Choose a future date");
+  if (!nextRunAt) throw new Error("Välj en tidpunkt i framtiden.");
   await db
     .update(automations)
     .set({
@@ -790,7 +790,7 @@ export async function updateCalendarActivity(
   await logActivity({
     actor: "USER",
     action: "CALENDAR_ACTIVITY_UPDATED",
-    summary: `Calendar activity updated: ${name}`,
+    summary: `Aktivitet uppdaterad: ${name}`,
     contactId: contact.id,
     entityType: "automation",
     entityId: automationId,
@@ -814,7 +814,7 @@ export async function deleteCalendarActivity(
   await logActivity({
     actor: "USER",
     action: "CALENDAR_ACTIVITY_DELETED",
-    summary: `Calendar activity deleted: ${existing.name}`,
+    summary: `Aktivitet borttagen: ${existing.name}`,
     contactId: existing.contactId,
     entityType: "automation",
     entityId: existing.id,
@@ -938,7 +938,7 @@ export async function createAutomation(formData: FormData): Promise<void> {
   await logActivity({
     actor: "USER",
     action: "AUTOMATION_CREATED",
-    summary: `Automation created: ${created.name}`,
+    summary: `Automation skapad: ${created.name}`,
     contactId: values.contactId,
     entityType: "automation",
     entityId: created.id,
@@ -967,7 +967,7 @@ export async function updateAutomation(
   await logActivity({
     actor: "USER",
     action: "AUTOMATION_UPDATED",
-    summary: `Automation updated: ${values.name}`,
+    summary: `Automation uppdaterad: ${values.name}`,
     contactId: values.contactId,
     entityType: "automation",
     entityId: automationId,
@@ -1002,7 +1002,7 @@ export async function toggleAutomation(automationId: string): Promise<void> {
   await logActivity({
     actor: "USER",
     action: enabled ? "AUTOMATION_ENABLED" : "AUTOMATION_DISABLED",
-    summary: `Automation ${enabled ? "enabled" : "disabled"}: ${automation.name}`,
+    summary: `Automation ${enabled ? "aktiverad" : "avstängd"}: ${automation.name}`,
     entityType: "automation",
     entityId: automationId,
   });
@@ -1075,7 +1075,7 @@ export async function skipNextOccurrence(automationId: string): Promise<void> {
   await logActivity({
     actor: "USER",
     action: "AUTOMATION_SKIPPED",
-    summary: `Skipped next occurrence of "${automation.name}"`,
+    summary: `Hoppade över nästa körning av ”${automation.name}”`,
     entityType: "automation",
     entityId: automationId,
   });
@@ -1092,7 +1092,7 @@ export async function deleteAutomation(automationId: string): Promise<void> {
     await logActivity({
       actor: "USER",
       action: "AUTOMATION_DELETED",
-      summary: `Automation deleted: ${automation.name}`,
+      summary: `Automation borttagen: ${automation.name}`,
     });
   }
   revalidatePath("/automations");
@@ -1109,7 +1109,7 @@ export async function approveDraft(reminderId: string): Promise<void> {
     .where(and(eq(reminders.id, reminderId), eq(reminders.kind, "DRAFT")));
   if (!draft || draft.status !== "PENDING" || !draft.draftText) return;
   const contact = draft.contactId ? await getContact(draft.contactId) : null;
-  if (!contact?.phoneNumber) throw new Error("Draft has no valid recipient");
+  if (!contact?.phoneNumber) throw new Error("Utkastet saknar giltig mottagare, så inget skickades.");
 
   // Mark done BEFORE sending so double-clicks cannot double-send; revert on failure.
   const claimed = await db
@@ -1136,7 +1136,7 @@ export async function approveDraft(reminderId: string): Promise<void> {
   await logActivity({
     actor: "USER",
     action: "DRAFT_APPROVED",
-    summary: `Approved and sent draft to ${displayName(contact)}`,
+    summary: `Godkände och skickade utkastet till ${displayName(contact)}`,
     contactId: contact.id,
   });
   revalidatePath("/");
@@ -1168,7 +1168,7 @@ export async function completeReminder(reminderId: string): Promise<void> {
     await logActivity({
       actor: "USER",
       action: "REMINDER_COMPLETED",
-      summary: `Completed: ${reminder.title}`,
+      summary: `Klar: ${reminder.title}`,
       contactId: reminder.contactId,
     });
   }
@@ -1192,7 +1192,7 @@ export async function reviewFact(
     await logActivity({
       actor: "USER",
       action: decision === "CONFIRMED" ? "FACT_CONFIRMED" : "FACT_DISMISSED",
-      summary: `${decision === "CONFIRMED" ? "Confirmed" : "Dismissed"} fact: ${fact.fact.slice(0, 80)}`,
+      summary: `${decision === "CONFIRMED" ? "Bekräftade" : "Avfärdade"} faktum: ${fact.fact.slice(0, 80)}`,
       contactId: fact.contactId,
     });
   }
@@ -1213,7 +1213,7 @@ export async function reviewCommitment(
     await logActivity({
       actor: "USER",
       action: `COMMITMENT_${decision}`,
-      summary: `Commitment ${decision.toLowerCase()}: ${commitment.description.slice(0, 80)}`,
+      summary: `Löfte ${decision === "CONFIRMED" ? "bekräftat" : "avfärdat"}: ${commitment.description.slice(0, 80)}`,
       contactId: commitment.contactId,
     });
   }
@@ -1238,7 +1238,7 @@ export async function addFact(
   await logActivity({
     actor: "USER",
     action: "FACT_ADDED",
-    summary: `Added fact: ${fact.slice(0, 80)}`,
+    summary: `Lade till faktum: ${fact.slice(0, 80)}`,
     contactId,
   });
   revalidatePath(`/people/${contactId}`);
@@ -1261,7 +1261,7 @@ export async function addReminder(
   await logActivity({
     actor: "USER",
     action: "REMINDER_CREATED",
-    summary: `Reminder created: ${title}`,
+    summary: `Påminnelse skapad: ${title}`,
     contactId,
   });
   revalidatePath("/");
@@ -1298,7 +1298,7 @@ export async function proposeRelationshipFromDescription(
   await logActivity({
     actor: "AI",
     action: "RELATIONSHIP_PROPOSED",
-    summary: `Relationship ontology proposed for ${displayName(contact)}: ${proposal.label}`,
+    summary: `Relationsprofil föreslagen för ${displayName(contact)}: ${proposal.label}`,
     contactId,
     detail: { vector: proposal.vector, reasoning: proposal.reasoning },
   });
@@ -1366,7 +1366,7 @@ export async function updateAdvancedRelationship(
   await logActivity({
     actor: "USER",
     action: "RELATIONSHIP_UPDATED",
-    summary: "Advanced relationship settings updated",
+    summary: "Avancerade relationsinställningar uppdaterade",
     contactId,
   });
   revalidatePath(`/people/${contactId}`);
@@ -1413,7 +1413,7 @@ export async function uploadStyleScreenshots(
     });
     stored++;
   }
-  if (stored === 0) throw new Error("No valid screenshots were uploaded");
+  if (stored === 0) throw new Error("Inga giltiga skärmbilder laddades upp. Inget sparades.");
   const { processContactStyle } = await import("@/lib/ai/process-style");
   await processContactStyle(contactId);
   revalidatePath(`/people/${contactId}`);
@@ -1468,7 +1468,7 @@ export async function blockNumber(phoneNumber: string): Promise<void> {
   await logActivity({
     actor: "USER",
     action: "NUMBER_BLOCKED",
-    summary: `Blocked ${phoneNumber}`,
+    summary: `Blockerade ${phoneNumber}`,
   });
   revalidatePath("/phone");
   revalidatePath("/settings");
@@ -1481,7 +1481,7 @@ export async function unblockNumber(phoneNumber: string): Promise<void> {
   await logActivity({
     actor: "USER",
     action: "NUMBER_UNBLOCKED",
-    summary: `Unblocked ${phoneNumber}`,
+    summary: `Avblockerade ${phoneNumber}`,
   });
   revalidatePath("/phone");
   revalidatePath("/settings");
@@ -1504,7 +1504,7 @@ export async function markCallHandled(callId: string): Promise<void> {
     await logActivity({
       actor: "USER",
       action: "CALL_HANDLED",
-      summary: "Call/voicemail marked handled",
+      summary: "Samtal/röstmeddelande markerat som hanterat",
       contactId: call.contactId,
       entityType: "call",
       entityId: call.id,
@@ -1712,7 +1712,7 @@ export async function generateElevenLabsGreetings(): Promise<void> {
   await logActivity({
     actor: "USER",
     action: "VOICE_GREETINGS_GENERATED",
-    summary: "ElevenLabs voicemail and screening greetings generated",
+    summary: "ElevenLabs-hälsningar för röstbrevlåda och AI-växel skapade",
   });
   revalidatePath("/settings");
 }
@@ -1727,7 +1727,7 @@ export async function generateReceptionistPrompts(): Promise<void> {
     "@/lib/voice/receptionist-config"
   );
   const state = await getReceptionistState();
-  if (!state) throw new Error("Owner profile is unavailable");
+  if (!state) throw new Error("Ägarprofilen går inte att läsa just nu. Inget ändrades.");
   const prompts = [
     ["RECEPTIONIST_GREETING", state.config.greetingText],
     ["RECEPTIONIST_RETRY", state.config.retryText],
@@ -1778,7 +1778,7 @@ export async function generateReceptionistPrompts(): Promise<void> {
   await logActivity({
     actor: "USER",
     action: "RECEPTIONIST_PROMPTS_GENERATED",
-    summary: "AI receptionist prompts generated with ElevenLabs voice",
+    summary: "AI-växelns röstfraser skapade med ElevenLabs-röst",
   });
   revalidatePath("/settings");
 }
@@ -1808,7 +1808,7 @@ export async function removeProviderConfig(
   await logActivity({
     actor: "USER",
     action: "PROVIDER_REMOVED",
-    summary: `${provider} provider configuration removed`,
+    summary: `Konfigurationen för ${provider} togs bort`,
   });
   revalidatePath("/settings");
 }

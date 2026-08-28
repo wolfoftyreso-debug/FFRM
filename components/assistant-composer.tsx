@@ -25,7 +25,7 @@ export function AssistantComposer() {
         setError(
           submitError instanceof Error
             ? submitError.message
-            : "The assistant could not respond.",
+            : "Assistenten kunde inte svara. Försök igen.",
         );
       }
     });
@@ -52,7 +52,7 @@ export function AssistantComposer() {
           required
           value={text}
           onChange={(event) => setText(event.target.value)}
-          placeholder="Ask your assistant…"
+          placeholder="Fråga din assistent…"
           className="w-full resize-none rounded-xl border border-black/10 bg-white px-3 py-2 text-[16px] focus-visible:ring-2 focus-visible:ring-[var(--system-blue)]"
         />
         {error ? <p className="mt-1 text-sm text-red-600">{error}</p> : null}

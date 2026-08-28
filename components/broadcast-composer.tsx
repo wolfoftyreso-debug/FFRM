@@ -59,7 +59,7 @@ export function BroadcastComposer({ contacts }: { contacts: ContactOption[] }) {
     try {
       await createBroadcastCampaign(formData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not save batch");
+      setError(err instanceof Error ? err.message : "Utskicket kunde inte sparas. Inget skickades.");
       setPending(false);
     }
   }
@@ -67,13 +67,13 @@ export function BroadcastComposer({ contacts }: { contacts: ContactOption[] }) {
   return (
     <form action={save} className="space-y-4">
       <label className="block text-sm font-medium">
-        Message
+        Meddelande
         <textarea
           name="text"
           rows={5}
           value={text}
           onChange={(event) => setText(event.target.value)}
-          placeholder={personalized ? "Hej *namn*, ..." : "Write the SMS…"}
+          placeholder={personalized ? "Hej *namn*, ..." : "Skriv SMS:et…"}
           className="mt-1 w-full rounded-2xl border border-black/10 bg-white px-3 py-3 text-[16px]"
         />
       </label>
@@ -91,7 +91,7 @@ export function BroadcastComposer({ contacts }: { contacts: ContactOption[] }) {
       </button>
       {personalized ? (
         <p className="text-sm text-[var(--secondary-label)]">
-          Write <code>*namn*</code> where the first name should go. Preview: “{preview}”
+          Skriv <code>*namn*</code> where the first name should go. Preview: “{preview}”
         </p>
       ) : null}
 
@@ -110,7 +110,7 @@ export function BroadcastComposer({ contacts }: { contacts: ContactOption[] }) {
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search contacts"
+              placeholder="Sök kontakter"
               className="min-h-11 flex-1 rounded-xl bg-black/[0.05] px-3 text-[15px]"
             />
             <button
@@ -120,7 +120,7 @@ export function BroadcastComposer({ contacts }: { contacts: ContactOption[] }) {
               }
               className="text-sm font-semibold text-[var(--system-blue)]"
             >
-              All
+              Alla
             </button>
           </div>
           <div className="max-h-[50vh] overflow-y-auto">
@@ -162,9 +162,9 @@ export function BroadcastComposer({ contacts }: { contacts: ContactOption[] }) {
       )}
 
       <label className="block rounded-2xl border border-dashed border-black/15 px-4 py-4 text-sm">
-        <span className="font-semibold">Import number list</span>
+        <span className="font-semibold">Importera nummerlista</span>
         <p className="mt-1 text-[var(--secondary-label)]">
-          TXT or CSV. One number per line, or number and name.
+          TXT eller CSV. Ett nummer per rad, eller nummer och namn.
         </p>
         <input
           type="file"
@@ -199,8 +199,8 @@ export function BroadcastComposer({ contacts }: { contacts: ContactOption[] }) {
         className="ios-safe-bottom flex min-h-12 w-full items-center justify-center rounded-full bg-[var(--system-blue)] text-base font-semibold text-white disabled:opacity-40"
       >
         {pending
-          ? "Saving…"
-          : `Save batch · ${selected.size}${importedList.trim() ? " + list" : ""}`}
+          ? "Köar utskicket…"
+          : `Skicka till ${selected.size}${importedList.trim() ? " + lista" : ""}`}
       </button>
     </form>
   );

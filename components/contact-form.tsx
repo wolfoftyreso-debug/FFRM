@@ -1,6 +1,7 @@
 import type { Contact } from "@/lib/db/schema";
 import { inputClass, labelClass } from "@/components/ui";
 import { AUTONOMY_LABELS } from "@/lib/ai/policy";
+import { relationshipTypeLabel } from "@/lib/terminology";
 
 const RELATIONSHIP_TYPES = [
   "FAMILY",
@@ -39,40 +40,40 @@ const TIMEZONE_OPTIONS = [
 ];
 
 const COMMUNICATION_STYLES = [
-  ["informal, warm, short messages", "Informal, warm and short"],
-  ["warm and supportive", "Warm and supportive"],
-  ["concise and direct", "Concise and direct"],
-  ["formal and professional", "Formal and professional"],
-  ["playful and humorous", "Playful and humorous"],
+  ["informal, warm, short messages", "Informell, varm och kort"],
+  ["warm and supportive", "Varm och stöttande"],
+  ["concise and direct", "Kortfattad och rak"],
+  ["formal and professional", "Formell och professionell"],
+  ["playful and humorous", "Lekfull och humoristisk"],
   ["neutral", "Neutral"],
 ] as const;
 
 const MONTHS = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
+  "januari",
+  "februari",
+  "mars",
+  "april",
+  "maj",
+  "juni",
+  "juli",
+  "augusti",
+  "september",
+  "oktober",
+  "november",
+  "december",
 ];
 
 export function ContactFormFields({ contact }: { contact?: Contact | null }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       <div className="sm:col-span-2">
-        <h3 className="text-sm font-semibold text-stone-800">Identity</h3>
+        <h3 className="text-sm font-semibold text-stone-800">Identitet</h3>
         <p className="mt-0.5 text-xs text-stone-400">
-          Start with the essentials. Everything else can be added later.
+          Börja med det nödvändiga. Resten kan fyllas i senare.
         </p>
       </div>
       <label className={labelClass}>
-        First name *
+        Förnamn *
         <input
           name="firstName"
           required
@@ -81,7 +82,7 @@ export function ContactFormFields({ contact }: { contact?: Contact | null }) {
         />
       </label>
       <label className={labelClass}>
-        Last name
+        Efternamn
         <input
           name="lastName"
           defaultValue={contact?.lastName ?? ""}
@@ -89,7 +90,7 @@ export function ContactFormFields({ contact }: { contact?: Contact | null }) {
         />
       </label>
       <label className={labelClass}>
-        Nickname
+        Smeknamn
         <input
           name="nickname"
           defaultValue={contact?.nickname ?? ""}
@@ -97,25 +98,25 @@ export function ContactFormFields({ contact }: { contact?: Contact | null }) {
         />
       </label>
       <label className={labelClass}>
-        Display name
+        Visningsnamn
         <input
           name="displayName"
-          placeholder="How the name appears in Phone and Messages"
+          placeholder="Så visas namnet i Telefon och Meddelanden"
           defaultValue={contact?.displayName ?? ""}
           className={inputClass}
         />
       </label>
       <label className={labelClass}>
-        Phone number
+        Telefonnummer
         <input
           name="phoneNumber"
-          placeholder="+46701234567 or 0701234567"
+          placeholder="+46701234567 eller 0701234567"
           defaultValue={contact?.phoneNumber ?? ""}
           className={inputClass}
         />
       </label>
       <label className={labelClass}>
-        Email
+        E-post
         <input
           name="email"
           type="email"
@@ -124,7 +125,7 @@ export function ContactFormFields({ contact }: { contact?: Contact | null }) {
         />
       </label>
       <label className={labelClass}>
-        Birthday
+        Födelsedag
         <input
           name="birthday"
           type="date"
@@ -133,14 +134,14 @@ export function ContactFormFields({ contact }: { contact?: Contact | null }) {
         />
       </label>
       <label className={labelClass}>
-        Name day
+        Namnsdag
         <span className="mt-1 grid grid-cols-[1fr_100px] gap-2">
           <select
             name="nameDayMonth"
             defaultValue={contact?.nameDayMonth ?? ""}
             className={inputClass}
           >
-            <option value="">Month</option>
+            <option value="">Månad</option>
             {MONTHS.map((month, index) => (
               <option key={month} value={index + 1}>
                 {month}
@@ -152,7 +153,7 @@ export function ContactFormFields({ contact }: { contact?: Contact | null }) {
             defaultValue={contact?.nameDayDay ?? ""}
             className={inputClass}
           >
-            <option value="">Day</option>
+            <option value="">Dag</option>
             {Array.from({ length: 31 }, (_, index) => (
               <option key={index + 1} value={index + 1}>
                 {index + 1}
@@ -161,14 +162,14 @@ export function ContactFormFields({ contact }: { contact?: Contact | null }) {
           </select>
         </span>
         <span className="mt-1 block text-xs text-stone-400">
-          Name days repeat every year.
+          Namnsdagar återkommer varje år.
         </span>
       </label>
       <div className="sm:col-span-2 mt-2 border-t border-black/10 pt-4">
-        <h3 className="text-sm font-semibold text-stone-800">Relationship</h3>
+        <h3 className="text-sm font-semibold text-stone-800">Relation</h3>
       </div>
       <label className={labelClass}>
-        Relationship
+        Relation
         <select
           name="relationshipType"
           defaultValue={contact?.relationshipType ?? "FRIEND"}
@@ -176,31 +177,31 @@ export function ContactFormFields({ contact }: { contact?: Contact | null }) {
         >
           {RELATIONSHIP_TYPES.map((t) => (
             <option key={t} value={t}>
-              {t.charAt(0) + t.slice(1).toLowerCase()}
+              {relationshipTypeLabel(t)}
             </option>
           ))}
         </select>
       </label>
       <label className={labelClass}>
-        Importance
+        Betydelse
         <select
           name="importance"
           defaultValue={contact?.importance ?? "MEDIUM"}
           className={inputClass}
         >
-          <option value="LOW">Low</option>
-          <option value="MEDIUM">Medium</option>
-          <option value="HIGH">High</option>
+          <option value="LOW">Låg</option>
+          <option value="MEDIUM">Mellan</option>
+          <option value="HIGH">Hög</option>
         </select>
       </label>
       <label className={labelClass}>
-        Preferred language
+        Språk
         <select
           name="preferredLanguage"
           defaultValue={contact?.preferredLanguage ?? ""}
           className={inputClass}
         >
-          <option value="">Use owner default</option>
+          <option value="">Använd min standard</option>
           {LANGUAGE_OPTIONS.map(([value, label]) => (
             <option key={value} value={value}>
               {label}
@@ -209,13 +210,13 @@ export function ContactFormFields({ contact }: { contact?: Contact | null }) {
         </select>
       </label>
       <label className={labelClass}>
-        Timezone
+        Tidszon
         <select
           name="timezone"
           defaultValue={contact?.timezone ?? ""}
           className={inputClass}
         >
-          <option value="">Use owner default</option>
+          <option value="">Använd min standard</option>
           {contact?.timezone &&
           !TIMEZONE_OPTIONS.includes(contact.timezone) ? (
             <option value={contact.timezone}>{contact.timezone}</option>
@@ -229,14 +230,14 @@ export function ContactFormFields({ contact }: { contact?: Contact | null }) {
       </label>
       <div className="sm:col-span-2 mt-2 border-t border-black/10 pt-4">
         <h3 className="text-sm font-semibold text-stone-800">
-          AI & communication
+          AI och kommunikation
         </h3>
         <p className="mt-0.5 text-xs text-stone-400">
-          These settings control tone and how much the assistant may do.
+          De här inställningarna styr tonen och hur mycket assistenten får göra.
         </p>
       </div>
       <label className={labelClass}>
-        Desired contact cadence (days)
+        Önskad kontaktfrekvens (dagar)
         <input
           name="desiredContactCadenceDays"
           type="number"
@@ -246,13 +247,13 @@ export function ContactFormFields({ contact }: { contact?: Contact | null }) {
         />
       </label>
       <label className={labelClass}>
-        Communication style
+        Kommunikationsstil
         <select
           name="communicationStyle"
           defaultValue={contact?.communicationStyle ?? ""}
           className={inputClass}
         >
-          <option value="">Learn from conversations</option>
+          <option value="">Lär från era samtal</option>
           {contact?.communicationStyle &&
           !COMMUNICATION_STYLES.some(
             ([value]) => value === contact.communicationStyle,
@@ -269,21 +270,21 @@ export function ContactFormFields({ contact }: { contact?: Contact | null }) {
         </select>
       </label>
       <label className={labelClass}>
-        Emoji style
+        Emojistil
         <select
           name="emojiStyle"
           defaultValue={contact?.emojiStyle ?? ""}
           className={inputClass}
         >
-          <option value="">Learn from conversations</option>
-          <option value="none">None</option>
-          <option value="light">Light</option>
-          <option value="moderate">Moderate</option>
-          <option value="heavy">Heavy</option>
+          <option value="">Lär från era samtal</option>
+          <option value="none">Inga</option>
+          <option value="light">Sparsamt</option>
+          <option value="moderate">Lagom</option>
+          <option value="heavy">Mycket</option>
         </select>
       </label>
       <label className={labelClass}>
-        AI autonomy
+        AI:ns självständighet
         <select
           name="autonomyLevel"
           defaultValue={String(contact?.autonomyLevel ?? 1)}
@@ -303,7 +304,7 @@ export function ContactFormFields({ contact }: { contact?: Contact | null }) {
           defaultChecked={contact?.humorAllowed ?? true}
           className="h-4 w-4 rounded border-stone-300"
         />
-        Humor allowed
+        Humor tillåten
       </label>
       <label className="flex items-center gap-2 text-sm font-medium text-stone-700 sm:col-span-2">
         <input
@@ -312,10 +313,10 @@ export function ContactFormFields({ contact }: { contact?: Contact | null }) {
           defaultChecked={contact?.automaticBirthdayGreeting ?? false}
           className="h-4 w-4 rounded border-stone-300"
         />
-        Automatic birthday greeting
+        Automatisk födelsedagshälsning
       </label>
       <label className={`${labelClass} sm:col-span-2`}>
-        Notes
+        Anteckningar
         <textarea
           name="notes"
           rows={3}
@@ -324,10 +325,10 @@ export function ContactFormFields({ contact }: { contact?: Contact | null }) {
         />
       </label>
       <div className="sm:col-span-2 mt-2 border-t border-black/10 pt-4">
-        <h3 className="text-sm font-semibold text-stone-800">Work & interests</h3>
+        <h3 className="text-sm font-semibold text-stone-800">Arbete och intressen</h3>
       </div>
       <label className={labelClass}>
-        Company
+        Företag
         <input
           name="company"
           defaultValue={contact?.profile?.company ?? ""}
@@ -335,7 +336,7 @@ export function ContactFormFields({ contact }: { contact?: Contact | null }) {
         />
       </label>
       <label className={labelClass}>
-        Job title
+        Titel
         <input
           name="jobTitle"
           defaultValue={contact?.profile?.jobTitle ?? ""}
@@ -343,7 +344,7 @@ export function ContactFormFields({ contact }: { contact?: Contact | null }) {
         />
       </label>
       <label className={labelClass}>
-        Interests (comma-separated)
+        Intressen (kommaseparerade)
         <input
           name="interests"
           defaultValue={contact?.profile?.interests?.join(", ") ?? ""}
@@ -351,7 +352,7 @@ export function ContactFormFields({ contact }: { contact?: Contact | null }) {
         />
       </label>
       <label className={labelClass}>
-        Hobbies (comma-separated)
+        Fritidsintressen (kommaseparerade)
         <input
           name="hobbies"
           defaultValue={contact?.profile?.hobbies?.join(", ") ?? ""}

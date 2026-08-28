@@ -35,7 +35,7 @@ export function QuoteActions({
       <div className="grid grid-cols-3 gap-2">
         <form action={reviewInsight.bind(null, insightId, "HANDLED")}>
           <button className="min-h-12 w-full rounded-xl bg-[var(--system-green)] text-sm font-semibold text-white">
-            Handled
+            Hanterat
           </button>
         </form>
         <button
@@ -43,7 +43,7 @@ export function QuoteActions({
           onClick={() => setMode(mode === "idle" ? "action" : "idle")}
           className="min-h-12 rounded-xl bg-[var(--system-yellow,#ffcc00)] text-sm font-semibold text-black"
         >
-          Create action
+          Skapa åtgärd
         </button>
         <form
           action={reviewInsight.bind(null, insightId, "DISMISSED")}
@@ -52,7 +52,7 @@ export function QuoteActions({
           }}
         >
           <button className="min-h-12 w-full rounded-xl bg-[var(--system-red)] text-sm font-semibold text-white">
-            Dismiss
+            Avfärda
           </button>
         </form>
       </div>
@@ -64,21 +64,21 @@ export function QuoteActions({
             onClick={() => setMode("ticket")}
             className="min-h-11 rounded-xl bg-black/[0.05] text-sm font-semibold"
           >
-            Create ticket
+            Skapa uppgift
           </button>
           <button
             type="button"
             onClick={() => setMode("calendar")}
             className="min-h-11 rounded-xl bg-black/[0.05] text-sm font-semibold"
           >
-            Create calendar event
+            Skapa kalenderhändelse
           </button>
           {smsHref ? (
             <a
               href={smsHref}
               className="flex min-h-11 items-center justify-center rounded-xl bg-black/[0.05] text-sm font-semibold"
             >
-              Send SMS
+              Skicka SMS
             </a>
           ) : null}
           {emailHref ? (
@@ -86,14 +86,14 @@ export function QuoteActions({
               href={emailHref}
               className="flex min-h-11 items-center justify-center rounded-xl bg-black/[0.05] text-sm font-semibold"
             >
-              Send email
+              Skicka mail
             </a>
           ) : null}
           <a
             href={`sms:?&body=${encodeURIComponent(quote)}`}
             className="flex min-h-11 items-center justify-center rounded-xl bg-black/[0.05] text-sm font-semibold"
           >
-            Send to colleague
+            Skicka till kollega
           </a>
           <button
             type="button"
@@ -121,7 +121,7 @@ export function QuoteActions({
             className="min-h-11 w-full rounded-xl bg-black/[0.05] px-3"
           />
           <button className="min-h-11 w-full rounded-xl bg-[var(--system-blue)] font-semibold text-white">
-            Save ticket
+            Spara uppgift
           </button>
         </form>
       ) : null}
@@ -143,7 +143,7 @@ export function QuoteActions({
             className="min-h-11 w-full rounded-xl bg-black/[0.05] px-3"
           />
           <button className="min-h-11 w-full rounded-xl bg-[var(--system-blue)] font-semibold text-white">
-            Save event
+            Spara händelse
           </button>
         </form>
       ) : null}

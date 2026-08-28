@@ -18,7 +18,7 @@ export default async function BroadcastDetailPage({
   return (
     <>
       <PageHeader
-        title="Saved batch"
+        title="Sparat utskick"
         subtitle={`${campaign.sentCount} sent · ${campaign.failedCount} failed · ${campaign.totalCount} total`}
       />
       <p className="mb-4 whitespace-pre-wrap rounded-2xl bg-white px-4 py-3 text-[16px]">
@@ -26,7 +26,7 @@ export default async function BroadcastDetailPage({
       </p>
       <div className="mb-4 flex gap-2">
         <Badge label={campaign.status} />
-        {campaign.personalized ? <Badge label="PERSONAL" /> : null}
+        {campaign.personalized ? <Badge label="Personligt" tone="info" /> : null}
       </div>
       <InsetSection
         title={

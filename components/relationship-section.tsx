@@ -17,22 +17,22 @@ const VECTOR_DIMS: { key: string; label: string }[] = [
   { key: "sensitiveTopicAccess", label: "Sensitive-topic access" },
   { key: "autonomousReplyFreedom", label: "Autonomous reply freedom" },
   { key: "proactiveContactDesired", label: "Proactive contact desired" },
-  { key: "callThroughPriority", label: "Call-through priority" },
-  { key: "privacySensitivity", label: "Privacy sensitivity" },
+  { key: "callThroughPriority", label: "Samtalsprioritet" },
+  { key: "privacySensitivity", label: "Integritetskänslighet" },
 ];
 
 const ENVELOPE_ROWS: { key: string; label: string }[] = [
-  { key: "SMALL_TALK", label: "Small talk" },
-  { key: "JOKES", label: "Jokes" },
-  { key: "GENERIC_LIFE_QUESTIONS", label: "Generic life questions" },
-  { key: "KNOWN_SHARED_TOPICS", label: "Known shared topics" },
-  { key: "SUGGEST_MEETING", label: "Suggest \u201cwe should meet\u201d" },
-  { key: "AGREE_SPECIFIC_MEETING", label: "Agree to a specific meeting" },
-  { key: "MONEY_OR_PAYMENT", label: "Money / payments" },
-  { key: "PRIVATE_INFORMATION", label: "Share private information" },
-  { key: "FACTUAL_COMMITMENT", label: "Factual commitments" },
-  { key: "WORK_DECISION", label: "Work decisions" },
-  { key: "CONFLICT_OR_EMOTION", label: "Conflict / emotional topics" },
+  { key: "SMALL_TALK", label: "Småprat" },
+  { key: "JOKES", label: "Skämt" },
+  { key: "GENERIC_LIFE_QUESTIONS", label: "Allmänna livsfrågor" },
+  { key: "KNOWN_SHARED_TOPICS", label: "Kända gemensamma ämnen" },
+  { key: "SUGGEST_MEETING", label: "Föreslå att ni ses" },
+  { key: "AGREE_SPECIFIC_MEETING", label: "Boka en bestämd träff" },
+  { key: "MONEY_OR_PAYMENT", label: "Pengar och betalningar" },
+  { key: "PRIVATE_INFORMATION", label: "Dela privat information" },
+  { key: "FACTUAL_COMMITMENT", label: "Konkreta löften" },
+  { key: "WORK_DECISION", label: "Beslut i jobbet" },
+  { key: "CONFLICT_OR_EMOTION", label: "Konflikter och känsliga ämnen" },
 ];
 
 const CALL_POLICIES: { value: string; label: string }[] = [
@@ -68,7 +68,7 @@ export function RelationshipSection({
     <>
       <Card>
         <h3 className="text-xs font-semibold uppercase tracking-wide text-stone-400">
-          Relationship
+          Relation
         </h3>
         {contact.relationshipLabel ? (
           <p className="mt-1 text-sm font-medium text-stone-900">
@@ -88,20 +88,20 @@ export function RelationshipSection({
             className="w-full rounded-md border border-stone-300 px-2.5 py-1.5 text-sm focus:border-stone-500 focus:outline-none"
           />
           <button className="mt-2 rounded-md bg-stone-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-stone-700">
-            Let AI propose the profile
+            Låt AI föreslå profilen
           </button>
         </form>
 
         <details className="mt-4">
           <summary className="cursor-pointer text-sm font-medium text-stone-700">
-            Advanced relationship
+            Avancerad relation
           </summary>
           <form
             action={updateAdvancedRelationship.bind(null, contact.id)}
             className="mt-3 space-y-4"
           >
             <label className={labelClass}>
-              Label
+              Etikett
               <input
                 name="relationshipLabel"
                 defaultValue={contact.relationshipLabel ?? ""}
@@ -110,7 +110,7 @@ export function RelationshipSection({
             </label>
             <details className="rounded-xl border border-black/10 bg-white">
               <summary className="flex min-h-12 cursor-pointer items-center px-3 text-sm font-semibold text-stone-700">
-                Relationship dimensions
+                Relationens dimensioner
                 <span className="ml-auto text-xs font-normal text-stone-400">
                   0–100
                 </span>
@@ -137,7 +137,7 @@ export function RelationshipSection({
 
             <details className="rounded-xl border border-black/10 bg-white">
               <summary className="flex min-h-12 cursor-pointer items-center px-3 text-sm font-semibold text-stone-700">
-                What AI may do
+                Vad AI:n får göra
                 <span className="ml-auto text-xs font-normal text-stone-400">
                   11 policies
                 </span>
@@ -155,8 +155,8 @@ export function RelationshipSection({
                       className="h-10 w-full rounded-lg border border-black/10 bg-white px-2 text-sm focus-visible:ring-2 focus-visible:ring-[var(--system-blue)]"
                     >
                       <option value="AUTO">Auto</option>
-                      <option value="ESCALATE">Escalate</option>
-                      <option value="BLOCK">Block</option>
+                      <option value="ESCALATE">Eskalera</option>
+                      <option value="BLOCK">Blockera</option>
                     </select>
                   </label>
                 ))}
@@ -164,7 +164,7 @@ export function RelationshipSection({
             </details>
 
             <label className={labelClass}>
-              Call policy
+              Samtalspolicy
               <select
                 name="callPolicy"
                 defaultValue={contact.callPolicy}
@@ -179,7 +179,7 @@ export function RelationshipSection({
             </label>
 
             <button className="sticky bottom-20 z-10 min-h-11 w-full rounded-xl bg-[var(--system-blue)] px-4 text-sm font-semibold text-white shadow-lg sm:static sm:w-auto sm:shadow-none">
-              Save advanced settings
+              Spara avancerade inställningar
             </button>
           </form>
         </details>
@@ -188,7 +188,7 @@ export function RelationshipSection({
       <Card>
         <details open={stylePending > 0 || styleFailed > 0}>
           <summary className="flex min-h-11 cursor-pointer items-center text-sm font-semibold text-stone-700">
-            Teach AI how we talk
+            Lär AI:n hur ni pratar
           </summary>
           <div className="border-t border-black/10 pt-3">
         <p className="mt-1 text-sm text-stone-500">
@@ -213,7 +213,7 @@ export function RelationshipSection({
             </p>
             <form action={retryStyleExtraction.bind(null, contact.id)}>
               <button className="mt-1 font-semibold text-[var(--system-blue)]">
-                Retry analysis
+                Försök analysera igen
               </button>
             </form>
           </div>
@@ -231,14 +231,14 @@ export function RelationshipSection({
             className="block w-full text-sm text-stone-600 file:mr-3 file:rounded-md file:border-0 file:bg-stone-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-stone-700 hover:file:bg-stone-200"
           />
           <button className="mt-2 rounded-md bg-stone-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-stone-700">
-            Analyze style
+            Analysera stilen
           </button>
         </form>
 
         {cp?.ownerStyle ? (
           <div className="mt-3 rounded-md bg-stone-50 p-2.5 text-sm text-stone-700">
             <p className="text-[10px] font-semibold uppercase tracking-wide text-stone-400">
-              Learned communication profile
+              Inlärd kommunikationsprofil
             </p>
             <p className="mt-1">
               You write {cp.ownerStyle.averageLength ?? "short"} messages in{" "}

@@ -6,8 +6,8 @@ const NUMBER = "+46766861234";
 async function login(page: Page) {
   await page.goto("/login");
   if (page.url().includes("/login")) {
-    await page.getByLabel("Password").fill("local-test-password");
-    await page.getByRole("button", { name: "Sign in" }).click();
+    await page.getByLabel("Lösenord").fill("local-test-password");
+    await page.getByRole("button", { name: "Logga in" }).click();
     await page.waitForURL(/\/messages/);
   }
 }
@@ -42,7 +42,7 @@ test.describe("live updates", () => {
     await expect(page.getByText(opening)).toBeVisible();
 
     // A half-written reply must survive whatever arrives while it is typed.
-    const composer = page.getByPlaceholder(/^Message…/);
+    const composer = page.getByPlaceholder(/^Skriv ett SMS…/);
     await composer.fill("Halvskrivet svar");
 
     const live = `Live ${Date.now()}`;

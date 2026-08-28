@@ -37,7 +37,7 @@ export async function POST(req: Request) {
         error:
           error instanceof Error
             ? error.message
-            : "Could not transcribe recording",
+            : "Inspelningen kunde inte tolkas.",
       },
       { status: 500 },
     );

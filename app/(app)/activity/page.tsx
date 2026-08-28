@@ -2,16 +2,17 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { listActivity, displayName } from "@/lib/queries";
 import { Badge, Card, EmptyState, PageHeader } from "@/components/ui";
+import { TERMS } from "@/lib/terminology";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Activity" };
+export const metadata = { title: TERMS.activity };
 
 export default async function ActivityPage() {
   const rows = await listActivity(150);
 
   return (
     <>
-      <PageHeader title="Activity" subtitle="Everything the system has done" />
+      <PageHeader title={TERMS.activity} subtitle="Allt systemet har gjort" />
       {rows.length === 0 ? (
         <EmptyState text="No activity yet." />
       ) : (

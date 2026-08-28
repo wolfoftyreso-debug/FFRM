@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { format } from "date-fns";
-import { getConversationDetail, conversationStateLabel, displayName } from "@/lib/queries";
+import { getConversationDetail, displayName } from "@/lib/queries";
 import {
   closeConversation,
   pauseConversation,
@@ -15,6 +15,13 @@ import { MessageComposer } from "@/components/message-composer";
 import { ContactAvatar } from "@/components/apple-ui";
 import { ConversationReadReceipt } from "@/components/conversation-read-receipt";
 import { PendingActionButton } from "@/components/pending-action-button";
+import {
+  TERMS,
+  conversationState,
+  conversationStateExplanation,
+  importanceLabel,
+  relationshipTypeLabel,
+} from "@/lib/terminology";
 
 export const dynamic = "force-dynamic";
 
@@ -27,13 +34,13 @@ export default async function ConversationPage({
   const detail = await getConversationDetail(id);
   if (!detail) notFound();
   const { conversation, contact, messages, facts, mediaByMessage } = detail;
-  const stateLabel = conversationStateLabel(
+  const state = conversationState(
     conversation.aiControlState,
     conversation.status,
   );
   const title = contact
     ? displayName(contact)
-    : (conversation.peerNumber ?? "Unknown");
+    : (conversation.peerNumber ?? "Okänt nummer");
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
@@ -53,22 +60,21 @@ export default async function ConversationPage({
               </p>
             ) : (
               <p className="text-xs text-[var(--secondary-label)]">
-                {conversation.aiControlState === "AI"
-                  ? "AI handling low-risk messages"
-                  : conversation.aiControlState === "USER"
-                    ? "You are handling"
-                    : conversation.aiControlState.toLowerCase()}
+                {conversationStateExplanation(
+                  conversation.aiControlState,
+                  conversation.status,
+                )}
               </p>
             )}
             </div>
           </div>
-          <Badge label={stateLabel} />
+          <Badge label={state.label} tone={state.tone} />
         </header>
 
         <div className="ios-inset-group ios-scroll min-h-[45vh] space-y-2 p-3 md:p-4">
           {messages.length === 0 ? (
             <p className="py-6 text-center text-sm text-stone-400">
-              No messages yet.
+              Inga meddelanden än.
             </p>
           ) : (
             messages.map((m) => {
@@ -126,7 +132,7 @@ export default async function ConversationPage({
                                   : "text-stone-400"
                               }`}
                             >
-                              AI saw this · confidence{" "}
+                              Så här såg AI:n bilden · säkerhet{" "}
                               {Math.round((asset.analysisConfidence ?? 0) * 100)}%
                             </summary>
                             <div
@@ -163,7 +169,8 @@ export default async function ConversationPage({
                           </details>
                         ) : asset.analysisStatus === "FAILED" ? (
                           <p className="mt-1 text-[10px] text-red-400">
-                            AI could not safely understand this image.
+                            AI:n kunde inte tolka bilden säkert — därför lämnades
+                            den till dig.
                           </p>
                         ) : null}
                       </div>
@@ -172,7 +179,7 @@ export default async function ConversationPage({
                         key={asset.id}
                         className="mb-2 rounded-md border border-dashed border-current/20 p-4 text-center text-xs opacity-70"
                       >
-                        Processing image…
+                        Tolkar bilden…
                       </div>
                     ),
                   )}
@@ -195,36 +202,36 @@ export default async function ConversationPage({
         <div className="mt-4 flex flex-wrap gap-2">
           {conversation.aiControlState !== "USER" && (
             <form action={takeOverConversation.bind(null, conversation.id)}>
-              <PendingActionButton variant="filled" pendingText="Taking over…">
-                Take over
+              <PendingActionButton variant="filled" pendingText="Tar över…">
+                Ta över
               </PendingActionButton>
             </form>
           )}
           {conversation.aiControlState !== "AI" && (
             <form action={returnConversationToAi.bind(null, conversation.id)}>
-              <PendingActionButton variant="tinted" pendingText="Returning…">
-                Return to AI
+              <PendingActionButton variant="tinted" pendingText="Lämnar över…">
+                Låt AI svara
               </PendingActionButton>
             </form>
           )}
           {conversation.aiControlState !== "PAUSED" && (
             <form action={pauseConversation.bind(null, conversation.id)}>
-              <PendingActionButton variant="plain" pendingText="Pausing…">
-                Pause AI
+              <PendingActionButton variant="plain" pendingText="Pausar…">
+                Pausa AI
               </PendingActionButton>
             </form>
           )}
           {conversation.status === "OPEN" && (
             <form action={closeConversation.bind(null, conversation.id)}>
-              <PendingActionButton pendingText="Closing…">
-                Close
+              <PendingActionButton pendingText="Avslutar…">
+                Avsluta
               </PendingActionButton>
             </form>
           )}
           {conversation.status === "CLOSED" && (
             <form action={reopenConversation.bind(null, conversation.id)}>
-              <PendingActionButton variant="filled" pendingText="Reopening…">
-                Reopen
+              <PendingActionButton variant="filled" pendingText="Öppnar…">
+                Öppna igen
               </PendingActionButton>
             </form>
           )}
@@ -238,7 +245,7 @@ export default async function ConversationPage({
         ) : (
           <div className="ios-safe-bottom sticky bottom-32 z-20 mt-3 rounded-2xl border border-black/10 bg-white/95 p-4 text-center shadow-lg md:bottom-2">
             <p className="text-sm text-[var(--secondary-label)]">
-              This conversation is closed. Reopen it before sending a message.
+              Konversationen är avslutad. Öppna den igen innan du skickar något.
             </p>
           </div>
         )}
@@ -249,7 +256,7 @@ export default async function ConversationPage({
           <>
             <Card>
               <h3 className="text-xs font-semibold uppercase tracking-wide text-stone-400">
-                Contact
+                {TERMS.contact}
               </h3>
               <p className="mt-1 text-sm font-medium">
                 <Link
@@ -263,7 +270,8 @@ export default async function ConversationPage({
                 <div>
                   <dt className="inline text-stone-400">Relationship: </dt>
                   <dd className="inline">
-                    {contact.relationshipType} · {contact.importance}
+                    {relationshipTypeLabel(contact.relationshipType)} ·{" "}
+                    {importanceLabel(contact.importance)}
                   </dd>
                 </div>
                 {contact.phoneNumber ? (
@@ -289,7 +297,7 @@ export default async function ConversationPage({
             {facts.length > 0 && (
               <Card>
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-stone-400">
-                  Relevant facts
+                  Det AI:n vet om er
                 </h3>
                 <ul className="mt-2 space-y-1.5 text-sm text-stone-600">
                   {facts.map((f) => (
@@ -320,23 +328,19 @@ export default async function ConversationPage({
               href={`/people/new?phone=${encodeURIComponent(conversation.peerNumber ?? "")}`}
               className="mt-2 inline-block text-sm font-medium text-stone-900 underline"
             >
-              Create contact
+              Skapa kontakt
             </Link>
           </Card>
         )}
         <Card>
           <h3 className="text-xs font-semibold uppercase tracking-wide text-stone-400">
-            AI status
+            AI-status
           </h3>
           <p className="mt-1 text-sm text-stone-600">
-            {conversation.aiControlState === "AI" &&
-              "AI answers low-risk messages within policy."}
-            {conversation.aiControlState === "USER" &&
-              "You are handling this conversation. AI will not respond."}
-            {conversation.aiControlState === "PAUSED" &&
-              "Paused. Nobody responds automatically."}
-            {conversation.aiControlState === "ESCALATED" &&
-              "AI has escalated this conversation to you."}
+            {conversationStateExplanation(
+              conversation.aiControlState,
+              conversation.status,
+            )}
           </p>
         </Card>
       </aside>

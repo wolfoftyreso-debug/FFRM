@@ -34,7 +34,7 @@ export async function POST(
     const { id } = await params;
     const form = await request.formData();
     const file = form.get("photo");
-    if (!(file instanceof File)) throw new Error("Choose a photo");
+    if (!(file instanceof File)) throw new Error("Välj en bild.");
     const photo = await normalizeContactPhoto(file);
     const db = await getDb();
     const updated = await db

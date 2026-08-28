@@ -138,6 +138,38 @@ blocked by the schema, but has no specialized V1 UI.
   `BIRTHDAY` / `NAME_DAY` recurrence is timezone-aware and contact automation
   shortcuts preconfigure the matching yearly trigger.
 
+## Product language
+
+The product writes Swedish on the owner's behalf all day. Its own surfaces do
+the same, and each domain object has exactly one name.
+
+`lib/terminology.ts` is the single source for that vocabulary: destination and
+entity names (`TERMS`), plus the functions that turn a stored enum into words
+a person reads — conversation state, insight kind, execution status,
+relationship type, importance. Storage keeps its English identifiers
+(`contacts`, `conversation_insights`, `reminders`, `message_campaigns`); this
+is the presentation vocabulary, not a rename of the schema.
+
+The rule it enforces: **a concept has one name, and no stored enum reaches the
+owner unlabelled.** Before this existed, one entity could be "Contacts" in the
+tab bar, "People" in the page title and `contacts` in the database; AI findings
+were "Quotes" — named after the fact that they carry a quotation rather than
+after the owner's job of confirming them; tasks were "Tickets" over a
+`reminders` table; and bulk SMS was "Send to many", "Massmeddelande", "batch"
+and "campaign" in four different places.
+
+Two couplings were removed with it:
+
+- `Badge` took its colour from the label text, so renaming a state silently
+  dropped its colour. States now pass a `tone`; only badges that still print a
+  stored enum verbatim (Apollo list states, campaign states, calendar kinds)
+  fall back to the legacy text keys.
+- The inbox decided whether to show the red escalation dot by comparing
+  against the string `"NEEDS YOU"`. It now reads the tone.
+
+The end-to-end tests import `TERMS` instead of repeating the strings, so a
+renamed concept cannot leave a test asserting a word the app no longer says.
+
 ## Live updates
 
 Every operational surface is server-rendered, so keeping it current is a

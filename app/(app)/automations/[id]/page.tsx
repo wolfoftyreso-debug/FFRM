@@ -11,6 +11,7 @@ import {
 import { Badge, Card, PageHeader, PrimaryButton, SecondaryButton } from "@/components/ui";
 import { AutomationFormFields } from "@/components/automation-form";
 import { ConfirmForm } from "@/components/confirm-form";
+import { executionStatusLabel } from "@/lib/terminology";
 
 export const dynamic = "force-dynamic";
 
@@ -38,17 +39,20 @@ export default async function AutomationDetailPage({
           .filter(Boolean)
           .join(" · ")}
         action={
-          <Badge label={automation.enabled ? "ENABLED" : "DISABLED"} />
+          <Badge
+            label={automation.enabled ? "Aktiv" : "Avstängd"}
+            tone={automation.enabled ? "positive" : "neutral"}
+          />
         }
       />
 
       <div className="mb-6 flex flex-wrap gap-2">
         <form action={runAutomationNow.bind(null, automation.id)}>
-          <PrimaryButton>Run now</PrimaryButton>
+          <PrimaryButton>Kör nu</PrimaryButton>
         </form>
         {automation.nextRunAt ? (
           <form action={skipNextOccurrence.bind(null, automation.id)}>
-            <SecondaryButton>Skip once</SecondaryButton>
+            <SecondaryButton>Hoppa över en gång</SecondaryButton>
           </form>
         ) : null}
         <form action={toggleAutomation.bind(null, automation.id)}>
@@ -58,32 +62,32 @@ export default async function AutomationDetailPage({
         </form>
         <ConfirmForm
           action={deleteAutomation.bind(null, automation.id)}
-          label="Delete"
-          confirmText={`Delete automation "${automation.name}" and its execution history?`}
+          label="Ta bort"
+          confirmText={`Ta bort automationen ”${automation.name}” och dess körhistorik?`}
         />
       </div>
 
       <div className="space-y-6">
         <Card>
           <h2 className="mb-4 text-sm font-semibold text-stone-700">
-            Configuration
+            Konfiguration
           </h2>
           <form action={updateAutomation.bind(null, automation.id)}>
             <AutomationFormFields automation={automation} contacts={contacts} />
             <div className="mt-6">
-              <PrimaryButton>Save changes</PrimaryButton>
+              <PrimaryButton>Spara ändringar</PrimaryButton>
             </div>
           </form>
         </Card>
 
         <section>
           <h2 className="mb-2 text-sm font-semibold text-stone-700">
-            Execution history
+            Körhistorik
           </h2>
           {executions.length === 0 ? (
             <Card>
               <p className="py-4 text-center text-sm text-stone-400">
-                Never executed.
+                Har aldrig körts.
               </p>
             </Card>
           ) : (
@@ -97,7 +101,7 @@ export default async function AutomationDetailPage({
                         {e.occurrenceKey}
                       </span>
                     </p>
-                    <Badge label={e.status} />
+                    <Badge {...executionStatusLabel(e.status)} />
                   </div>
                   {e.result != null || e.error || e.decision != null ? (
                     <div className="mt-1.5 space-y-1 text-xs text-stone-500">
@@ -105,10 +109,10 @@ export default async function AutomationDetailPage({
                         <p className="text-red-600">Error: {e.error}</p>
                       ) : null}
                       {e.decision != null ? (
-                        <ExecutionValue label="Decision" value={e.decision} />
+                        <ExecutionValue label="Beslut" value={e.decision} />
                       ) : null}
                       {e.result != null ? (
-                        <ExecutionValue label="Result" value={e.result} />
+                        <ExecutionValue label="Resultat" value={e.result} />
                       ) : null}
                       {e.aiModel ? (
                         <p>

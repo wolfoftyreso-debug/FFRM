@@ -5,6 +5,7 @@ import { calls, contacts, messages } from "@/lib/db/schema";
 import { getInsight } from "@/lib/review";
 import { QuoteActions } from "@/components/quote-actions";
 import { PageHeader } from "@/components/ui";
+import { TERMS, insightKindLabel } from "@/lib/terminology";
 
 export const dynamic = "force-dynamic";
 
@@ -48,7 +49,10 @@ export default async function ReviewDetailPage({
 
   return (
     <>
-      <PageHeader title="Quote" subtitle={contact?.firstName ?? "Conversation"} />
+      <PageHeader
+        title={insightKindLabel(insight.kind)}
+        subtitle={contact?.firstName ?? TERMS.conversation}
+      />
       <blockquote className="mb-4 rounded-2xl bg-white px-4 py-3 text-[17px] font-medium">
         “{insight.quote}”
       </blockquote>
@@ -67,7 +71,7 @@ export default async function ReviewDetailPage({
 }
 
 function highlightQuote(text: string, quote: string) {
-  if (!text) return "No transcript stored for this source yet.";
+  if (!text) return "Ingen transkribering är sparad för källan ännu.";
   const index = text.indexOf(quote);
   if (index < 0) return text;
   return (

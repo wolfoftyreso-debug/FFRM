@@ -146,7 +146,7 @@ export async function handleIncomingCall(
       contactId: contact?.id ?? null,
       channel: "VOICE_CALL",
       eventKey: `${input.callid}:started`,
-      text: `Incoming call · ${disposition} · ${decision.reason}`,
+      text: `Inkommande samtal · ${disposition} · ${decision.reason}`,
     });
     if (contact) {
       await db
@@ -157,7 +157,7 @@ export async function handleIncomingCall(
     await logActivity({
       actor: "46ELKS",
       action: "CALL_RECEIVED",
-      summary: `Incoming call from ${contact ? contactDisplayName(contact) : from} → ${disposition} (${decision.reason})`,
+      summary: `Inkommande samtal från ${contact ? contactDisplayName(contact) : from} → ${disposition} (${decision.reason})`,
       contactId: contact?.id ?? null,
       entityType: "call",
       entityId: inserted[0].id,
@@ -319,7 +319,7 @@ export async function handleHangup(input: HangupInput): Promise<void> {
     contactId: call.contactId,
     channel: finalState === "VOICEMAIL" ? "VOICEMAIL" : "VOICE_CALL",
     eventKey: `${input.id}:ended`,
-    text: `${call.direction === "INBOUND" ? "Incoming" : "Outgoing"} call · ${finalState.toLowerCase()}${
+    text: `${call.direction === "INBOUND" ? "Inkommande" : "Utgående"} samtal · ${finalState.toLowerCase()}${
       input.duration ? ` · ${input.duration}s` : ""
     }`,
   });
@@ -443,7 +443,7 @@ export async function initiateCallbackToNumber(args: {
   await logActivity({
     actor: "USER",
     action: "CALL_INITIATED",
-    summary: `Callback started to ${contact ? contactDisplayName(contact) : phoneNumber}`,
+    summary: `Återuppringning startad till ${contact ? contactDisplayName(contact) : phoneNumber}`,
     contactId: contact?.id ?? null,
     entityType: "call",
     entityId: started.id,
@@ -453,7 +453,7 @@ export async function initiateCallbackToNumber(args: {
     contactId: contact?.id ?? null,
     channel: "VOICE_CALL",
     eventKey: `${started.providerCallId}:started`,
-    text: "Outgoing callback initiated",
+    text: "Utgående återuppringning startad",
   });
 
   return started;

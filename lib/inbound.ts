@@ -92,7 +92,7 @@ export async function processInboundMessage(messageId: string): Promise<void> {
       await logActivity({
         actor: "SYSTEM",
         action: "INBOUND_HELD",
-        summary: `Inbound SMS from ${contactDisplayName(contact)} held (conversation is ${controlState})`,
+        summary: `Inkommande SMS från ${contactDisplayName(contact)} lämnades orört (konversationen är ${controlState})`,
         contactId: contact.id,
         conversationId: message.conversationId,
         entityType: "message",
@@ -158,7 +158,7 @@ export async function processInboundMessage(messageId: string): Promise<void> {
       await logActivity({
         actor: "AI",
         action: "TRIAGE_FAILED",
-        summary: `AI triage failed for message from ${contactDisplayName(contact)}: ${err instanceof Error ? err.message : String(err)}`,
+        summary: `AI-bedömningen misslyckades för meddelandet från ${contactDisplayName(contact)}: ${err instanceof Error ? err.message : String(err)}`,
         contactId: contact.id,
         conversationId: message.conversationId,
         entityType: "message",
@@ -178,7 +178,7 @@ export async function processInboundMessage(messageId: string): Promise<void> {
     await logActivity({
       actor: "AI",
       action: "AI_TRIAGE",
-      summary: `AI classified message from ${contactDisplayName(contact)}: ${outcome.decision.decision} (${outcome.decision.policyMatch}, risk ${outcome.decision.risk}, confidence ${outcome.decision.confidence.toFixed(2)})`,
+      summary: `AI:n bedömde meddelandet från ${contactDisplayName(contact)}: ${outcome.decision.decision === "AUTO_REPLY" ? "svarar själv" : "lämnar över till dig"}`,
       contactId: contact.id,
       conversationId: message.conversationId,
       entityType: "message",
@@ -235,7 +235,7 @@ export async function processInboundMessage(messageId: string): Promise<void> {
       await logActivity({
         actor: "AI",
         action: "INBOUND_IGNORED",
-        summary: `No reply needed for message from ${contactDisplayName(contact)}: ${outcome.decision.reason}`,
+        summary: `Inget svar behövdes på meddelandet från ${contactDisplayName(contact)}: ${outcome.decision.reason}`,
         contactId: contact.id,
         conversationId: message.conversationId,
         entityType: "message",
@@ -284,7 +284,7 @@ export async function processInboundMessage(messageId: string): Promise<void> {
     await logActivity({
       actor: "SYSTEM",
       action: "INBOUND_PROCESSING_FAILED",
-      summary: `Inbound processing failed: ${err instanceof Error ? err.message : String(err)}`,
+      summary: `Inkommande meddelande kunde inte behandlas: ${err instanceof Error ? err.message : String(err)}`,
       contactId: message.contactId,
       conversationId: message.conversationId,
       entityType: "message",

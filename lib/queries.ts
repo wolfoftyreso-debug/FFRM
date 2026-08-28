@@ -77,20 +77,6 @@ export interface ConversationListItem {
   lastChannel: string | null;
 }
 
-export function conversationStateLabel(state: string, status: string): string {
-  if (status === "CLOSED") return "CLOSED";
-  switch (state) {
-    case "ESCALATED":
-      return "NEEDS YOU";
-    case "USER":
-      return "YOU HANDLING";
-    case "PAUSED":
-      return "PAUSED";
-    default:
-      return "AI HANDLING";
-  }
-}
-
 export async function listConversations(): Promise<ConversationListItem[]> {
   const db = await getDb();
   const rows = await db

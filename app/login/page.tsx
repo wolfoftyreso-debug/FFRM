@@ -1,6 +1,6 @@
 import { login } from "./actions";
 
-export const metadata = { title: "Sign in" };
+export const metadata = { title: "Logga in" };
 
 export default async function LoginPage({
   searchParams,
@@ -18,15 +18,15 @@ export default async function LoginPage({
           Personal Phone
         </h1>
         <p className="mt-1 text-sm text-stone-500">
-          Sign in to your private workspace.
+          Logga in på din privata telefon.
         </p>
         {params.error ? (
           <p className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-            Wrong password.
+            Fel lösenord.
           </p>
         ) : null}
         <label className="mt-6 block text-sm font-medium text-stone-700">
-          Password
+          Lösenord
           <input
             type="password"
             name="password"
@@ -40,7 +40,7 @@ export default async function LoginPage({
           type="submit"
           className="mt-6 h-12 w-full rounded-xl bg-[var(--system-blue)] px-4 text-[16px] font-semibold text-white"
         >
-          Sign in
+          Logga in
         </button>
       </form>
     </main>

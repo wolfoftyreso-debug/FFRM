@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     await ensureOwner();
     const form = await request.formData();
     const file = form.get("photo");
-    if (!(file instanceof File)) throw new Error("Choose a logo");
+    if (!(file instanceof File)) throw new Error("Välj en logga.");
     const logo = await normalizeCompanyLogo(file);
     const db = await getDb();
     await db.update(users).set({

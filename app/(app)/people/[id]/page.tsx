@@ -23,6 +23,7 @@ import {
 import { ConfirmForm } from "@/components/confirm-form";
 import { isCalendarSmsJob } from "@/lib/calendar-activities";
 import { VCardShareButton } from "@/components/contact-share-actions";
+import { relationshipTypeLabel } from "@/lib/terminology";
 
 export const dynamic = "force-dynamic";
 
@@ -53,14 +54,14 @@ export default async function ContactPage({
     historyPage * historyPageSize,
   );
   const historyItems = [
-    { id: "ALL", label: "All" },
-    { id: "MESSAGES", label: "Messages" },
-    { id: "PHOTOS", label: "Photos" },
-    { id: "CALLS", label: "Calls" },
-    { id: "VOICEMAIL", label: "Voicemail" },
+    { id: "ALL", label: "Allt" },
+    { id: "MESSAGES", label: "Meddelanden" },
+    { id: "PHOTOS", label: "Bilder" },
+    { id: "CALLS", label: "Samtal" },
+    { id: "VOICEMAIL", label: "Röstbrevlåda" },
     { id: "AUTOMATIONS", label: "SMS-jobb" },
-    { id: "FACTS", label: "Facts" },
-    { id: "REMINDERS", label: "Reminders" },
+    { id: "FACTS", label: "Fakta" },
+    { id: "REMINDERS", label: "Påminnelser" },
     { id: "SYSTEM", label: "System" },
   ].map((item) => ({
     ...item,
@@ -75,7 +76,7 @@ export default async function ContactPage({
             href={`/people/${contact.id}/edit`}
             className="flex min-h-11 items-center px-2 text-[17px] text-[var(--system-blue)]"
           >
-            Edit
+            Redigera
           </Link>
         </div>
         <ContactAvatar
@@ -91,7 +92,7 @@ export default async function ContactPage({
           {displayName(contact)}
         </h1>
         <p className="mt-1 text-[15px] text-[var(--secondary-label)]">
-          {contact.relationshipLabel ?? contact.relationshipType}
+          {contact.relationshipLabel ?? relationshipTypeLabel(contact.relationshipType)}
           {contact.lastInteractionAt
             ? ` · ${formatDistanceToNow(contact.lastInteractionAt, { addSuffix: true })}`
             : " · No communication history"}
@@ -104,7 +105,7 @@ export default async function ContactPage({
                   <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--system-blue)] text-white">
                     <Phone className="h-5 w-5" />
                   </span>
-                  Call
+                  Ring
                 </button>
               </form>
               <form action={messageContact.bind(null, contact.id)}>
@@ -112,12 +113,12 @@ export default async function ContactPage({
                   <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--system-blue)] text-white">
                     <MessageCircle className="h-5 w-5" />
                   </span>
-                  Message
+                  Meddela
                 </button>
               </form>
             </>
           ) : null}
-          <AppleAction href="#reminder" icon={<Bell className="h-5 w-5" />} label="Remind" />
+          <AppleAction href="#reminder" icon={<Bell className="h-5 w-5" />} label="Påminn" />
           <VCardShareButton
             name={displayName(contact)}
             vcardUrl={`/api/contacts/${contact.id}/vcard`}
@@ -125,7 +126,7 @@ export default async function ContactPage({
         </div>
       </header>
 
-      <InsetSection title="Contact">
+      <InsetSection title="Kontaktuppgifter">
         {contact.phoneNumber ? (
           <a
             href={`tel:${contact.phoneNumber}`}
@@ -175,7 +176,7 @@ export default async function ContactPage({
             styleError={styleMedia.latestError}
           />
           <section>
-            <h2 className="mb-2 px-1 text-xl font-bold">History</h2>
+            <h2 className="mb-2 px-1 text-xl font-bold">Historik</h2>
             <div className="mb-3 overflow-x-auto pb-1 md:hidden">
               <div className="flex min-w-max gap-2">
                 {historyItems.map((item) => (
@@ -203,7 +204,7 @@ export default async function ContactPage({
             {filteredTimeline.length === 0 ? (
               <Card>
                 <p className="py-4 text-center text-sm text-stone-400">
-                  No events in this category.
+                  Inga händelser i den här kategorin.
                 </p>
               </Card>
             ) : (
@@ -257,7 +258,7 @@ export default async function ContactPage({
                     href={`/people/${id}?history=${historyFilter}&page=${historyPage - 1}`}
                     className="flex min-h-11 items-center rounded-xl bg-white px-4 text-sm font-semibold text-[var(--system-blue)]"
                   >
-                    Newer
+                    Nyare
                   </Link>
                 ) : null}
                 {historyPage * historyPageSize < filteredTimeline.length ? (
@@ -265,7 +266,7 @@ export default async function ContactPage({
                     href={`/people/${id}?history=${historyFilter}&page=${historyPage + 1}`}
                     className="flex min-h-11 items-center rounded-xl bg-white px-4 text-sm font-semibold text-[var(--system-blue)]"
                   >
-                    Older
+                    Äldre
                   </Link>
                 ) : null}
               </div>
@@ -276,10 +277,10 @@ export default async function ContactPage({
         <aside className="min-w-0 space-y-4">
           <Card>
             <h3 className="text-xs font-semibold uppercase tracking-wide text-stone-400">
-              Facts
+              Fakta
             </h3>
             {facts.length === 0 ? (
-              <p className="mt-2 text-sm text-stone-400">No facts yet.</p>
+              <p className="mt-2 text-sm text-stone-400">Inga fakta än.</p>
             ) : (
               <ul className="mt-2 space-y-2 text-sm">
                 {facts.map((f) => (
@@ -292,7 +293,7 @@ export default async function ContactPage({
                       <span className="flex shrink-0 gap-1">
                         <form action={reviewFact.bind(null, f.id, "CONFIRMED")}>
                           <button className="text-xs text-emerald-600 hover:underline">
-                            Keep
+                            Behåll
                           </button>
                         </form>
                         <form action={reviewFact.bind(null, f.id, "DISMISSED")}>
@@ -310,11 +311,11 @@ export default async function ContactPage({
               <input
                 name="fact"
                 required
-                placeholder="Add a fact…"
+                placeholder="Lägg till ett faktum…"
                 className="w-full rounded-md border border-stone-300 px-2.5 py-1.5 text-sm focus:border-stone-500 focus:outline-none"
               />
               <button className="shrink-0 rounded-md border border-stone-300 px-2.5 py-1.5 text-sm text-stone-700 hover:bg-stone-50">
-                Add
+                Lägg till
               </button>
             </form>
           </Card>
@@ -322,7 +323,7 @@ export default async function ContactPage({
           {commitments.length > 0 && (
             <Card>
               <h3 className="text-xs font-semibold uppercase tracking-wide text-stone-400">
-                Commitments
+                Löften
               </h3>
               <ul className="mt-2 space-y-2 text-sm">
                 {commitments
@@ -343,7 +344,7 @@ export default async function ContactPage({
                           className="mt-1"
                         >
                           <button className="text-xs text-emerald-600 hover:underline">
-                            Mark completed
+                            Markera som klar
                           </button>
                         </form>
                       ) : c.status === "SUGGESTED" ? (
@@ -356,7 +357,7 @@ export default async function ContactPage({
                             )}
                           >
                             <button className="text-xs font-medium text-[var(--system-blue)]">
-                              Keep
+                              Behåll
                             </button>
                           </form>
                           <form
@@ -367,7 +368,7 @@ export default async function ContactPage({
                             )}
                           >
                             <button className="text-xs text-[var(--system-red)]">
-                              Dismiss
+                              Avfärda
                             </button>
                           </form>
                         </div>
@@ -396,7 +397,10 @@ export default async function ContactPage({
                     >
                       {a.name}
                     </Link>
-                    <Badge label={a.enabled ? "ENABLED" : "DISABLED"} />
+                    <Badge
+                      label={a.enabled ? "Aktiv" : "Avstängd"}
+                      tone={a.enabled ? "positive" : "neutral"}
+                    />
                   </li>
                 ))}
               </ul>
@@ -430,7 +434,7 @@ export default async function ContactPage({
           {conversations.length > 0 && (
             <Card>
               <h3 className="text-xs font-semibold uppercase tracking-wide text-stone-400">
-                Conversations
+                Konversationer
               </h3>
               <ul className="mt-2 space-y-1.5 text-sm">
                 {conversations.map((c) => (
@@ -452,7 +456,7 @@ export default async function ContactPage({
 
           <Card>
             <h3 className="text-xs font-semibold uppercase tracking-wide text-stone-400">
-              Quick reminder
+              Snabb påminnelse
             </h3>
             <form
               id="reminder"
@@ -462,7 +466,7 @@ export default async function ContactPage({
               <input
                 name="title"
                 required
-                placeholder="Remind me to…"
+                placeholder="Påminn mig om att…"
                 className="w-full rounded-md border border-stone-300 px-2.5 py-1.5 text-sm focus:border-stone-500 focus:outline-none"
               />
               <input
@@ -471,14 +475,14 @@ export default async function ContactPage({
                 className="w-full rounded-md border border-stone-300 px-2.5 py-1.5 text-sm focus:border-stone-500 focus:outline-none"
               />
               <button className="rounded-md border border-stone-300 px-2.5 py-1.5 text-sm text-stone-700 hover:bg-stone-50">
-                Create reminder
+                Skapa påminnelse
               </button>
             </form>
           </Card>
 
           <ConfirmForm
             action={archiveContact.bind(null, contact.id)}
-            label="Archive contact"
+            label="Arkivera kontakten"
             confirmText={`Archive ${displayName(contact)}? Messages and history remain stored.`}
           />
         </aside>

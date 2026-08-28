@@ -37,6 +37,8 @@ export type AppMenuIcon =
   | "settings"
   | "profile";
 
+import { TERMS } from "@/lib/terminology";
+
 export interface AppMenuGroup {
   id: string;
   title: string;
@@ -44,14 +46,14 @@ export interface AppMenuGroup {
 }
 
 export const PRIMARY_TABS = [
-  { href: "/phone", label: "Phone", icon: "phone" as const, badge: "phone" as const },
+  { href: "/phone", label: TERMS.phone, icon: "phone" as const, badge: "phone" as const },
   {
     href: "/messages",
-    label: "Messages",
+    label: TERMS.messages,
     icon: "message" as const,
     badge: "messages" as const,
   },
-  { href: "/people", label: "Contacts", icon: "contacts" as const, badge: null },
+  { href: "/people", label: TERMS.contacts, icon: "contacts" as const, badge: null },
 ];
 
 export const APP_MENU_GROUPS: AppMenuGroup[] = [
@@ -62,22 +64,22 @@ export const APP_MENU_GROUPS: AppMenuGroup[] = [
       { href: "/messages/new", label: "Nytt meddelande", icon: "compose" },
       {
         href: "/messages/broadcast",
-        label: "Massmeddelande",
+        label: TERMS.broadcast,
         icon: "broadcast",
         subtitle: "Skicka till många",
       },
       {
         href: "/messages?view=needs-you",
-        label: "Behöver dig",
+        label: TERMS.needsYou,
         icon: "needsYou",
         badge: "messages",
       },
-      { href: "/messages?view=unread", label: "Olästa", icon: "unread" },
-      { href: "/phone?view=missed", label: "Missade samtal", icon: "missed" },
-      { href: "/phone?view=voicemail", label: "Röstbrevlåda", icon: "voicemail" },
+      { href: "/messages?view=unread", label: TERMS.unread, icon: "unread" },
+      { href: "/phone?view=missed", label: TERMS.missedCalls, icon: "missed" },
+      { href: "/phone?view=voicemail", label: TERMS.voicemail, icon: "voicemail" },
       {
         href: "/phone?view=callback",
-        label: "Återuppringning",
+        label: TERMS.callback,
         icon: "callback",
         badge: "phone",
       },
@@ -112,19 +114,19 @@ export const APP_MENU_GROUPS: AppMenuGroup[] = [
     id: "work",
     title: "Planering",
     items: [
-      { href: "/calendar", label: "Calendar", icon: "calendar" },
+      { href: "/calendar", label: TERMS.calendar, icon: "calendar" },
       { href: "/calendar/new", label: "Ny aktivitet", icon: "newEvent" },
-      { href: "/tasks", label: "Tickets", icon: "tasks" },
+      { href: "/tasks", label: TERMS.tasks, icon: "tasks" },
       {
         href: "/automations",
-        label: "Automations",
+        label: TERMS.automations,
         icon: "automations",
         subtitle: "Regler som körs åt dig",
       },
-      { href: "/review", label: "Quotes", icon: "quotes" },
+      { href: "/review", label: TERMS.insights, icon: "quotes" },
       {
         href: "/notifications",
-        label: "Notiser",
+        label: TERMS.notifications,
         icon: "notifications",
         badge: "notifications",
       },
@@ -134,14 +136,14 @@ export const APP_MENU_GROUPS: AppMenuGroup[] = [
     id: "system",
     title: "AI och system",
     items: [
-      { href: "/chat", label: "Assistant", icon: "assistant" },
+      { href: "/chat", label: TERMS.assistant, icon: "assistant" },
       {
         href: "/settings?section=calls",
         label: "AI-växel",
         icon: "receptionist",
         subtitle: "Grind, ajour, callbacks",
       },
-      { href: "/activity", label: "Activity", icon: "activity" },
+      { href: "/activity", label: TERMS.activity, icon: "activity" },
       {
         href: "/settings?section=integrations",
         label: "Integrationer",
@@ -153,7 +155,7 @@ export const APP_MENU_GROUPS: AppMenuGroup[] = [
         label: "Diagnostik",
         icon: "diagnostics",
       },
-      { href: "/settings", label: "Settings", icon: "settings" },
+      { href: "/settings", label: TERMS.settings, icon: "settings" },
     ],
   },
 ];

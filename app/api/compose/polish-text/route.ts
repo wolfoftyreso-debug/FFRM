@@ -22,7 +22,7 @@ export async function POST(req: Request) {
       .where(eq(conversations.id, input.conversationId))
       .limit(1);
     if (!conversation) {
-      return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
+      return NextResponse.json({ error: "Konversationen hittades inte." }, { status: 404 });
     }
     const [contact, recent] = await Promise.all([
       conversation.contactId
@@ -72,7 +72,7 @@ ${input.text}`,
     return NextResponse.json(
       {
         error:
-          error instanceof Error ? error.message : "Could not improve text",
+          error instanceof Error ? error.message : "Texten kunde inte förbättras. Din text är oförändrad.",
       },
       { status: 500 },
     );

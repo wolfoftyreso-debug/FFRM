@@ -3,9 +3,10 @@ import { addMonths, format, startOfMonth, endOfMonth } from "date-fns";
 import { getCalendarItems } from "@/lib/queries";
 import { Badge, Card, EmptyState, PageHeader } from "@/components/ui";
 import { addReminder } from "@/app/actions";
+import { TERMS } from "@/lib/terminology";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Calendar" };
+export const metadata = { title: TERMS.calendar };
 
 export default async function CalendarPage({
   searchParams,
@@ -31,7 +32,7 @@ export default async function CalendarPage({
   return (
     <>
       <PageHeader
-        title="Calendar"
+        title={TERMS.calendar}
         subtitle={format(base, "MMMM yyyy")}
         action={
           <div className="flex gap-2">
@@ -60,16 +61,16 @@ export default async function CalendarPage({
 
       <div className="mb-4 flex flex-wrap gap-2 text-xs text-stone-500">
         <span className="flex items-center gap-1">
-          <Badge label="AUTOMATIC" /> the system will do this
+          <Badge label="Automatiskt" tone="automatic" /> systemet gör det här
         </span>
         <span className="flex items-center gap-1">
-          <Badge label="HUMAN" /> you need to do this
+          <Badge label="Du" tone="info" /> du behöver göra det här
         </span>
         <span className="flex items-center gap-1">
-          <Badge label="COMPLETED" /> already performed
+          <Badge label="Klar" tone="positive" /> redan utfört
         </span>
         <span className="flex items-center gap-1">
-          <Badge label="ESCALATED" /> requires you
+          <Badge label={TERMS.needsYou} tone="critical" /> kräver dig
         </span>
       </div>
 
@@ -81,7 +82,7 @@ export default async function CalendarPage({
           <input
             name="title"
             required
-            placeholder="What should I remember?"
+            placeholder="Vad ska jag komma ihåg?"
             className="h-11 rounded-xl border border-black/10 bg-white px-3 text-sm"
           />
           <input
@@ -90,13 +91,13 @@ export default async function CalendarPage({
             className="h-11 rounded-xl border border-black/10 bg-white px-3 text-sm"
           />
           <button className="rounded-xl bg-[var(--system-blue)] px-4 text-sm font-semibold text-white">
-            Save
+            Spara
           </button>
         </form>
       </details>
 
       {byDay.size === 0 ? (
-        <EmptyState text="Nothing this month." />
+        <EmptyState text="Inget den här månaden." />
       ) : (
         <div className="space-y-4">
           {[...byDay.entries()].map(([day, dayItems]) => (

@@ -5,7 +5,7 @@ import { AutomationFormFields } from "@/components/automation-form";
 import type { Automation } from "@/lib/db/schema";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "New automation" };
+export const metadata = { title: "Ny automation" };
 
 export default async function NewAutomationPage({
   searchParams,
@@ -19,7 +19,7 @@ export default async function NewAutomationPage({
   const contacts = await listContacts();
   return (
     <>
-      <PageHeader title="New automation" />
+      <PageHeader title="Ny automation" />
       <Card>
         <form action={createAutomation}>
           <AutomationFormFields
@@ -28,7 +28,7 @@ export default async function NewAutomationPage({
             defaultTriggerType={params.triggerType}
           />
           <div className="mt-6">
-            <PrimaryButton>Create automation</PrimaryButton>
+            <PrimaryButton>Skapa automation</PrimaryButton>
           </div>
         </form>
       </Card>

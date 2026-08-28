@@ -1,7 +1,7 @@
 import { startManualConversation } from "@/app/actions";
 import { Card, PageHeader, PrimaryButton, inputClass } from "@/components/ui";
 
-export const metadata = { title: "New message" };
+export const metadata = { title: "Nytt meddelande" };
 
 export default async function NewMessagePage({
   searchParams,
@@ -12,13 +12,13 @@ export default async function NewMessagePage({
   return (
     <>
       <PageHeader
-        title="New message"
-        subtitle="Start an SMS thread with any Swedish or international number."
+        title="Nytt meddelande"
+        subtitle="Starta en SMS-tråd med ett svenskt eller utländskt nummer."
       />
       <Card className="mx-auto max-w-lg">
         <form action={startManualConversation}>
           <label className="block text-sm font-medium text-[var(--label)]">
-            Phone number
+            Telefonnummer
             <input
               name="phoneNumber"
               type="tel"
@@ -31,14 +31,14 @@ export default async function NewMessagePage({
           </label>
           {error ? (
             <p className="mt-2 text-sm text-[var(--system-red)]">
-              Enter a valid phone number including country code.
+              Ange ett giltigt telefonnummer med landskod.
             </p>
           ) : null}
           <p className="mt-3 text-xs text-[var(--secondary-label)]">
-            You will review the message before anything is sent.
+            Du får läsa meddelandet innan något skickas.
           </p>
           <div className="mt-5">
-            <PrimaryButton>Open conversation</PrimaryButton>
+            <PrimaryButton>Öppna konversationen</PrimaryButton>
           </div>
         </form>
       </Card>

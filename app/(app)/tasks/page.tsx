@@ -4,9 +4,10 @@ import { listContacts } from "@/lib/queries";
 import { completeReminder, dismissReminder } from "@/app/actions";
 import { AppleRow, InsetSection, SegmentedLinks } from "@/components/apple-ui";
 import { PageHeader, PrimaryButton, inputClass } from "@/components/ui";
+import { TERMS } from "@/lib/terminology";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Tickets" };
+export const metadata = { title: TERMS.tasks };
 
 export default async function TasksPage({
   searchParams,
@@ -21,13 +22,13 @@ export default async function TasksPage({
 
   return (
     <>
-      <PageHeader title="Tickets" subtitle="A simple list. No extra boards." />
+      <PageHeader title={TERMS.tasks} subtitle="En enkel lista. Inga extra tavlor." />
       <div className="mb-5">
         <SegmentedLinks
           active={view}
           items={[
-            { id: "open", label: "Open", href: "/tasks?view=open" },
-            { id: "done", label: "Done", href: "/tasks?view=done" },
+            { id: "open", label: "Öppna", href: "/tasks?view=open" },
+            { id: "done", label: "Klara", href: "/tasks?view=done" },
           ]}
         />
       </div>
@@ -38,12 +39,12 @@ export default async function TasksPage({
         <input
           name="title"
           required
-          placeholder="New ticket"
+          placeholder="Ny uppgift"
           className={inputClass}
         />
         <div className="grid gap-2 sm:grid-cols-2">
           <select name="contactId" className={inputClass}>
-            <option value="">No contact</option>
+            <option value="">Ingen kontakt</option>
             {contacts.map((contact) => (
               <option key={contact.id} value={contact.id}>
                 {contact.firstName}
@@ -52,12 +53,12 @@ export default async function TasksPage({
           </select>
           <input name="dueAt" type="datetime-local" className={inputClass} />
         </div>
-        <PrimaryButton>Add ticket</PrimaryButton>
+        <PrimaryButton>Lägg till uppgift</PrimaryButton>
       </form>
       <InsetSection>
         {tickets.length === 0 ? (
           <p className="px-4 py-8 text-center text-sm text-[var(--secondary-label)]">
-            No tickets here.
+            Inga uppgifter här.
           </p>
         ) : (
           tickets.map(({ ticket, contact }) => (
@@ -78,12 +79,12 @@ export default async function TasksPage({
                 <div className="mt-2 flex gap-3">
                   <form action={completeReminder.bind(null, ticket.id)}>
                     <button className="text-sm font-semibold text-[var(--system-green)]">
-                      Done
+                      Klar
                     </button>
                   </form>
                   <form action={dismissReminder.bind(null, ticket.id)}>
                     <button className="text-sm font-semibold text-[var(--system-red)]">
-                      Dismiss
+                      Avfärda
                     </button>
                   </form>
                 </div>

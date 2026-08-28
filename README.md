@@ -47,6 +47,9 @@ Your Swedish number → 46elks → this app → relationship/context/policy → 
   dates live on the contact card; one tap creates a yearly automation.
   Custom cron/interval/incoming-SMS rules are listed and managed under that
   contact.
+- **One language, one name per thing** — the app speaks Swedish, like the
+  messages it writes for you, and every domain object has a single name owned
+  by `lib/terminology.ts`. No stored enum reaches you unlabelled.
 - **Live surfaces** — the inbox, the open thread, Phone and every badge update
   themselves while the app is open. A lightweight change signal is polled and
   only a real change triggers a re-render, so an arriving SMS never disturbs a

@@ -6,20 +6,20 @@ import { Check, ChevronDown, ListFilter, X } from "lucide-react";
 
 export const CONTACT_FILTER_GROUPS = [
   {
-    title: "Relationship",
+    title: "Relation",
     items: [
-      { id: "all", label: "All contacts" },
-      { id: "family", label: "Family" },
-      { id: "friend", label: "Friends" },
-      { id: "work", label: "Work" },
+      { id: "all", label: "Alla kontakter" },
+      { id: "family", label: "Familj" },
+      { id: "friend", label: "Vänner" },
+      { id: "work", label: "Arbete" },
     ],
   },
   {
-    title: "Focus",
+    title: "Fokus",
     items: [
-      { id: "important", label: "Important" },
-      { id: "birthday-soon", label: "Birthday soon" },
-      { id: "needs-attention", label: "Needs attention" },
+      { id: "important", label: "Viktiga" },
+      { id: "birthday-soon", label: "Snart födelsedag" },
+      { id: "needs-attention", label: "Behöver uppmärksamhet" },
     ],
   },
 ] as const;
@@ -31,7 +31,7 @@ const ALL_FILTERS: ContactFilterItem[] = CONTACT_FILTER_GROUPS.flatMap(
 );
 
 export function contactFilterLabel(id: string) {
-  return ALL_FILTERS.find((item) => item.id === id)?.label ?? "All contacts";
+  return ALL_FILTERS.find((item) => item.id === id)?.label ?? "Alla kontakter";
 }
 
 function hrefFor(filter: string, sort: string, query: string) {
@@ -90,10 +90,10 @@ export function ContactCriteriaMenu({
         {filter !== "all" ? (
           <Link
             href={hrefFor("all", sort, query)}
-            aria-label="Clear contact filter"
+            aria-label="Rensa kontaktfiltret"
             className="shrink-0 px-2 text-[13px] font-semibold text-[var(--system-blue)]"
           >
-            Clear
+            Rensa
           </Link>
         ) : null}
       </div>
@@ -102,7 +102,7 @@ export function ContactCriteriaMenu({
         <div className="fixed inset-0 z-50">
           <button
             type="button"
-            aria-label="Close search criteria"
+            aria-label="Stäng sökvillkoren"
             className="absolute inset-0 bg-black/40"
             onClick={() => setOpen(false)}
           />
@@ -114,11 +114,11 @@ export function ContactCriteriaMenu({
           >
             <div className="mb-4 flex items-center justify-between">
               <h2 id={titleId} className="text-[17px] font-semibold">
-                Show
+                Visa
               </h2>
               <button
                 type="button"
-                aria-label="Close"
+                aria-label="Stäng"
                 onClick={() => setOpen(false)}
                 className="flex h-11 w-11 items-center justify-center rounded-full text-[var(--system-blue)]"
               >
