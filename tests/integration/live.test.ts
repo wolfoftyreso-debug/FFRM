@@ -12,6 +12,7 @@ import { getLiveVersion } from "@/lib/live";
 import { listConversations } from "@/lib/queries";
 import { getOrCreateConversation } from "@/lib/sms/send-message";
 import { GET as liveEndpoint } from "@/app/api/live/route";
+import { GET as contactPhotoEndpoint } from "@/app/api/contacts/[id]/photo/route";
 
 let db: Db;
 
@@ -297,5 +298,44 @@ describe("inbox previews", () => {
     const after = (await listConversations())[0]?.contactPhotoUrl;
     expect(before).toBeTruthy();
     expect(after).not.toBe(before);
+  });
+
+  it("serves a stored photo as cacheable private bytes", async () => {
+    const owner = await seedOwner(db);
+    const contact = await seedContact(db, owner.id);
+    await db
+      .update(schema.contacts)
+      .set({
+        photoDataBase64: Buffer.from("pretend-jpeg").toString("base64"),
+        photoMimeType: "image/jpeg",
+      })
+      .where(eq(schema.contacts.id, contact.id));
+
+    const response = await contactPhotoEndpoint(new Request("http://localhost"), {
+      params: Promise.resolve({ id: contact.id }),
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe("image/jpeg");
+    // The URL is versioned by updatedAt, so the bytes behind one URL never
+    // change and the browser may keep them. Private: this is a personal image.
+    const cacheControl = response.headers.get("cache-control") ?? "";
+    expect(cacheControl).toContain("private");
+    expect(cacheControl).toContain("immutable");
+    expect(cacheControl).not.toContain("no-store");
+    expect(Buffer.from(await response.arrayBuffer()).toString()).toBe(
+      "pretend-jpeg",
+    );
+  });
+
+  it("404s rather than guessing when a contact has no photo", async () => {
+    const owner = await seedOwner(db);
+    const contact = await seedContact(db, owner.id);
+
+    const response = await contactPhotoEndpoint(new Request("http://localhost"), {
+      params: Promise.resolve({ id: contact.id }),
+    });
+
+    expect(response.status).toBe(404);
   });
 });
