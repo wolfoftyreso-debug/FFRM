@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { format } from "date-fns";
 import {
   getOwner,
@@ -566,7 +567,7 @@ export default async function SettingsPage({
           ) : null}
           <ProviderTestDetail provider={apollo} />
           <p className="mt-3 text-xs text-stone-500">
-            Sök och hämta nummer: <a className="text-[var(--system-blue)]" href="/apollo">/apollo</a>
+            Sök och hämta nummer: <Link className="text-[var(--system-blue)]" href="/apollo">/apollo</Link>
             . Webhook: <code>/api/webhooks/apollo/phone</code>
           </p>
         </Card>
