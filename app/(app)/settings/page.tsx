@@ -35,6 +35,7 @@ import {
 } from "@/lib/voice/receptionist-config";
 import { parseApolloPublicConfig } from "@/lib/apollo/config";
 import { TERMS } from "@/lib/terminology";
+import { photoUrl } from "@/lib/photo-url";
 
 const DISPOSITIONS = [
   { value: "RING_THROUGH", label: "Koppla fram till min telefon" },
@@ -126,16 +127,20 @@ export default async function SettingsPage({
             <ContactPhotoUploader
               name={owner.name}
               endpoint="/api/profile/photo"
-              initialPhotoUrl={
-                owner.photoDataBase64 ? "/api/profile/photo" : null
-              }
+              initialPhotoUrl={photoUrl(
+                "/api/profile/photo",
+                owner.photoDataBase64,
+                owner.updatedAt,
+              )}
             />
             <CompanyLogoUploader
               company={owner.company}
               endpoint="/api/profile/logo"
-              initialLogoUrl={
-                owner.companyLogoDataBase64 ? "/api/profile/logo" : null
-              }
+              initialLogoUrl={photoUrl(
+                "/api/profile/logo",
+                owner.companyLogoDataBase64,
+                owner.updatedAt,
+              )}
             />
             <div className="grid gap-4 sm:grid-cols-2">
               <AutosaveField section="owner" field="name" label="Namn" defaultValue={owner.name} />

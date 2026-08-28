@@ -7,11 +7,17 @@ import { normalizeContactPhoto } from "@/lib/contact-photo";
 export async function GET() {
   await ensureOwner();
   const db = await getDb();
-  const [owner] = await db.select().from(users).limit(1);
-  if (!owner?.photoDataBase64 || !owner.photoMimeType) {
+  const [owner] = await db
+    .select({
+      dataBase64: users.photoDataBase64,
+      mimeType: users.photoMimeType,
+    })
+    .from(users)
+    .limit(1);
+  if (!owner?.dataBase64 || !owner.mimeType) {
     return new Response("not found", { status: 404 });
   }
-  return imageResponse(owner.photoDataBase64, owner.photoMimeType);
+  return imageResponse(owner.dataBase64, owner.mimeType);
 }
 
 export async function POST(request: Request) {
@@ -55,7 +61,10 @@ function imageResponse(dataBase64: string, mimeType: string) {
   return new Response(Buffer.from(dataBase64, "base64"), {
     headers: {
       "content-type": mimeType,
-      "cache-control": "private, no-store",
+      // Addressed through a URL versioned by the owner row's updatedAt
+      // (lib/photo-url.ts): a changed photo is a changed URL, so the bytes
+      // behind any one URL are stable. Private: personal data.
+      "cache-control": "private, max-age=86400, immutable",
       "x-content-type-options": "nosniff",
     },
   });

@@ -24,6 +24,8 @@ export interface ContactCardData {
   photoMimeType: string | null;
   companyLogoDataBase64?: string | null;
   companyLogoMimeType?: string | null;
+  /** Versions the photo/logo URLs so they can be cached. */
+  updatedAt?: Date | null;
 }
 
 export interface SharedContact extends ContactCardData {
@@ -122,6 +124,7 @@ function sharedContact(owner: User, shareToken: string): SharedContact {
     photoMimeType: owner.photoMimeType,
     companyLogoDataBase64: owner.companyLogoDataBase64,
     companyLogoMimeType: owner.companyLogoMimeType,
+    updatedAt: owner.updatedAt,
     shareToken,
   };
 }

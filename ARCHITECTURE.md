@@ -138,6 +138,27 @@ blocked by the schema, but has no specialized V1 UI.
   `BIRTHDAY` / `NAME_DAY` recurrence is timezone-aware and contact automation
   shortcuts preconfigure the matching yearly trigger.
 
+## Stored photos
+
+Contact and owner photos live in the database as base64 and are served from
+authenticated routes. Two things make that workable now that the live refresh
+re-renders lists on a timer:
+
+- **The URL carries a version.** `lib/photo-url.ts` appends the row's
+  `updatedAt`, so a new photo is a new URL. The routes can therefore answer
+  `private, max-age=86400, immutable` instead of `no-store`, and an avatar in
+  a list that re-renders every few seconds is fetched once rather than on
+  every render. `private` keeps personal images out of shared caches.
+- **Queries ask for what they render.** The inbox selected the whole contact
+  row — pulling every stored photo's base64 into a query that only needed a
+  name — and the photo route selected the whole row to return one image. Both
+  now select their columns, and the inbox carries `hasPhoto` rather than the
+  bytes.
+
+Photos appear wherever a person does: the inbox, the open thread, Contacts,
+the contact card, Phone, the broadcast recipient picker and the public share
+card. Initials remain the fallback.
+
 ## Product language
 
 The product writes Swedish on the owner's behalf all day. Its own surfaces do

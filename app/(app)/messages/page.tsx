@@ -160,7 +160,12 @@ export default async function MessagesPage({
               <AppleRow
                 key={c.id}
                 href={`/messages/${c.id}`}
-                leading={<ContactAvatar name={c.contactName} />}
+                leading={
+                  <ContactAvatar
+                    name={c.contactName}
+                    photoUrl={c.contactPhotoUrl}
+                  />
+                }
                 title={
                   <span className="flex items-center gap-2">
                     {c.unread ? (

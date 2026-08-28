@@ -3,6 +3,7 @@ import { ContactAvatar, InsetSection } from "@/components/apple-ui";
 import { CompanyLogoUploader } from "@/components/company-logo-uploader";
 import { ContactShareActions } from "@/components/contact-share-actions";
 import type { SharedContact } from "@/lib/contact-sharing";
+import { photoUrl } from "@/lib/photo-url";
 
 export function ContactShareCard({
   contact,
@@ -59,7 +60,11 @@ export function ContactShareCard({
           company={contact.company}
           endpoint="/api/profile/logo"
           initialLogoUrl={
-            contact.companyLogoDataBase64 ? "/api/profile/logo" : null
+            photoUrl(
+              "/api/profile/logo",
+              contact.companyLogoDataBase64,
+              contact.updatedAt,
+            )
           }
         />
       )}

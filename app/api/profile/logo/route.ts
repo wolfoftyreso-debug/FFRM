@@ -51,7 +51,8 @@ function imageResponse(dataBase64: string, mimeType: string) {
   return new Response(Buffer.from(dataBase64, "base64"), {
     headers: {
       "content-type": mimeType,
-      "cache-control": "private, no-store",
+      // Versioned URL (lib/photo-url.ts); see the profile photo route.
+      "cache-control": "private, max-age=86400, immutable",
       "x-content-type-options": "nosniff",
     },
   });

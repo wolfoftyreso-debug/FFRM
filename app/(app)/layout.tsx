@@ -8,6 +8,7 @@ import { ContextBackBar } from "@/components/context-back-bar";
 import { PresenceHeartbeat } from "@/components/presence-heartbeat";
 import { LiveRefresh } from "@/components/live-refresh";
 import { getLiveVersion } from "@/lib/live";
+import { photoUrl } from "@/lib/photo-url";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +36,11 @@ export default async function AppLayout({
     phoneBadge = attention.voicemailNeedsYou;
     notificationCount = reviewCount;
     if (owner?.name) ownerName = owner.name;
-    if (owner?.photoDataBase64) ownerPhotoUrl = "/api/profile/photo";
+    ownerPhotoUrl = photoUrl(
+      "/api/profile/photo",
+      owner?.photoDataBase64,
+      owner?.updatedAt,
+    );
   } catch {
     // Database may be unavailable during first-time setup; render anyway.
   }

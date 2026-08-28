@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { createBroadcastCampaign } from "@/app/actions";
 import { ContactAvatar } from "@/components/apple-ui";
 import { parsePhoneList, personalizeBroadcast } from "@/lib/sms/phone-list";
+import { photoUrl } from "@/lib/photo-url";
 
 interface ContactOption {
   id: string;
@@ -12,6 +13,8 @@ interface ContactOption {
   displayName: string | null;
   nickname: string | null;
   phoneNumber: string | null;
+  hasPhoto?: boolean;
+  updatedAt?: Date | string | null;
 }
 
 export function BroadcastComposer({ contacts }: { contacts: ContactOption[] }) {
@@ -133,7 +136,15 @@ export function BroadcastComposer({ contacts }: { contacts: ContactOption[] }) {
                   key={contact.id}
                   className="ios-hairline flex min-h-14 items-center gap-3 px-4"
                 >
-                  <ContactAvatar name={label} size="sm" />
+                  <ContactAvatar
+                    name={label}
+                    size="sm"
+                    photoUrl={photoUrl(
+                      `/api/contacts/${contact.id}/photo`,
+                      contact.hasPhoto,
+                      contact.updatedAt,
+                    )}
+                  />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[16px] font-medium">
                       {label}

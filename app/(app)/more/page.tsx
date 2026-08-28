@@ -7,6 +7,7 @@ import { getOwner } from "@/lib/queries";
 import { getNotificationCount } from "@/lib/review";
 import { getAttentionSummary } from "@/lib/queries";
 import { TERMS } from "@/lib/terminology";
+import { photoUrl } from "@/lib/photo-url";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: TERMS.more };
@@ -34,7 +35,11 @@ export default async function MorePage() {
           <ContactAvatar
             name={owner.name}
             size="lg"
-            photoUrl={owner.photoDataBase64 ? "/api/profile/photo" : null}
+            photoUrl={photoUrl(
+              "/api/profile/photo",
+              owner.photoDataBase64,
+              owner.updatedAt,
+            )}
           />
           <div className="min-w-0 flex-1">
             <p className="truncate text-[17px] font-semibold">{owner.name}</p>

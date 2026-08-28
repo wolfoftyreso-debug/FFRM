@@ -25,6 +25,7 @@ import { ConfirmForm } from "@/components/confirm-form";
 import { Card, PrimaryButton, inputClass } from "@/components/ui";
 import { getReceptionistState } from "@/lib/voice/receptionist-config";
 import { TERMS } from "@/lib/terminology";
+import { contactPhotoUrl } from "@/lib/photo-url";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: TERMS.phone };
@@ -184,11 +185,7 @@ export default async function PhonePage({
                 <div className="flex items-start gap-3">
                   <ContactAvatar
                     name={who}
-                    photoUrl={
-                      contact?.photoDataBase64
-                        ? `/api/contacts/${contact.id}/photo`
-                        : null
-                    }
+                    photoUrl={contact ? contactPhotoUrl(contact) : null}
                   />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">

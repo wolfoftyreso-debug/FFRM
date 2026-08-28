@@ -22,6 +22,7 @@ import {
   importanceLabel,
   relationshipTypeLabel,
 } from "@/lib/terminology";
+import { contactPhotoUrl } from "@/lib/photo-url";
 
 export const dynamic = "force-dynamic";
 
@@ -51,7 +52,10 @@ export default async function ConversationPage({
       <div>
         <header className="sticky top-0 z-10 mb-3 flex items-center justify-between gap-3 border-b border-black/10 bg-[var(--system-gray-6)]/90 py-2 backdrop-blur-xl">
           <div className="flex min-w-0 items-center gap-3">
-            <ContactAvatar name={title} />
+            <ContactAvatar
+              name={title}
+              photoUrl={contact ? contactPhotoUrl(contact) : null}
+            />
             <div className="min-w-0">
             <h1 className="truncate text-[17px] font-semibold">{title}</h1>
             {conversation.escalationReason ? (

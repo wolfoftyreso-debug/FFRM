@@ -24,6 +24,7 @@ import { ConfirmForm } from "@/components/confirm-form";
 import { isCalendarSmsJob } from "@/lib/calendar-activities";
 import { VCardShareButton } from "@/components/contact-share-actions";
 import { relationshipTypeLabel } from "@/lib/terminology";
+import { contactPhotoUrl } from "@/lib/photo-url";
 
 export const dynamic = "force-dynamic";
 
@@ -82,11 +83,7 @@ export default async function ContactPage({
         <ContactAvatar
           name={displayName(contact)}
           size="xl"
-          photoUrl={
-            contact.photoDataBase64
-              ? `/api/contacts/${contact.id}/photo`
-              : null
-          }
+          photoUrl={contactPhotoUrl(contact)}
         />
         <h1 className="mt-3 text-[28px] font-bold tracking-tight">
           {displayName(contact)}

@@ -47,6 +47,10 @@ Your Swedish number → 46elks → this app → relationship/context/policy → 
   dates live on the contact card; one tap creates a yearly automation.
   Custom cron/interval/incoming-SMS rules are listed and managed under that
   contact.
+- **Contact photos everywhere** — a person looks like themselves in the inbox,
+  the thread, Contacts, Phone and the recipient picker; initials are the
+  fallback. Photo URLs are versioned so they cache instead of being refetched
+  on every live update.
 - **One language, one name per thing** — the app speaks Swedish, like the
   messages it writes for you, and every domain object has a single name owned
   by `lib/terminology.ts`. No stored enum reaches you unlabelled.

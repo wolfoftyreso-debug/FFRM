@@ -4,6 +4,7 @@ import { updateContact } from "@/app/actions";
 import { Card, PageHeader, PrimaryButton } from "@/components/ui";
 import { ContactFormFields } from "@/components/contact-form";
 import { ContactPhotoUploader } from "@/components/contact-photo-uploader";
+import { contactPhotoUrl } from "@/lib/photo-url";
 
 export const dynamic = "force-dynamic";
 
@@ -36,9 +37,7 @@ export default async function EditContactPage({
           name={displayName(contact)}
           endpoint={`/api/contacts/${contact.id}/photo`}
           initialPhotoUrl={
-            contact.photoDataBase64
-              ? `/api/contacts/${contact.id}/photo`
-              : null
+            contactPhotoUrl(contact)
           }
         />
         <form action={updateContact.bind(null, contact.id)}>

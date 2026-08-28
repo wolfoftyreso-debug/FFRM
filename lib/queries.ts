@@ -23,6 +23,7 @@ import { nextYearlyOccurrence } from "@/lib/automations/recurrence";
 import { defaultTimezone } from "@/lib/env";
 import { cleanErrorMessage } from "@/lib/errors";
 import { isCalendarSmsJob } from "@/lib/calendar-activities";
+import { contactPhotoUrl } from "@/lib/photo-url";
 
 export async function getOwner() {
   const db = await getDb();
@@ -50,6 +51,8 @@ export async function listContactOptions() {
       displayName: contacts.displayName,
       nickname: contacts.nickname,
       phoneNumber: contacts.phoneNumber,
+      hasPhoto: sql<boolean>`${contacts.photoDataBase64} is not null`,
+      updatedAt: contacts.updatedAt,
     })
     .from(contacts)
     .where(sql`${contacts.archivedAt} is null`)
@@ -66,6 +69,8 @@ export interface ConversationListItem {
   id: string;
   contactName: string;
   contactId: string | null;
+  /** Authenticated photo route, or null when the contact has no photo. */
+  contactPhotoUrl: string | null;
   peerNumber: string | null;
   aiControlState: string;
   status: string;
@@ -79,10 +84,20 @@ export interface ConversationListItem {
 
 export async function listConversations(): Promise<ConversationListItem[]> {
   const db = await getDb();
+  // Only the fields the row renders. Selecting the whole contact pulled every
+  // stored photo's base64 into a query the live refresh now runs continuously.
   const rows = await db
     .select({
       conversation: conversations,
-      contact: contacts,
+      contact: {
+        id: contacts.id,
+        firstName: contacts.firstName,
+        lastName: contacts.lastName,
+        displayName: contacts.displayName,
+        nickname: contacts.nickname,
+        hasPhoto: sql<boolean>`${contacts.photoDataBase64} is not null`,
+        updatedAt: contacts.updatedAt,
+      },
     })
     .from(conversations)
     .leftJoin(contacts, eq(conversations.contactId, contacts.id))
@@ -110,9 +125,16 @@ export async function listConversations(): Promise<ConversationListItem[]> {
     return {
       id: row.conversation.id,
       contactId: row.contact?.id ?? null,
+      contactPhotoUrl: row.contact?.id
+        ? contactPhotoUrl({
+            id: row.contact.id,
+            hasPhoto: row.contact.hasPhoto,
+            updatedAt: row.contact.updatedAt,
+          })
+        : null,
       contactName: row.contact
         ? displayName(row.contact)
-        : (row.conversation.peerNumber ?? "Unknown"),
+        : (row.conversation.peerNumber ?? "Okänt nummer"),
       peerNumber: row.conversation.peerNumber,
       aiControlState: row.conversation.aiControlState,
       status: row.conversation.status,
@@ -212,7 +234,13 @@ export async function getConversationDetail(id: string) {
   };
 }
 
-export function displayName(contact: Contact): string {
+/** The four fields a name is built from; any full Contact satisfies it. */
+export type ContactName = Pick<
+  Contact,
+  "displayName" | "nickname" | "firstName" | "lastName"
+>;
+
+export function displayName(contact: ContactName): string {
   return (
     contact.displayName ??
     contact.nickname ??

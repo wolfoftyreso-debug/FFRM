@@ -241,4 +241,61 @@ describe("inbox previews", () => {
     expect(only.lastMessageText).toBeNull();
     expect(only.unread).toBe(false);
   });
+
+  it("gives the inbox row a versioned photo URL only when a photo exists", async () => {
+    const owner = await seedOwner(db);
+    const withPhoto = await seedContact(db, owner.id, { firstName: "Foto" });
+    const withoutPhoto = await seedContact(db, owner.id, {
+      firstName: "Utan",
+      phoneNumber: "+46700000003",
+    });
+    await db
+      .update(schema.contacts)
+      .set({
+        photoDataBase64: Buffer.from("not-a-real-image").toString("base64"),
+        photoMimeType: "image/jpeg",
+      })
+      .where(eq(schema.contacts.id, withPhoto.id));
+    const photoThread = await getOrCreateConversation(withPhoto.id, null);
+    const plainThread = await getOrCreateConversation(withoutPhoto.id, null);
+    await inbound(photoThread, withPhoto.id, "Hej!");
+    await inbound(plainThread, withoutPhoto.id, "Hej!");
+
+    const inbox = await listConversations();
+    const photoRow = inbox.find((c) => c.contactId === withPhoto.id);
+    const plainRow = inbox.find((c) => c.contactId === withoutPhoto.id);
+
+    expect(plainRow?.contactPhotoUrl).toBeNull();
+    expect(photoRow?.contactPhotoUrl).toMatch(
+      new RegExp(`^/api/contacts/${withPhoto.id}/photo\\?v=\\d+$`),
+    );
+  });
+
+  it("changes the photo URL when the photo changes, so caches cannot go stale", async () => {
+    const owner = await seedOwner(db);
+    const contact = await seedContact(db, owner.id);
+    const conversationId = await getOrCreateConversation(contact.id, null);
+    await inbound(conversationId, contact.id, "Hej!");
+    await db
+      .update(schema.contacts)
+      .set({
+        photoDataBase64: Buffer.from("first").toString("base64"),
+        photoMimeType: "image/jpeg",
+      })
+      .where(eq(schema.contacts.id, contact.id));
+    const before = (await listConversations())[0]?.contactPhotoUrl;
+
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    await db
+      .update(schema.contacts)
+      .set({
+        photoDataBase64: Buffer.from("second").toString("base64"),
+        updatedAt: new Date(),
+      })
+      .where(eq(schema.contacts.id, contact.id));
+
+    const after = (await listConversations())[0]?.contactPhotoUrl;
+    expect(before).toBeTruthy();
+    expect(after).not.toBe(before);
+  });
 });

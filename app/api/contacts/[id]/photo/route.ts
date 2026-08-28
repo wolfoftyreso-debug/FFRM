@@ -9,18 +9,27 @@ export async function GET(
 ) {
   const { id } = await params;
   const db = await getDb();
+  // Only the photo columns: selecting the whole row pulled every other field
+  // for a response that is just the image.
   const [contact] = await db
-    .select()
+    .select({
+      dataBase64: contacts.photoDataBase64,
+      mimeType: contacts.photoMimeType,
+    })
     .from(contacts)
     .where(eq(contacts.id, id))
     .limit(1);
-  if (!contact?.photoDataBase64 || !contact.photoMimeType) {
+  if (!contact?.dataBase64 || !contact.mimeType) {
     return new Response("not found", { status: 404 });
   }
-  return new Response(Buffer.from(contact.photoDataBase64, "base64"), {
+  return new Response(Buffer.from(contact.dataBase64, "base64"), {
     headers: {
-      "content-type": contact.photoMimeType,
-      "cache-control": "private, no-store",
+      "content-type": contact.mimeType,
+      // Callers address this through a URL versioned by the contact's
+      // updatedAt (lib/photo-url.ts), so a changed photo is a changed URL and
+      // the bytes behind any one URL never change. Private: personal data
+      // must not enter a shared cache.
+      "cache-control": "private, max-age=86400, immutable",
       "x-content-type-options": "nosniff",
     },
   });

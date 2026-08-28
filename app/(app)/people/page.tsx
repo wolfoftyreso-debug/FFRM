@@ -10,6 +10,7 @@ import {
 import { ContactCriteriaMenu } from "@/components/contact-criteria-menu";
 import { Plus, Radar, Search } from "lucide-react";
 import { TERMS, relationshipTypeLabel } from "@/lib/terminology";
+import { contactPhotoUrl } from "@/lib/photo-url";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: TERMS.contacts };
@@ -117,11 +118,7 @@ export default async function PeoplePage({
                     leading={
                       <ContactAvatar
                         name={displayName(c)}
-                        photoUrl={
-                          c.photoDataBase64
-                            ? `/api/contacts/${c.id}/photo`
-                            : null
-                        }
+                        photoUrl={contactPhotoUrl(c)}
                       />
                     }
                     title={
